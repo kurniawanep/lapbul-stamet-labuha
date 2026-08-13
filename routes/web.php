@@ -1,0 +1,47 @@
+<?php
+
+use App\Http\Controllers\JadwalController;
+use App\Http\Controllers\MetarController;
+use App\Http\Controllers\PegawaiController;
+use App\Http\Controllers\PibalController;
+use App\Http\Controllers\TaforController;
+use Illuminate\Support\Facades\Route;
+
+Route::inertia('/', 'welcome')->name('home');
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+
+    // Pegawai Management Routes
+    Route::resource('pegawai', PegawaiController::class)->except(['create', 'edit', 'show']);
+
+    // Jadwal Dinas Routes (Operasional & TU, Teknisi, PPNPN, Master Shift)
+    Route::get('/jadwal/operasional', [JadwalController::class, 'index'])->name('jadwal.operasional');
+    Route::get('/jadwal/teknisi', [JadwalController::class, 'teknisiIndex'])->name('jadwal.teknisi');
+    Route::get('/jadwal/ppnpn', [JadwalController::class, 'ppnpnIndex'])->name('jadwal.ppnpn');
+
+    Route::post('/jadwal/update-cell', [JadwalController::class, 'updateCell'])->name('jadwal.update-cell');
+    Route::post('/jadwal/batch-update-cells', [JadwalController::class, 'batchUpdateCells'])->name('jadwal.batch-update-cells');
+    Route::post('/jadwal/bulk-update', [JadwalController::class, 'bulkUpdate'])->name('jadwal.bulk-update');
+    Route::get('/jadwal/shifts', [JadwalController::class, 'shiftsIndex'])->name('jadwal.shifts.index');
+    Route::post('/jadwal/shifts', [JadwalController::class, 'storeShift'])->name('jadwal.shifts.store');
+    Route::patch('/jadwal/shifts/{shift}', [JadwalController::class, 'updateShift'])->name('jadwal.shifts.update');
+    Route::get('/jadwal/pdf', [JadwalController::class, 'exportPdf'])->name('jadwal.pdf');
+
+    // Laporan Bulanan - Data PIBAL Routes
+    Route::get('/laporan/pibal', [PibalController::class, 'index'])->name('laporan.pibal');
+    Route::post('/laporan/pibal/sync', [PibalController::class, 'sync'])->name('laporan.pibal.sync');
+    Route::get('/laporan/pibal/export-ae31', [PibalController::class, 'exportAe31'])->name('laporan.pibal.export-ae31');
+    Route::get('/laporan/pibal/export-lapbul', [PibalController::class, 'exportLapbulPibal'])->name('laporan.pibal.export-lapbul');
+
+    // Laporan Bulanan - Data TAFOR Routes
+    Route::get('/laporan/tafor', [TaforController::class, 'index'])->name('laporan.tafor');
+    Route::post('/laporan/tafor/sync', [TaforController::class, 'sync'])->name('laporan.tafor.sync');
+    Route::get('/laporan/tafor/export-verifikasi', [TaforController::class, 'exportVerifikasi'])->name('laporan.tafor.export-verifikasi');
+
+    // Laporan Bulanan - Data METAR Routes
+    Route::get('/laporan/metar', [MetarController::class, 'index'])->name('laporan.metar');
+    Route::post('/laporan/metar/sync', [MetarController::class, 'sync'])->name('laporan.metar.sync');
+});
+
+require __DIR__.'/settings.php';

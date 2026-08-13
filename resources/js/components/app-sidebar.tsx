@@ -1,0 +1,99 @@
+import { Link } from '@inertiajs/react';
+import { Briefcase, Calendar, CloudRain, FileText, Gauge, LayoutGrid, Users, Wind, Wrench } from 'lucide-react';
+import AppLogo from '@/components/app-logo';
+import { NavMain } from '@/components/nav-main';
+import { NavUser } from '@/components/nav-user';
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+} from '@/components/ui/sidebar';
+import { dashboard } from '@/routes';
+import type { NavItem } from '@/types';
+
+const mainNavItems: NavItem[] = [
+    {
+        title: 'Dashboard',
+        href: dashboard(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Pegawai',
+        href: '/pegawai',
+        icon: Users,
+    },
+    {
+        title: 'Jadwal Dinas',
+        href: '/jadwal/operasional',
+        icon: Calendar,
+        items: [
+            {
+                title: 'Jadwal Dinas Operasional',
+                href: '/jadwal/operasional',
+                icon: Calendar,
+            },
+            {
+                title: 'Jadwal Dinas Teknisi',
+                href: '/jadwal/teknisi',
+                icon: Wrench,
+            },
+            {
+                title: 'Jadwal Dinas PPNPN',
+                href: '/jadwal/ppnpn',
+                icon: Briefcase,
+            },
+        ],
+    },
+    {
+        title: 'Laporan Bulanan',
+        href: '/laporan/pibal',
+        icon: FileText,
+        items: [
+            {
+                title: 'Data PIBAL',
+                href: '/laporan/pibal',
+                icon: Wind,
+            },
+            {
+                title: 'Data TAFOR',
+                href: '/laporan/tafor',
+                icon: CloudRain,
+            },
+            {
+                title: 'Data METAR',
+                href: '/laporan/metar',
+                icon: Gauge,
+            },
+        ],
+    },
+];
+
+export function AppSidebar() {
+    return (
+        <Sidebar collapsible="icon" variant="inset">
+            <SidebarHeader>
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton size="lg" asChild>
+                            <Link href={dashboard()} prefetch>
+                                <AppLogo />
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarHeader>
+
+            <SidebarContent>
+                <NavMain items={mainNavItems} />
+            </SidebarContent>
+
+            <SidebarFooter>
+                <NavUser />
+            </SidebarFooter>
+        </Sidebar>
+    );
+}
