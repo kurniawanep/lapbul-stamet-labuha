@@ -23,9 +23,9 @@ test('authenticated user can view tafor monthly report page with pagination', fu
         'ttaaii' => 'FTID40',
         'type_message' => 'taf',
         'data_timestamp' => '2026-08-13 11:00:00',
-        'sandi' => "FTID40 WAEL 131100\nTAF WAEL 131100Z 1312/1412 08004KT 9000 FEW019=",
+        'sandi' => "FTID40 WAEL 131100\nTAF WAEL 131100Z 1312/1412 08004KT 9000 FEW019 BECMG 1314/1316 00000KT=",
         'status' => 'sent',
-        'sender_username' => '97460',
+        'sender_username' => 'root',
         'observer_name' => 'Rezky Ramadhan',
     ]);
 
@@ -41,7 +41,7 @@ test('authenticated user can view tafor monthly report page with pagination', fu
     );
 });
 
-test('tafor sync fetches and stores data into data_tafor table', function () {
+test('tafor sync fetches and stores data into data_tafor table using 10-day chunks', function () {
     $user = Pegawai::create([
         'nama' => 'Rezky Ramadhan',
         'email' => 'rezky@bmkg.go.id',
@@ -59,14 +59,14 @@ test('tafor sync fetches and stores data into data_tafor table', function () {
                     'id' => 6909459,
                     'bmkgsoft_id' => 138,
                     'station_name' => 'Stasiun Meteorologi Oesman Sadik',
-                    'data_timestamp' => '2026-08-13T11:00:00Z',
-                    'received_timestamp' => '2026-08-13T11:13:43.140803Z',
-                    'sent_timestamp' => '2026-08-13T11:13:43.191224Z',
+                    'data_timestamp' => '2026-08-01T11:00:00Z',
+                    'received_timestamp' => '2026-08-01T10:43:08Z',
+                    'sent_timestamp' => '2026-08-01T10:43:08Z',
                     'type_message' => 'taf',
                     'ttaaii' => 'FTID40',
                     'cccc' => 'WAEL',
                     'bbb' => null,
-                    'sandi' => 'FTID40 WAEL 131100\nTAF WAEL 131100Z 1312/1412 08004KT 9000 FEW019 BECMG 1314/1316 00000KT=',
+                    'sandi' => 'FTID40 WAEL 011100\nTAF WAEL 011100Z 0112/0212 00000KT 9999 FEW020 BECMG 0203/0205 25008KT=',
                     'status' => 'sent',
                     'sender_username' => 'Rezky Ramadhan',
                 ],
@@ -75,7 +75,7 @@ test('tafor sync fetches and stores data into data_tafor table', function () {
     ]);
 
     $service = new BmkgsoftService();
-    $result = $service->syncTaforData('2026-08-01T00:00:00Z', '2026-08-13T23:59:59Z', 138);
+    $result = $service->syncTaforData('2026-08-01T00:00:00Z', '2026-08-01T23:59:59Z', 138);
 
     expect($result['synced_count'])->toBe(1);
 

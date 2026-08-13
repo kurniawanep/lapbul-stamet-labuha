@@ -4,62 +4,62 @@ namespace App\Services;
 
 use App\Models\DataMetar;
 use App\Models\DataPibal;
+use App\Models\DataSinoptik;
 use App\Models\DataTafor;
-use App\Models\Pegawai;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class BmkgsoftService
 {
-    protected string $baseUrl = 'https://bmkgsatu.bmkg.go.id';
+    protected string $baseUrl;
+    protected string $username;
+    protected string $password;
+    protected ObserverResolverService $observerResolver;
 
-    /**
-     * Get JWT token for BMKGSoft API.
-     */
-    protected function getToken(): ?string
+    public function __construct()
     {
-        $cachedToken = Cache::get('bmkgsoft_bearer_token');
-        if ($cachedToken) {
-            return $cachedToken;
-        }
-
-        $username = config('services.bmkgsoft.username', env('BMKGSOFT_USERNAME', '97460'));
-        $password = config('services.bmkgsoft.password', env('BMKGSOFT_PASSWORD', 'opr97460'));
-
-        if (empty($password)) {
-            return env('BMKGSOFT_TOKEN', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODY1ODk5MTAsImlhdCI6MTc4NjQxNzEwNSwiaWQiOiI5NzQ6MCIsImlzcyI6ImdvLWJta2dzb2Z0IiwicGVybXMiOlsic3RhX21vZCIsInN0YV92dyIsInN0YV9lbGVtIiwiZGF0YV9leHBvcnQiLCJkYXRhX3JlcG9ydCIsImRhdGFfdml6IiwiZGF0YV9tb24iLCJxY19jb25mIiwicWNfbW9uaXRvciIsImVudHJ5X2FkZCIsImVudHJ5X3Z3IiwiZW50cnlfZWRpdCJdLCJyb2xlX25hbWUiOiJzdGFzaXVuIiwic3ViIjoiOTc06MCIsInVpZCI6MjI5fQ.y6a3p2Ik5XVjq2HOZBnDCtYoy0Hx7HZonBOJne2Zok8');
-        }
-
-        try {
-            $response = Http::withoutVerifying()
-                ->timeout(10)
-                ->withHeaders([
-                    'accept' => 'application/json',
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                ])
-                ->post("{$this->baseUrl}/api/v21/user/session/login", [
-                    'username' => $username,
-                    'password' => $password,
-                ]);
-
-            if ($response->successful()) {
-                $token = $response->json('data.token') ?? $response->json('token');
-                if ($token) {
-                    Cache::put('bmkgsoft_bearer_token', $token, 86000);
-                    return $token;
-                }
-            }
-        } catch (\Throwable $e) {
-            Log::error("BMKGSoft login failed: " . $e->getMessage());
-        }
-
-        return env('BMKGSOFT_TOKEN');
+        $this->baseUrl = config('services.bmkgsoft.base_url', 'https://bmkgsatu.bmkg.go.id');
+        $this->username = config('services.bmkgsoft.username', '97460');
+        $this->password = config('services.bmkgsoft.password', 'opr97460');
+        $this->observerResolver = app(ObserverResolverService::class);
     }
 
     /**
-     * Fetch PIBAL raw data from BMKGSoft API and return detailed result array.
+     * Get bearer authentication token from BMKGSoft API.
+     */
+    public function getToken(): ?string
+    {
+        try {
+            $response = Http::withoutVerifying()
+                ->timeout(15)
+                ->withHeaders([
+                    'accept' => 'application/json',
+                    'content-type' => 'application/json',
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                ])
+                ->post("{$this->baseUrl}/api/v21/user/session/login", [
+                    'username' => $this->username,
+                    'password' => $this->password,
+                ]);
+
+            if ($response->successful()) {
+                return $response->json('data.token');
+            }
+
+            Log::error("BMKGSoft Login Failed", [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+            return null;
+        } catch (\Exception $e) {
+            Log::error("BMKGSoft Login Exception: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Fetch PIBAL observation data from BMKGSoft API.
      */
     public function fetchPibalDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
     {
@@ -82,17 +82,16 @@ class BmkgsoftService
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 ])
                 ->get($url, [
+                    'model' => 'pibal',
+                    'station' => $stationId,
                     'date_from' => $dateFrom,
                     'date_to' => $dateTo,
-                    'station_id' => $stationId,
-                    'type_data' => 'pibal',
                 ]);
 
             if ($response->successful()) {
-                $data = $response->json();
                 return [
                     'success' => true,
-                    'data' => is_array($data) ? $data : [],
+                    'data' => $response->json('data', []),
                     'error' => null,
                 ];
             }
@@ -100,166 +99,105 @@ class BmkgsoftService
             return [
                 'success' => false,
                 'data' => [],
-                'error' => "API BMKGSoft merespon dengan status HTTP {$response->status()}",
+                'error' => "HTTP {$response->status()}: " . $response->body(),
             ];
-        } catch (\Throwable $e) {
-            Log::error("Fetch PIBAL data failed: " . $e->getMessage());
+        } catch (\Exception $e) {
             return [
                 'success' => false,
                 'data' => [],
-                'error' => "Koneksi ke API BMKGSoft gagal: " . $e->getMessage(),
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Fetch PIBAL raw data from BMKGSoft API.
+     * Sync PIBAL observation data into data_pibal table.
      */
-    public function fetchPibalData(string $dateFrom, string $dateTo, int $stationId = 138): array
+    public function syncPibalData(string $startDate, string $endDate, int $stationId = 138): array
     {
-        $res = $this->fetchPibalDataWithResult($dateFrom, $dateTo, $stationId);
-        return $res['data'];
-    }
+        $fetchResult = $this->fetchPibalDataWithResult($startDate, $endDate, $stationId);
 
-    /**
-     * Fetch and synchronize PIBAL data into data_pibal table with sync status details.
-     */
-    public function syncPibalData(string $dateFrom, string $dateTo, int $stationId = 138): array
-    {
-        $fetchResult = $this->fetchPibalDataWithResult($dateFrom, $dateTo, $stationId);
         if (!$fetchResult['success']) {
             return [
                 'success' => false,
                 'synced_count' => 0,
                 'failed_count' => 0,
                 'total_fetched' => 0,
-                'message' => $fetchResult['error'],
+                'message' => 'Gagal mengambil data dari BMKGSoft API.',
                 'error_reason' => $fetchResult['error'],
                 'details' => [],
             ];
         }
 
-        $records = $fetchResult['data'];
-        if (empty($records)) {
-            return [
-                'success' => true,
-                'synced_count' => 0,
-                'failed_count' => 0,
-                'total_fetched' => 0,
-                'message' => 'Tidak ada data PIBAL ditemukan dari BMKGSoft API untuk periode ini.',
-                'error_reason' => null,
-                'details' => [],
-            ];
-        }
-
-        $pegawais = Pegawai::all();
+        $items = $fetchResult['data'];
         $syncedCount = 0;
         $failedCount = 0;
         $details = [];
 
-        foreach ($records as $item) {
-            if (empty($item['data_timestamp'])) {
+        foreach ($items as $item) {
+            $timestamp = $item['data_timestamp'] ?? null;
+            $observerName = $item['observer_name'] ?? null;
+
+            if (!$timestamp) {
                 $failedCount++;
                 $details[] = [
-                    'timestamp' => 'Tanpa Timestamp',
-                    'observer' => $item['observer_name'] ?? '-',
+                    'timestamp' => 'N/A',
+                    'observer' => $observerName,
                     'status' => 'gagal',
-                    'reason' => 'Attribute data_timestamp tidak ditemukan pada data BMKGSoft API.',
+                    'reason' => 'Missing data_timestamp field',
                 ];
                 continue;
             }
+
+            $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName);
 
             try {
-                $utcTimestamp = Carbon::parse($item['data_timestamp'], 'UTC')->toDateTimeString();
-            } catch (\Throwable $e) {
+                DataPibal::updateOrCreate(
+                    [
+                        'data_timestamp' => Carbon::parse($timestamp)->format('Y-m-d H:i:s'),
+                    ],
+                    [
+                        'station_id' => $item['station_id'] ?? $stationId,
+                        'station_name' => $item['station_name'] ?? 'Stasiun Meteorologi Oesman Sadik',
+                        'raw_pibal' => $item['raw_pibal'] ?? null,
+                        'observer_name' => $observerName,
+                        'pegawai_id' => $pegawai ? $pegawai->id : null,
+                    ]
+                );
+
+                $syncedCount++;
+                $details[] = [
+                    'timestamp' => $timestamp,
+                    'observer' => $pegawai ? $pegawai->nama : ($observerName ?? 'Unassigned'),
+                    'status' => 'berhasil',
+                    'reason' => null,
+                ];
+            } catch (\Exception $e) {
                 $failedCount++;
                 $details[] = [
-                    'timestamp' => $item['data_timestamp'],
-                    'observer' => $item['observer_name'] ?? '-',
+                    'timestamp' => $timestamp,
+                    'observer' => $observerName,
                     'status' => 'gagal',
-                    'reason' => 'Format timestamp dari API tidak valid.',
+                    'reason' => $e->getMessage(),
                 ];
-                continue;
             }
-
-            $observerName = trim($item['observer_name'] ?? '');
-            $matchedPegawaiId = null;
-            $reasons = [];
-
-            if ($observerName) {
-                $matched = $pegawais->first(function ($p) use ($observerName) {
-                    return strcasecmp($p->nama, $observerName) === 0 ||
-                           stripos($p->nama, $observerName) !== false ||
-                           stripos($observerName, $p->nama) !== false;
-                });
-                if ($matched) {
-                    $matchedPegawaiId = $matched->id;
-                } else {
-                    $reasons[] = "Observer '{$observerName}' tidak ditemukan pada Master Pegawai Stasiun";
-                }
-            } else {
-                $reasons[] = "Nama Observer kosong/tidak diisi dari BMKGSoft";
-            }
-
-            $sandiText = trim($item['sandi_pibal'] ?? '');
-            $penghentian = trim($item['penghentian_pengamatan'] ?? '');
-
-            if (empty($sandiText) && empty($penghentian)) {
-                $reasons[] = "Sandi PIBAL dan alasan penghentian keduanya tidak tersedia";
-            }
-
-            $isSuccess = empty($reasons);
-
-            DataPibal::updateOrCreate(
-                ['data_timestamp' => $utcTimestamp],
-                [
-                    'station_id' => $item['station_id'] ?? 138,
-                    'alias_station_id' => $item['alias_station_id'] ?? 97460,
-                    'station_name' => $item['station_name'] ?? 'Stasiun Meteorologi Oesman Sadik',
-                    'observer_name' => $observerName ?: null,
-                    'pegawai_id' => $matchedPegawaiId,
-                    'wind_dir_surface' => isset($item['wind_dir_surface']) ? (float) $item['wind_dir_surface'] : null,
-                    'wind_speed_surface' => isset($item['wind_speed_surface']) ? (float) $item['wind_speed_surface'] : null,
-                    'station_elevation' => $item['station_elevation'] ?? null,
-                    'sandi_pibal' => $sandiText ?: null,
-                    'penghentian_pengamatan' => $penghentian ?: null,
-                    'pembacaan_azimuth_elevasi' => $item['pembacaan_azimuth_elevasi'] ?? null,
-                    'hasil_lapisan_wd_ws_dddff' => $item['hasil_lapisan_wd_ws_dddff'] ?? null,
-                ]
-            );
-
-            if ($isSuccess) {
-                $syncedCount++;
-            } else {
-                $failedCount++;
-            }
-
-            $details[] = [
-                'timestamp' => $utcTimestamp,
-                'observer' => $observerName ?: 'Unassigned',
-                'status' => $isSuccess ? 'berhasil' : 'gagal',
-                'reason' => empty($reasons) ? 'Data PIBAL tersimpan dengan sukses' : implode('; ', $reasons),
-            ];
         }
-
-        $totalFetched = count($records);
-        $message = "Hasil Sinkronisasi BMKGSoft: Total {$totalFetched} data diterima ({$syncedCount} Berhasil" . ($failedCount > 0 ? ", {$failedCount} Gagal/Peringatan" : "") . ").";
 
         return [
             'success' => true,
             'synced_count' => $syncedCount,
             'failed_count' => $failedCount,
-            'total_fetched' => $totalFetched,
-            'message' => $message,
-            'error_reason' => $failedCount > 0 ? "Ada {$failedCount} data yang memerlukan perhatian" : null,
+            'total_fetched' => count($items),
+            'message' => "Berhasil menyinkronkan {$syncedCount} dari " . count($items) . " data PIBAL.",
+            'error_reason' => null,
             'details' => $details,
         ];
     }
 
     /**
-     * Fetch TAFOR raw data from BMKGSoft API for a specific date range.
+     * Fetch TAFOR GTS observation data from BMKGSoft API v21 GTS Entry.
      */
-    public function fetchTaforDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138, string $cccc = 'WAEL'): array
+    public function fetchTaforDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
     {
         $token = $this->getToken();
         if (!$token) {
@@ -277,25 +215,23 @@ class BmkgsoftService
                 ->withHeaders([
                     'accept' => 'application/json',
                     'Authorization' => "Bearer {$token}",
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 ])
                 ->get($url, [
                     'start' => 0,
                     'size' => 100,
                     'type_message' => 'taf',
-                    'cccc' => $cccc,
+                    'cccc' => 'WAEL',
                     'date_from' => $dateFrom,
                     'date_to' => $dateTo,
                     'order_by' => 'data_timestamp',
-                    'is_order_by_asc' => 'false',
+                    'is_order_by_asc' => 'true',
                 ]);
 
             if ($response->successful()) {
-                $json = $response->json();
-                $data = $json['data'] ?? [];
                 return [
                     'success' => true,
-                    'data' => is_array($data) ? $data : [],
+                    'data' => $response->json('data', []),
                     'error' => null,
                 ];
             }
@@ -303,185 +239,140 @@ class BmkgsoftService
             return [
                 'success' => false,
                 'data' => [],
-                'error' => "API BMKGSoft merespon dengan status HTTP {$response->status()}",
+                'error' => "HTTP {$response->status()}: " . $response->body(),
             ];
-        } catch (\Throwable $e) {
-            Log::error("Fetch TAFOR data failed: " . $e->getMessage());
+        } catch (\Exception $e) {
             return [
                 'success' => false,
                 'data' => [],
-                'error' => "Koneksi ke API BMKGSoft gagal: " . $e->getMessage(),
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Fetch and synchronize TAFOR data in 10-day chunks into data_tafor table.
+     * Sync TAFOR observation data into data_tafor table using 10-day chunked looping.
      */
-    public function syncTaforData(string $dateFrom, string $dateTo, int $stationId = 138, string $cccc = 'WAEL'): array
+    public function syncTaforData(string $startDate, string $endDate, int $stationId = 138): array
     {
-        $startCarbon = Carbon::parse($dateFrom);
-        $endCarbon = Carbon::parse($dateTo);
+        $start = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
 
-        $records = [];
-        $fetchedIds = [];
-        $lastError = null;
+        $totalSynced = 0;
+        $totalFailed = 0;
+        $totalFetched = 0;
+        $allDetails = [];
+        $overallError = null;
 
-        $currentStart = $startCarbon->copy();
-
-        while ($currentStart->lt($endCarbon)) {
-            $currentEnd = $currentStart->copy()->addDays(9)->endOfDay();
-            if ($currentEnd->gt($endCarbon)) {
-                $currentEnd = $endCarbon->copy();
+        $chunkStart = $start->copy();
+        while ($chunkStart->lte($end)) {
+            $chunkEnd = $chunkStart->copy()->addDays(9)->endOfDay();
+            if ($chunkEnd->gt($end)) {
+                $chunkEnd = $end->copy();
             }
 
-            $chunkFrom = $currentStart->format('Y-m-d\TH:i:s\Z');
-            $chunkTo = $currentEnd->format('Y-m-d\TH:i:s\Z');
+            $dateFromStr = $chunkStart->format('Y-m-d\TH:i:s\Z');
+            $dateToStr = $chunkEnd->format('Y-m-d\TH:i:s\Z');
 
-            $fetchResult = $this->fetchTaforDataWithResult($chunkFrom, $chunkTo, $stationId, $cccc);
-            if ($fetchResult['success']) {
-                foreach ($fetchResult['data'] as $rec) {
-                    $recId = $rec['id'] ?? null;
-                    if ($recId && in_array($recId, $fetchedIds)) {
-                        continue;
-                    }
-                    if ($recId) {
-                        $fetchedIds[] = $recId;
-                    }
-                    $records[] = $rec;
+            $fetchResult = $this->fetchTaforDataWithResult($dateFromStr, $dateToStr, $stationId);
+
+            if (!$fetchResult['success']) {
+                $overallError = $fetchResult['error'];
+                break;
+            }
+
+            $items = $fetchResult['data'];
+            $totalFetched += count($items);
+
+            foreach ($items as $item) {
+                $timestamp = $item['data_timestamp'] ?? null;
+                $observerName = $item['sender_username'] ?? ($item['observer_name'] ?? null);
+
+                if (!$timestamp) {
+                    $totalFailed++;
+                    $allDetails[] = [
+                        'timestamp' => 'N/A',
+                        'observer' => $observerName,
+                        'status' => 'gagal',
+                        'reason' => 'Missing data_timestamp field',
+                    ];
+                    continue;
                 }
-            } else {
-                $lastError = $fetchResult['error'];
+
+                $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName);
+
+                try {
+                    DataTafor::updateOrCreate(
+                        [
+                            'data_timestamp' => Carbon::parse($timestamp)->format('Y-m-d H:i:s'),
+                        ],
+                        [
+                            'bmkgsoft_entry_id' => $item['id'] ?? null,
+                            'station_id' => $item['bmkgsoft_id'] ?? $stationId,
+                            'alias_station_id' => $item['station_wmo_id'] ?? 97460,
+                            'station_name' => $item['station_name'] ?? 'Stasiun Meteorologi Oesman Sadik',
+                            'cccc' => $item['cccc'] ?? 'WAEL',
+                            'ttaaii' => $item['ttaaii'] ?? 'FTID40',
+                            'type_message' => $item['type_message'] ?? 'taf',
+                            'bbb' => $item['bbb'] ?? null,
+                            'received_timestamp' => isset($item['received_timestamp']) ? Carbon::parse($item['received_timestamp'])->format('Y-m-d H:i:s') : null,
+                            'sent_timestamp' => isset($item['sent_timestamp']) ? Carbon::parse($item['sent_timestamp'])->format('Y-m-d H:i:s') : null,
+                            'sandi' => $item['sandi'] ?? null,
+                            'status' => $item['status'] ?? 'sent',
+                            'sender_username' => $item['sender_username'] ?? null,
+                            'observer_name' => $observerName,
+                            'pegawai_id' => $pegawai ? $pegawai->id : null,
+                        ]
+                    );
+
+                    $totalSynced++;
+                    $allDetails[] = [
+                        'timestamp' => $timestamp,
+                        'observer' => $pegawai ? $pegawai->nama : ($observerName ?? 'Unassigned'),
+                        'status' => 'berhasil',
+                        'reason' => null,
+                    ];
+                } catch (\Exception $e) {
+                    $totalFailed++;
+                    $allDetails[] = [
+                        'timestamp' => $timestamp,
+                        'observer' => $observerName,
+                        'status' => 'gagal',
+                        'reason' => $e->getMessage(),
+                    ];
+                }
             }
 
-            $currentStart = $currentEnd->copy()->addSecond();
+            $chunkStart = $chunkEnd->copy()->addSecond();
         }
 
-        if (empty($records)) {
+        if ($overallError && $totalSynced === 0) {
             return [
-                'success' => $lastError === null,
+                'success' => false,
                 'synced_count' => 0,
                 'failed_count' => 0,
                 'total_fetched' => 0,
-                'message' => $lastError ?: 'Tidak ada data TAFOR ditemukan dari BMKGSoft API untuk periode ini.',
-                'error_reason' => $lastError,
+                'message' => 'Gagal mengambil data TAFOR dari BMKGSoft API.',
+                'error_reason' => $overallError,
                 'details' => [],
             ];
         }
 
-        $pegawais = Pegawai::all();
-        $syncedCount = 0;
-        $failedCount = 0;
-        $details = [];
-
-        foreach ($records as $item) {
-            if (empty($item['data_timestamp'])) {
-                $failedCount++;
-                $details[] = [
-                    'timestamp' => 'Tanpa Timestamp',
-                    'observer' => $item['sender_username'] ?? '-',
-                    'status' => 'gagal',
-                    'reason' => 'Attribute data_timestamp tidak ditemukan pada data TAFOR BMKGSoft API.',
-                ];
-                continue;
-            }
-
-            try {
-                $utcTimestamp = Carbon::parse($item['data_timestamp'], 'UTC')->toDateTimeString();
-            } catch (\Throwable $e) {
-                $failedCount++;
-                $details[] = [
-                    'timestamp' => $item['data_timestamp'],
-                    'observer' => $item['sender_username'] ?? '-',
-                    'status' => 'gagal',
-                    'reason' => 'Format timestamp dari API tidak valid.',
-                ];
-                continue;
-            }
-
-            $senderUsername = trim($item['sender_username'] ?? '');
-            $observerName = trim($item['observer_name'] ?? '');
-            $searchName = $observerName ?: $senderUsername;
-
-            $matchedPegawaiId = null;
-            $reasons = [];
-
-            if ($searchName) {
-                $matched = $pegawais->first(function ($p) use ($searchName) {
-                    return strcasecmp($p->nama, $searchName) === 0 ||
-                           stripos($p->nama, $searchName) !== false ||
-                           stripos($searchName, $p->nama) !== false;
-                });
-                if ($matched) {
-                    $matchedPegawaiId = $matched->id;
-                }
-            }
-
-            $sandiText = trim($item['sandi'] ?? '');
-            if (empty($sandiText)) {
-                $reasons[] = "Sandi TAFOR tidak tersedia / kosong";
-            }
-
-            $isSuccess = empty($reasons);
-
-            $receivedTimestamp = !empty($item['received_timestamp']) ? Carbon::parse($item['received_timestamp'])->toDateTimeString() : null;
-            $sentTimestamp = !empty($item['sent_timestamp']) ? Carbon::parse($item['sent_timestamp'])->toDateTimeString() : null;
-
-            DataTafor::updateOrCreate(
-                [
-                    'bmkgsoft_entry_id' => $item['id'] ?? null,
-                ],
-                [
-                    'station_id' => $item['bmkgsoft_id'] ?? $stationId,
-                    'alias_station_id' => 97460,
-                    'station_name' => $item['station_name'] ?? 'Stasiun Meteorologi Oesman Sadik',
-                    'cccc' => $item['cccc'] ?? $cccc,
-                    'ttaaii' => $item['ttaaii'] ?? null,
-                    'type_message' => $item['type_message'] ?? 'taf',
-                    'bbb' => $item['bbb'] ?? null,
-                    'data_timestamp' => $utcTimestamp,
-                    'received_timestamp' => $receivedTimestamp,
-                    'sent_timestamp' => $sentTimestamp,
-                    'sandi' => $sandiText ?: null,
-                    'status' => $item['status'] ?? null,
-                    'sender_username' => $senderUsername ?: null,
-                    'observer_name' => $observerName ?: null,
-                    'pegawai_id' => $matchedPegawaiId,
-                ]
-            );
-
-            if ($isSuccess) {
-                $syncedCount++;
-            } else {
-                $failedCount++;
-            }
-
-            $details[] = [
-                'timestamp' => $utcTimestamp,
-                'observer' => $searchName ?: 'Unassigned',
-                'status' => $isSuccess ? 'berhasil' : 'gagal',
-                'reason' => empty($reasons) ? 'Sandi TAFOR tersimpan dengan sukses' : implode('; ', $reasons),
-            ];
-        }
-
-        $totalFetched = count($records);
-        $message = "Hasil Sinkronisasi TAFOR BMKGSoft: Total {$totalFetched} data diterima ({$syncedCount} Berhasil" . ($failedCount > 0 ? ", {$failedCount} Gagal/Peringatan" : "") . ").";
-
         return [
             'success' => true,
-            'synced_count' => $syncedCount,
-            'failed_count' => $failedCount,
+            'synced_count' => $totalSynced,
+            'failed_count' => $totalFailed,
             'total_fetched' => $totalFetched,
-            'message' => $message,
-            'error_reason' => $failedCount > 0 ? "Ada {$failedCount} data yang memerlukan perhatian" : null,
-            'details' => $details,
+            'message' => "Berhasil menyinkronkan {$totalSynced} dari {$totalFetched} data TAFOR.",
+            'error_reason' => $overallError,
+            'details' => $allDetails,
         ];
     }
 
     /**
-     * Fetch METAR raw data from BMKGSoft API for a specific date range.
+     * Fetch METAR GTS observation data from BMKGSoft API v21 GTS Entry.
      */
-    public function fetchMetarDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138, string $cccc = 'WAEL'): array
+    public function fetchMetarDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
     {
         $token = $this->getToken();
         if (!$token) {
@@ -499,25 +390,23 @@ class BmkgsoftService
                 ->withHeaders([
                     'accept' => 'application/json',
                     'Authorization' => "Bearer {$token}",
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 ])
                 ->get($url, [
                     'start' => 0,
                     'size' => 100,
                     'type_message' => 'metar',
-                    'cccc' => $cccc,
+                    'cccc' => 'WAEL',
                     'date_from' => $dateFrom,
                     'date_to' => $dateTo,
                     'order_by' => 'data_timestamp',
-                    'is_order_by_asc' => 'false',
+                    'is_order_by_asc' => 'true',
                 ]);
 
             if ($response->successful()) {
-                $json = $response->json();
-                $data = $json['data'] ?? [];
                 return [
                     'success' => true,
-                    'data' => is_array($data) ? $data : [],
+                    'data' => $response->json('data', []),
                     'error' => null,
                 ];
             }
@@ -525,179 +414,323 @@ class BmkgsoftService
             return [
                 'success' => false,
                 'data' => [],
-                'error' => "API BMKGSoft merespon dengan status HTTP {$response->status()}",
+                'error' => "HTTP {$response->status()}: " . $response->body(),
             ];
-        } catch (\Throwable $e) {
-            Log::error("Fetch METAR data failed: " . $e->getMessage());
+        } catch (\Exception $e) {
             return [
                 'success' => false,
                 'data' => [],
-                'error' => "Koneksi ke API BMKGSoft gagal: " . $e->getMessage(),
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Fetch and synchronize METAR data in 2-day chunks into data_metar table.
+     * Sync METAR observation data into data_metar table using 2-day chunked looping.
      */
-    public function syncMetarData(string $dateFrom, string $dateTo, int $stationId = 138, string $cccc = 'WAEL'): array
+    public function syncMetarData(string $startDate, string $endDate, int $stationId = 138): array
     {
-        $startCarbon = Carbon::parse($dateFrom);
-        $endCarbon = Carbon::parse($dateTo);
+        $start = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
 
-        $records = [];
-        $fetchedIds = [];
-        $lastError = null;
+        $totalSynced = 0;
+        $totalFailed = 0;
+        $totalFetched = 0;
+        $allDetails = [];
+        $overallError = null;
 
-        $currentStart = $startCarbon->copy();
-
-        while ($currentStart->lt($endCarbon)) {
-            $currentEnd = $currentStart->copy()->addDays(1)->endOfDay();
-            if ($currentEnd->gt($endCarbon)) {
-                $currentEnd = $endCarbon->copy();
+        $chunkStart = $start->copy();
+        while ($chunkStart->lte($end)) {
+            $chunkEnd = $chunkStart->copy()->addDays(1)->endOfDay();
+            if ($chunkEnd->gt($end)) {
+                $chunkEnd = $end->copy();
             }
 
-            $chunkFrom = $currentStart->format('Y-m-d\TH:i:s\Z');
-            $chunkTo = $currentEnd->format('Y-m-d\TH:i:s\Z');
+            $dateFromStr = $chunkStart->format('Y-m-d\TH:i:s\Z');
+            $dateToStr = $chunkEnd->format('Y-m-d\TH:i:s\Z');
 
-            $fetchResult = $this->fetchMetarDataWithResult($chunkFrom, $chunkTo, $stationId, $cccc);
-            if ($fetchResult['success']) {
-                foreach ($fetchResult['data'] as $rec) {
-                    $recId = $rec['id'] ?? null;
-                    if ($recId && in_array($recId, $fetchedIds)) {
-                        continue;
-                    }
-                    if ($recId) {
-                        $fetchedIds[] = $recId;
-                    }
-                    $records[] = $rec;
+            $fetchResult = $this->fetchMetarDataWithResult($dateFromStr, $dateToStr, $stationId);
+
+            if (!$fetchResult['success']) {
+                $overallError = $fetchResult['error'];
+                break;
+            }
+
+            $items = $fetchResult['data'];
+            $totalFetched += count($items);
+
+            foreach ($items as $item) {
+                $timestamp = $item['data_timestamp'] ?? null;
+                $observerName = $item['sender_username'] ?? ($item['observer_name'] ?? null);
+
+                if (!$timestamp) {
+                    $totalFailed++;
+                    $allDetails[] = [
+                        'timestamp' => 'N/A',
+                        'observer' => $observerName,
+                        'status' => 'gagal',
+                        'reason' => 'Missing data_timestamp field',
+                    ];
+                    continue;
                 }
-            } else {
-                $lastError = $fetchResult['error'];
+
+                $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName);
+
+                try {
+                    DataMetar::updateOrCreate(
+                        [
+                            'data_timestamp' => Carbon::parse($timestamp)->format('Y-m-d H:i:s'),
+                        ],
+                        [
+                            'bmkgsoft_entry_id' => $item['id'] ?? null,
+                            'station_id' => $item['bmkgsoft_id'] ?? $stationId,
+                            'alias_station_id' => $item['station_wmo_id'] ?? 97460,
+                            'station_name' => $item['station_name'] ?? 'Stasiun Meteorologi Oesman Sadik',
+                            'cccc' => $item['cccc'] ?? 'WAEL',
+                            'ttaaii' => $item['ttaaii'] ?? 'SAID40',
+                            'type_message' => $item['type_message'] ?? 'metar',
+                            'bbb' => $item['bbb'] ?? null,
+                            'received_timestamp' => isset($item['received_timestamp']) ? Carbon::parse($item['received_timestamp'])->format('Y-m-d H:i:s') : null,
+                            'sent_timestamp' => isset($item['sent_timestamp']) ? Carbon::parse($item['sent_timestamp'])->format('Y-m-d H:i:s') : null,
+                            'sandi' => $item['sandi'] ?? null,
+                            'status' => $item['status'] ?? 'sent',
+                            'sender_username' => $item['sender_username'] ?? null,
+                            'observer_name' => $observerName,
+                            'pegawai_id' => $pegawai ? $pegawai->id : null,
+                        ]
+                    );
+
+                    $totalSynced++;
+                    $allDetails[] = [
+                        'timestamp' => $timestamp,
+                        'observer' => $pegawai ? $pegawai->nama : ($observerName ?? 'Unassigned'),
+                        'status' => 'berhasil',
+                        'reason' => null,
+                    ];
+                } catch (\Exception $e) {
+                    $totalFailed++;
+                    $allDetails[] = [
+                        'timestamp' => $timestamp,
+                        'observer' => $observerName,
+                        'status' => 'gagal',
+                        'reason' => $e->getMessage(),
+                    ];
+                }
             }
 
-            $currentStart = $currentEnd->copy()->addSecond();
+            $chunkStart = $chunkEnd->copy()->addSecond();
         }
 
-        if (empty($records)) {
+        if ($overallError && $totalSynced === 0) {
             return [
-                'success' => $lastError === null,
+                'success' => false,
                 'synced_count' => 0,
                 'failed_count' => 0,
                 'total_fetched' => 0,
-                'message' => $lastError ?: 'Tidak ada data METAR ditemukan dari BMKGSoft API untuk periode ini.',
-                'error_reason' => $lastError,
+                'message' => 'Gagal mengambil data METAR dari BMKGSoft API.',
+                'error_reason' => $overallError,
                 'details' => [],
             ];
         }
 
-        $pegawais = Pegawai::all();
-        $syncedCount = 0;
-        $failedCount = 0;
-        $details = [];
+        return [
+            'success' => true,
+            'synced_count' => $totalSynced,
+            'failed_count' => $totalFailed,
+            'total_fetched' => $totalFetched,
+            'message' => "Berhasil menyinkronkan {$totalSynced} dari {$totalFetched} data METAR.",
+            'error_reason' => $overallError,
+            'details' => $allDetails,
+        ];
+    }
 
-        foreach ($records as $item) {
-            if (empty($item['data_timestamp'])) {
-                $failedCount++;
-                $details[] = [
-                    'timestamp' => 'Tanpa Timestamp',
-                    'observer' => $item['sender_username'] ?? '-',
-                    'status' => 'gagal',
-                    'reason' => 'Attribute data_timestamp tidak ditemukan pada data METAR BMKGSoft API.',
-                ];
-                continue;
-            }
-
-            try {
-                $utcTimestamp = Carbon::parse($item['data_timestamp'], 'UTC')->toDateTimeString();
-            } catch (\Throwable $e) {
-                $failedCount++;
-                $details[] = [
-                    'timestamp' => $item['data_timestamp'],
-                    'observer' => $item['sender_username'] ?? '-',
-                    'status' => 'gagal',
-                    'reason' => 'Format timestamp dari API tidak valid.',
-                ];
-                continue;
-            }
-
-            $senderUsername = trim($item['sender_username'] ?? '');
-            $observerName = trim($item['observer_name'] ?? '');
-            $searchName = $observerName ?: $senderUsername;
-
-            $matchedPegawaiId = null;
-            $reasons = [];
-
-            if ($searchName && $searchName !== 'root') {
-                $matched = $pegawais->first(function ($p) use ($searchName) {
-                    return strcasecmp($p->nama, $searchName) === 0 ||
-                           stripos($p->nama, $searchName) !== false ||
-                           stripos($searchName, $p->nama) !== false;
-                });
-                if ($matched) {
-                    $matchedPegawaiId = $matched->id;
-                }
-            }
-
-            $sandiText = trim($item['sandi'] ?? '');
-            if (empty($sandiText)) {
-                $reasons[] = "Sandi METAR tidak tersedia / kosong";
-            }
-
-            $isSuccess = empty($reasons);
-
-            $receivedTimestamp = !empty($item['received_timestamp']) ? Carbon::parse($item['received_timestamp'])->toDateTimeString() : null;
-            $sentTimestamp = !empty($item['sent_timestamp']) ? Carbon::parse($item['sent_timestamp'])->toDateTimeString() : null;
-
-            DataMetar::updateOrCreate(
-                [
-                    'bmkgsoft_entry_id' => $item['id'] ?? null,
-                ],
-                [
-                    'station_id' => $item['bmkgsoft_id'] ?? $stationId,
-                    'alias_station_id' => 97460,
-                    'station_wmo_id' => $item['station_wmo_id'] ?? null,
-                    'station_name' => $item['station_name'] ?? 'Stasiun Meteorologi Oesman Sadik',
-                    'cccc' => $item['cccc'] ?? $cccc,
-                    'ttaaii' => $item['ttaaii'] ?? null,
-                    'type_message' => $item['type_message'] ?? 'metar',
-                    'bbb' => $item['bbb'] ?? null,
-                    'data_timestamp' => $utcTimestamp,
-                    'received_timestamp' => $receivedTimestamp,
-                    'sent_timestamp' => $sentTimestamp,
-                    'sandi' => $sandiText ?: null,
-                    'status' => $item['status'] ?? null,
-                    'sender_username' => $senderUsername ?: null,
-                    'observer_name' => $observerName ?: null,
-                    'pegawai_id' => $matchedPegawaiId,
-                ]
-            );
-
-            if ($isSuccess) {
-                $syncedCount++;
-            } else {
-                $failedCount++;
-            }
-
-            $details[] = [
-                'timestamp' => $utcTimestamp,
-                'observer' => $searchName ?: 'Unassigned',
-                'status' => $isSuccess ? 'berhasil' : 'gagal',
-                'reason' => empty($reasons) ? 'Sandi METAR tersimpan dengan sukses' : implode('; ', $reasons),
+    /**
+     * Fetch Synoptic observation data from BMKGSoft API v21 export preview.
+     */
+    public function fetchSinoptikDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
+    {
+        $token = $this->getToken();
+        if (!$token) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => 'Gagal mendapatkan token otentikasi BMKGSoft.',
             ];
         }
 
-        $totalFetched = count($records);
-        $message = "Hasil Sinkronisasi METAR BMKGSoft: Total {$totalFetched} data diterima ({$syncedCount} Berhasil" . ($failedCount > 0 ? ", {$failedCount} Gagal/Peringatan" : "") . ").";
+        try {
+            $url = "{$this->baseUrl}/api/v21/export/observation/by-station/preview";
+            $response = Http::withoutVerifying()
+                ->timeout(20)
+                ->withHeaders([
+                    'accept' => 'application/json',
+                    'content-type' => 'application/json',
+                    'Authorization' => "Bearer {$token}",
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                ])
+                ->post($url, [
+                    'station_id' => [$stationId],
+                    'data_type' => 'sinoptik',
+                    'date_from' => $dateFrom,
+                    'date_to' => $dateTo,
+                ]);
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'data' => $response->json('data', []),
+                    'error' => null,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => "HTTP {$response->status()}: " . $response->body(),
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Sync Synoptic observation data into data_sinoptik table using 10-day chunked looping.
+     */
+    public function syncSinoptikData(string $startDate, string $endDate, int $stationId = 138): array
+    {
+        $start = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
+
+        $totalSynced = 0;
+        $totalFailed = 0;
+        $totalFetched = 0;
+        $allDetails = [];
+        $overallError = null;
+
+        $chunkStart = $start->copy();
+        while ($chunkStart->lte($end)) {
+            $chunkEnd = $chunkStart->copy()->addDays(9)->endOfDay();
+            if ($chunkEnd->gt($end)) {
+                $chunkEnd = $end->copy();
+            }
+
+            $dateFromStr = $chunkStart->format('Y-m-d\TH:i:s\Z');
+            $dateToStr = $chunkEnd->format('Y-m-d\TH:i:s\Z');
+
+            $fetchResult = $this->fetchSinoptikDataWithResult($dateFromStr, $dateToStr, $stationId);
+
+            if (!$fetchResult['success']) {
+                $overallError = $fetchResult['error'];
+                break;
+            }
+
+            $payloadData = $fetchResult['data'];
+            $headersList = $payloadData['headers'] ?? [];
+            $rowsList = $payloadData['rows'] ?? ($payloadData['data'] ?? []);
+
+            $totalFetched += count($rowsList);
+
+            // Flip headers array to map column names to row indexes
+            $headerMap = array_flip($headersList);
+
+            $getValue = function (array $row, string $key) use ($headerMap) {
+                if (isset($headerMap[$key])) {
+                    $colIdx = $headerMap[$key];
+                    return $row[$colIdx] ?? null;
+                }
+                return null;
+            };
+
+            foreach ($rowsList as $row) {
+                $timestamp = $getValue($row, 'data_timestamp');
+                $observerName = $getValue($row, 'observer_name');
+                $sandiRaw = $getValue($row, 'edited_encoded_synop') ?? $getValue($row, 'encoded_synop');
+
+                if (!$timestamp) {
+                    $totalFailed++;
+                    $allDetails[] = [
+                        'timestamp' => 'N/A',
+                        'observer' => $observerName,
+                        'status' => 'gagal',
+                        'reason' => 'Missing data_timestamp field',
+                    ];
+                    continue;
+                }
+
+                $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName);
+
+                try {
+                    DataSinoptik::updateOrCreate(
+                        [
+                            'data_timestamp' => Carbon::parse($timestamp)->format('Y-m-d H:i:s'),
+                        ],
+                        [
+                            'station_id' => $stationId,
+                            'station_name' => $getValue($row, 'station_name') ?? 'Stasiun Meteorologi Oesman Sadik',
+                            'sandi' => $sandiRaw,
+                            'temp_drybulb' => $getValue($row, 'temp_drybulb_c_tttttt'),
+                            'temp_max' => $getValue($row, 'temp_max_c_txtxtx'),
+                            'temp_min' => $getValue($row, 'temp_min_c_tntntn'),
+                            'temp_wetbulb' => $getValue($row, 'temp_wetbulb_c'),
+                            'temp_dewpoint' => $getValue($row, 'temp_dewpoint_c_tdtdtd'),
+                            'humidity' => $getValue($row, 'relative_humidity_pc'),
+                            'pressure_qff' => $getValue($row, 'pressure_qff_mb_derived'),
+                            'pressure_qfe' => $getValue($row, 'pressure_qfe_mb_derived'),
+                            'wind_dir' => $getValue($row, 'wind_dir_deg_dd'),
+                            'wind_speed' => $getValue($row, 'wind_speed_ff'),
+                            'visibility' => $getValue($row, 'visibility_vv'),
+                            'rainfall' => $getValue($row, 'rainfall_last_mm'),
+                            'cloud_cover' => $getValue($row, 'cloud_cover_oktas_m'),
+                            'observer_name' => $observerName,
+                            'pegawai_id' => $pegawai ? $pegawai->id : null,
+                        ]
+                    );
+
+                    $totalSynced++;
+                    $allDetails[] = [
+                        'timestamp' => $timestamp,
+                        'observer' => $pegawai ? $pegawai->nama : ($observerName ?? 'Unassigned'),
+                        'status' => 'berhasil',
+                        'reason' => null,
+                    ];
+                } catch (\Exception $e) {
+                    $totalFailed++;
+                    $allDetails[] = [
+                        'timestamp' => $timestamp,
+                        'observer' => $observerName,
+                        'status' => 'gagal',
+                        'reason' => $e->getMessage(),
+                    ];
+                }
+            }
+
+            $chunkStart = $chunkEnd->copy()->addSecond();
+        }
+
+        if ($overallError && $totalSynced === 0) {
+            return [
+                'success' => false,
+                'synced_count' => 0,
+                'failed_count' => 0,
+                'total_fetched' => 0,
+                'message' => 'Gagal mengambil data Sinoptik dari BMKGSoft API.',
+                'error_reason' => $overallError,
+                'details' => [],
+            ];
+        }
 
         return [
             'success' => true,
-            'synced_count' => $syncedCount,
-            'failed_count' => $failedCount,
+            'synced_count' => $totalSynced,
+            'failed_count' => $totalFailed,
             'total_fetched' => $totalFetched,
-            'message' => $message,
-            'error_reason' => $failedCount > 0 ? "Ada {$failedCount} data yang memerlukan perhatian" : null,
-            'details' => $details,
+            'message' => "Berhasil menyinkronkan {$totalSynced} dari {$totalFetched} data Sinoptik.",
+            'error_reason' => $overallError,
+            'details' => $allDetails,
         ];
     }
 }

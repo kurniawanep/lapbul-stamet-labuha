@@ -59,14 +59,14 @@ test('metar sync fetches and stores data into data_metar table using 2-day chunk
                     'id' => 6910675,
                     'bmkgsoft_id' => 138,
                     'station_name' => 'Stasiun Meteorologi Oesman Sadik',
-                    'data_timestamp' => '2026-08-13T14:00:00Z',
-                    'received_timestamp' => '2026-08-13T13:58:03Z',
-                    'sent_timestamp' => '2026-08-13T13:58:03Z',
+                    'data_timestamp' => '2026-08-01T14:00:00Z',
+                    'received_timestamp' => '2026-08-01T13:58:03Z',
+                    'sent_timestamp' => '2026-08-01T13:58:03Z',
                     'type_message' => 'metar',
                     'ttaaii' => 'SAID40',
                     'cccc' => 'WAEL',
                     'bbb' => null,
-                    'sandi' => 'SAID40 WAEL 131400\nMETAR WAEL 131400Z AUTO VRB01KT //// ////// 26/24 Q1013=',
+                    'sandi' => 'SAID40 WAEL 011400\nMETAR WAEL 011400Z AUTO VRB01KT //// ////// 26/24 Q1013=',
                     'status' => 'sent',
                     'sender_username' => 'Rezky Ramadhan',
                 ],
@@ -75,7 +75,7 @@ test('metar sync fetches and stores data into data_metar table using 2-day chunk
     ]);
 
     $service = new BmkgsoftService();
-    $result = $service->syncMetarData('2026-08-01T00:00:00Z', '2026-08-13T23:59:59Z', 138);
+    $result = $service->syncMetarData('2026-08-01T00:00:00Z', '2026-08-01T23:59:59Z', 138);
 
     expect($result['synced_count'])->toBe(1);
 

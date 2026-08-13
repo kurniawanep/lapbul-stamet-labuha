@@ -4,6 +4,7 @@ use App\Http\Controllers\JadwalController;
 use App\Http\Controllers\MetarController;
 use App\Http\Controllers\PegawaiController;
 use App\Http\Controllers\PibalController;
+use App\Http\Controllers\SinoptikController;
 use App\Http\Controllers\TaforController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +43,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Laporan Bulanan - Data METAR Routes
     Route::get('/laporan/metar', [MetarController::class, 'index'])->name('laporan.metar');
     Route::post('/laporan/metar/sync', [MetarController::class, 'sync'])->name('laporan.metar.sync');
+
+    // Laporan Bulanan - Data Sinoptik Routes
+    Route::get('/laporan/sinoptik', [SinoptikController::class, 'index'])->name('laporan.sinoptik');
+    Route::post('/laporan/sinoptik/sync', [SinoptikController::class, 'sync'])->name('laporan.sinoptik.sync');
 });
 
 require __DIR__.'/settings.php';

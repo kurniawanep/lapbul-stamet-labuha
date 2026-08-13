@@ -9,10 +9,38 @@ use Carbon\Carbon;
 class ObserverResolverService
 {
     /**
+     * Resolve Pegawai model by observer name or duty schedule timestamp.
+     */
+    public function resolvePegawai(?string $timestamp, ?string $observerName = null): ?Pegawai
+    {
+        // 1. Try matching by observer name if provided
+        if (!empty($observerName)) {
+            $cleanName = trim($observerName);
+            $pegawai = Pegawai::where('nama', 'LIKE', "%{$cleanName}%")->first();
+            if ($pegawai) {
+                return $pegawai;
+            }
+
+            // Fuzzy match first word or name token
+            $parts = explode(' ', $cleanName);
+            if (!empty($parts[0]) && strlen($parts[0]) >= 3) {
+                $pegawai = Pegawai::where('nama', 'LIKE', "%{$parts[0]}%")->first();
+                if ($pegawai) {
+                    return $pegawai;
+                }
+            }
+        }
+
+        // 2. Fall back to duty schedule by timestamp if available
+        if (!empty($timestamp)) {
+            return $this->getObserverByTimestamp($timestamp);
+        }
+
+        return null;
+    }
+
+    /**
      * Resolve the duty observer (Pegawai) for a given date-time string in WIT timezone.
-     *
-     * @param string $dateTimeString e.g. "2026-08-10 08:30:00" or "2026-08-10 01:00:00"
-     * @return Pegawai|null
      */
     public function getObserverByTimestamp(string $dateTimeString): ?Pegawai
     {
