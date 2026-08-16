@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Briefcase, Calendar, CloudRain, Eye, FileText, Gauge, LayoutGrid, Sun, Users, Wind, Wrench } from 'lucide-react';
+import { Briefcase, Calendar, CloudRain, Eye, FileText, Gauge, LayoutGrid, MessageSquare, Sun, Users, Wind, Wrench } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -72,6 +72,11 @@ const mainNavItems: NavItem[] = [
                 title: 'Data Sinoptik',
                 href: '/laporan/sinoptik',
                 icon: Sun,
+            },
+            {
+                title: 'MET REPORT (QAM)',
+                href: '/laporan/met-report',
+                icon: MessageSquare,
             },
         ],
     },

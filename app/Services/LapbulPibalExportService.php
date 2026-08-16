@@ -17,28 +17,28 @@ class LapbulPibalExportService
         9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
     ];
 
-    // Table 1 (Upper Wind 1: Row 7 + Day) - Levels up to 15,000 ft
+    // Table 1 (Upper Wind 1: Row 7 + Day) - Levels up to 15,000 ft (Columns d d f f per height)
     protected array $levelColsMe39Table1 = [
-        1000 => ['ddd' => 'K', 'ff' => 'M'],
-        2000 => ['ddd' => 'O', 'ff' => 'Q'],
-        3000 => ['ddd' => 'S', 'ff' => 'U'],
-        5000 => ['ddd' => 'W', 'ff' => 'Y'],
-        7000 => ['ddd' => 'AA', 'ff' => 'AC'],
-        10000 => ['ddd' => 'AE', 'ff' => 'AG'],
-        12000 => ['ddd' => 'AI', 'ff' => 'AK'],
-        15000 => ['ddd' => 'AM', 'ff' => 'AO'],
+        1000 => ['d1' => 'K', 'd2' => 'L', 'f1' => 'M', 'f2' => 'N'],
+        2000 => ['d1' => 'O', 'd2' => 'P', 'f1' => 'Q', 'f2' => 'R'],
+        3000 => ['d1' => 'S', 'd2' => 'T', 'f1' => 'U', 'f2' => 'V'],
+        5000 => ['d1' => 'W', 'd2' => 'X', 'f1' => 'Y', 'f2' => 'Z'],
+        7000 => ['d1' => 'AA', 'd2' => 'AB', 'f1' => 'AC', 'f2' => 'AD'],
+        10000 => ['d1' => 'AE', 'd2' => 'AF', 'f1' => 'AG', 'f2' => 'AH'],
+        12000 => ['d1' => 'AI', 'd2' => 'AJ', 'f1' => 'AK', 'f2' => 'AL'],
+        15000 => ['d1' => 'AM', 'd2' => 'AN', 'f1' => 'AO', 'f2' => 'AP'],
     ];
 
-    // Table 2 (Upper Wind 2: Row 65 + Day) - Levels beyond 15,000 ft
+    // Table 2 (Upper Wind 2: Row 65 + Day) - Levels beyond 15,000 ft (Columns d d f f per height)
     protected array $levelColsMe39Table2 = [
-        18000 => ['ddd' => 'K', 'ff' => 'M'],
-        20000 => ['ddd' => 'O', 'ff' => 'Q'],
-        25000 => ['ddd' => 'S', 'ff' => 'U'],
-        30000 => ['ddd' => 'W', 'ff' => 'Y'],
-        35000 => ['ddd' => 'AA', 'ff' => 'AC'],
-        40000 => ['ddd' => 'AE', 'ff' => 'AG'],
-        45000 => ['ddd' => 'AI', 'ff' => 'AK'],
-        50000 => ['ddd' => 'AM', 'ff' => 'AO'],
+        18000 => ['d1' => 'K', 'd2' => 'L', 'f1' => 'M', 'f2' => 'N'],
+        20000 => ['d1' => 'O', 'd2' => 'P', 'f1' => 'Q', 'f2' => 'R'],
+        25000 => ['d1' => 'S', 'd2' => 'T', 'f1' => 'U', 'f2' => 'V'],
+        30000 => ['d1' => 'W', 'd2' => 'X', 'f1' => 'Y', 'f2' => 'Z'],
+        35000 => ['d1' => 'AA', 'd2' => 'AB', 'f1' => 'AC', 'f2' => 'AD'],
+        40000 => ['d1' => 'AE', 'd2' => 'AF', 'f1' => 'AG', 'f2' => 'AH'],
+        45000 => ['d1' => 'AI', 'd2' => 'AJ', 'f1' => 'AK', 'f2' => 'AL'],
+        50000 => ['d1' => 'AM', 'd2' => 'AN', 'f1' => 'AO', 'f2' => 'AP'],
     ];
 
     // Table 1 (Upper Air Steadiness 1: Row 5 + Day) - Levels up to 10,000 ft
@@ -68,7 +68,6 @@ class LapbulPibalExportService
     {
         $templatePath = resource_path('templates/excel/template_lapbul_pibal.xlsx');
         if (!file_exists($templatePath)) {
-            // Fallback if .xlsx template doesn't exist but .xlsm exists
             $templatePath = resource_path('templates/excel/template_lapbul_pibal.xlsm');
         }
         if (!file_exists($templatePath)) {
@@ -106,7 +105,6 @@ class LapbulPibalExportService
         // ----------------------------------------------------
         $rekapSheet = $spreadsheet->getSheetByName('Rekap');
         if ($rekapSheet) {
-            // Completely clean old rows and merged cells from template below row 2
             $highestRow = $rekapSheet->getHighestRow();
             if ($highestRow >= 3) {
                 foreach ($rekapSheet->getMergeCells() as $merged) {
@@ -130,7 +128,6 @@ class LapbulPibalExportService
                 foreach ([0, 12] as $hourIndex => $hour) {
                     $hourStr = sprintf('%02d', $hour);
 
-                    // Add 1 blank row gap before 12.00 Z if 00.00 Z was written for this day
                     if ($hourIndex > 0 && $dayWritten) {
                         $currentRow++;
                     }
@@ -139,7 +136,6 @@ class LapbulPibalExportService
                     $sandiText = trim($record->sandi_pibal ?? '');
                     $reason = $record->penghentian_pengamatan ?? null;
 
-                    // Check if sandi is missing or NIL
                     $isNil = empty($sandiText) 
                         || strcasecmp($sandiText, 'NIL') === 0 
                         || strcasecmp($sandiText, 'NIL=') === 0 
@@ -154,7 +150,6 @@ class LapbulPibalExportService
 
                             $parts = preg_split('/\s+/', $line);
 
-                            // Write date (Day, Month, Year) only on the very first row of the day
                             if (!$dayWritten) {
                                 $rekapSheet->setCellValue("A{$currentRow}", $day);
                                 $rekapSheet->setCellValue("B{$currentRow}", $this->namaBulanIndo[$bulan]);
@@ -162,7 +157,6 @@ class LapbulPibalExportService
                                 $dayWritten = true;
                             }
 
-                            // Write hour (00 or 12) only on the first line of the hour block
                             if ($firstLineOfHour) {
                                 $rekapSheet->setCellValue("D{$currentRow}", $hourStr);
                                 $firstLineOfHour = false;
@@ -181,7 +175,6 @@ class LapbulPibalExportService
                             $currentRow++;
                         }
                     } else {
-                        // NIL or missing sandi -> Format as NO REP DUE TO [reason] with Center Alignment
                         $reasonStr = "NO REP DUE TO " . ($reason ?: 'UNSPECIFIED');
 
                         if (!$dayWritten) {
@@ -213,7 +206,6 @@ class LapbulPibalExportService
                     }
                 }
 
-                // Apply solid black bottom border to columns A-J on the last row of each date
                 if ($lastRowOfDay !== null) {
                     $rekapSheet->getStyle("A{$lastRowOfDay}:J{$lastRowOfDay}")
                         ->getBorders()
@@ -226,29 +218,22 @@ class LapbulPibalExportService
                 }
             }
 
-            // ----------------------------------------------------
-            // APPLY GLOBAL STYLING & TTD TO SHEET "Rekap"
-            // ----------------------------------------------------
             if ($finalRowOfMonth >= 3) {
-                // 1. Font Courier New 10 for all data cells A3:J{$finalRowOfMonth}
                 $rekapSheet->getStyle("A3:J{$finalRowOfMonth}")
                     ->getFont()
                     ->setName('Courier New')
                     ->setSize(10);
 
-                // 2. Alignment: Center for Tanggal & Jam (A, B, C, D)
                 $rekapSheet->getStyle("A3:D{$finalRowOfMonth}")
                     ->getAlignment()
                     ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                     ->setVertical(Alignment::VERTICAL_CENTER);
 
-                // 3. Alignment: Left for Sandi Pilot Balon (E to J)
                 $rekapSheet->getStyle("E3:J{$finalRowOfMonth}")
                     ->getAlignment()
                     ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                     ->setVertical(Alignment::VERTICAL_CENTER);
 
-                // Re-apply Center Alignment specifically for merged NO REP cells in H-J
                 for ($r = 3; $r <= $finalRowOfMonth; $r++) {
                     $val = (string) $rekapSheet->getCell("H{$r}")->getValue();
                     if (str_contains($val, 'NO REP DUE TO')) {
@@ -259,94 +244,56 @@ class LapbulPibalExportService
                     }
                 }
 
-                // 4. Vertical Borders (Solid thin black lines down to $finalRowOfMonth)
                 $rekapSheet->getStyle("A3:A{$finalRowOfMonth}")
-                    ->getBorders()
-                    ->getLeft()
-                    ->setBorderStyle(Border::BORDER_THIN)
-                    ->getColor()
-                    ->setARGB('FF000000');
+                    ->getBorders()->getLeft()->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB('FF000000');
 
                 $rekapSheet->getStyle("C3:C{$finalRowOfMonth}")
-                    ->getBorders()
-                    ->getRight()
-                    ->setBorderStyle(Border::BORDER_THIN)
-                    ->getColor()
-                    ->setARGB('FF000000');
+                    ->getBorders()->getRight()->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB('FF000000');
 
                 $rekapSheet->getStyle("D3:D{$finalRowOfMonth}")
-                    ->getBorders()
-                    ->getRight()
-                    ->setBorderStyle(Border::BORDER_THIN)
-                    ->getColor()
-                    ->setARGB('FF000000');
+                    ->getBorders()->getRight()->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB('FF000000');
 
                 $rekapSheet->getStyle("J3:J{$finalRowOfMonth}")
-                    ->getBorders()
-                    ->getRight()
-                    ->setBorderStyle(Border::BORDER_THIN)
-                    ->getColor()
-                    ->setARGB('FF000000');
+                    ->getBorders()->getRight()->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB('FF000000');
 
-                // 5. Add Signature Block (TTD) at bottom of Sheet "Rekap"
                 $ttdStart = $finalRowOfMonth + 3;
 
-                // Export Date (Labuha, dd mmmm yyyy)
                 $rekapSheet->mergeCells("H{$ttdStart}:J{$ttdStart}");
                 $rekapSheet->setCellValue("H{$ttdStart}", $exportDateStr);
                 $rekapSheet->getStyle("H{$ttdStart}:J{$ttdStart}")
-                    ->getFont()
-                    ->setName('Times New Roman')
-                    ->setSize(12);
+                    ->getFont()->setName('Times New Roman')->setSize(12);
                 $rekapSheet->getStyle("H{$ttdStart}:J{$ttdStart}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-                // Titles
                 $ttdTitleRow = $ttdStart + 1;
                 $rekapSheet->mergeCells("B{$ttdTitleRow}:D{$ttdTitleRow}");
                 $rekapSheet->setCellValue("B{$ttdTitleRow}", "Pembuat Laporan");
                 $rekapSheet->getStyle("B{$ttdTitleRow}:D{$ttdTitleRow}")
-                    ->getFont()
-                    ->setName('Times New Roman')
-                    ->setSize(12)
-                    ->setBold(true);
+                    ->getFont()->setName('Times New Roman')->setSize(12)->setBold(true);
                 $rekapSheet->getStyle("B{$ttdTitleRow}:D{$ttdTitleRow}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 $rekapSheet->mergeCells("H{$ttdTitleRow}:J{$ttdTitleRow}");
                 $rekapSheet->setCellValue("H{$ttdTitleRow}", "Kepala");
                 $rekapSheet->getStyle("H{$ttdTitleRow}:J{$ttdTitleRow}")
-                    ->getFont()
-                    ->setName('Times New Roman')
-                    ->setSize(12)
-                    ->setBold(true);
+                    ->getFont()->setName('Times New Roman')->setSize(12)->setBold(true);
                 $rekapSheet->getStyle("H{$ttdTitleRow}:J{$ttdTitleRow}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-                // Names
                 $ttdNameRow = $ttdStart + 6;
                 $rekapSheet->mergeCells("B{$ttdNameRow}:D{$ttdNameRow}");
                 $rekapSheet->setCellValue("B{$ttdNameRow}", "Mirza Chrisandy Pesulima, S.Tr");
                 $rekapSheet->getStyle("B{$ttdNameRow}:D{$ttdNameRow}")
-                    ->getFont()
-                    ->setName('Times New Roman')
-                    ->setSize(12);
+                    ->getFont()->setName('Times New Roman')->setSize(12);
                 $rekapSheet->getStyle("B{$ttdNameRow}:D{$ttdNameRow}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 $rekapSheet->mergeCells("H{$ttdNameRow}:J{$ttdNameRow}");
                 $rekapSheet->setCellValue("H{$ttdNameRow}", "Ben Arther Molle, S.Tr., M.Si");
                 $rekapSheet->getStyle("H{$ttdNameRow}:J{$ttdNameRow}")
-                    ->getFont()
-                    ->setName('Times New Roman')
-                    ->setSize(12);
+                    ->getFont()->setName('Times New Roman')->setSize(12);
                 $rekapSheet->getStyle("H{$ttdNameRow}:J{$ttdNameRow}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             }
         }
 
@@ -382,7 +329,6 @@ class LapbulPibalExportService
                             }
                         }
 
-                        // If max altitude exists, display max altitude. Otherwise display observation cancellation reason.
                         if ($maxAlt !== null) {
                             $altVal = (string) $maxAlt;
                         } else {
@@ -390,8 +336,6 @@ class LapbulPibalExportService
                         }
                     }
 
-                    // Days 1..16 go to top row (Row 15 for 00z, Row 19 for 12z)
-                    // Days 17..31 go to bottom row (Row 17 for 00z, Row 21 for 12z)
                     if ($hour === 0) {
                         if ($day <= 16) {
                             $colStr = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(1 + $day);
@@ -416,7 +360,6 @@ class LapbulPibalExportService
                 $ae31Sheet->setCellValue('I8', ": Pengamatan tertinggi " . number_format($maxObsAlt, 0, ',', '.') . " Feet, tanggal {$maxObsDate} jam {$maxObsHour}");
             }
 
-            // Populate TTD block on "Ae. 31"
             $ae31Sheet->setCellValue('L32', $exportDateStr);
             $ae31Sheet->getStyle('L32')->getFont()->setName('Times New Roman')->setSize(12);
             $ae31Sheet->getStyle('L32')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -446,6 +389,8 @@ class LapbulPibalExportService
             12 => $spreadsheet->getSheetByName('Me. 39 & Me. 40 (2)'),
         ];
 
+        $year2Digits = sprintf('%02d', $tahun % 100);
+
         foreach ($meSheets as $hour => $sheet) {
             if (!$sheet) continue;
 
@@ -453,37 +398,98 @@ class LapbulPibalExportService
                 $rowNumTable1 = 7 + $day;  // Upper Wind 1: Row 8..38 (Day 1..31)
                 $rowNumTable2 = 65 + $day; // Upper Wind 2: Row 66..96 (Day 1..31)
 
+                $dayStr = sprintf('%02d', $day);
+
+                // Populate Columns 1..10 (A..J) for both Table 1 and Table 2
+                foreach ([$rowNumTable1, $rowNumTable2] as $rowNum) {
+                    if ($day === 1) {
+                        $sheet->setCellValue("A{$rowNum}", '7');
+                        $sheet->setCellValue("B{$rowNum}", '4');
+                        $sheet->setCellValue("C{$rowNum}", '6');
+                        $sheet->setCellValue("D{$rowNum}", '0');
+
+                        $sheet->setCellValue("E{$rowNum}", $year2Digits[0]);
+                        $sheet->setCellValue("F{$rowNum}", $year2Digits[1]);
+
+                        $sheet->setCellValue("G{$rowNum}", $bulan);
+                    }
+
+                    $sheet->setCellValue("H{$rowNum}", $dayStr[0]);
+                    $sheet->setCellValue("I{$rowNum}", $dayStr[1]);
+
+                    $sheet->setCellValue("J{$rowNum}", $hour);
+                }
+
                 if (isset($mappedData[$day][$hour])) {
                     $r = $mappedData[$day][$hour];
                     $lapisanData = $r->hasil_lapisan_wd_ws_dddff ?? [];
+                    $reason = $r->penghentian_pengamatan ?? null;
 
-                    $layersByHeight = [];
-                    foreach ($lapisanData as $lap) {
-                        $h = (int) ($lap['lapisan'] ?? -1);
-                        $layersByHeight[$h] = $lap;
-                    }
+                    $validLayers = array_filter($lapisanData, function($item) {
+                        return (int)($item['lapisan'] ?? -1) > 0 && (int)($item['wd'] ?? -1) >= 0 && (int)($item['ws'] ?? -1) >= 0;
+                    });
 
-                    // Table 1: Levels up to 15,000 ft (Upper Wind 1)
-                    foreach ($this->levelColsMe39Table1 as $targetHeight => $cols) {
-                        if (isset($layersByHeight[$targetHeight])) {
-                            $wd = $layersByHeight[$targetHeight]['wd'] ?? -1;
-                            $ws = $layersByHeight[$targetHeight]['ws'] ?? -1;
+                    if (empty($validLayers)) {
+                        // No valid wind layers -> merge 1000 FT columns K:N and write cancellation reason
+                        $reasonCode = !empty($reason) ? trim($reason) : 'NIL';
 
-                            if ($wd !== -1) $sheet->setCellValue("{$cols['ddd']}{$rowNumTable1}", $wd);
-                            if ($ws !== -1) $sheet->setCellValue("{$cols['ff']}{$rowNumTable1}", $ws);
+                        $sheet->mergeCells("K{$rowNumTable1}:N{$rowNumTable1}");
+                        $sheet->setCellValue("K{$rowNumTable1}", $reasonCode);
+                        $sheet->getStyle("K{$rowNumTable1}:N{$rowNumTable1}")
+                            ->getAlignment()
+                            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                            ->setVertical(Alignment::VERTICAL_CENTER);
+                    } else {
+                        $layersByHeight = [];
+                        foreach ($lapisanData as $lap) {
+                            $h = (int) ($lap['lapisan'] ?? -1);
+                            $layersByHeight[$h] = $lap;
+                        }
+
+                        // Table 1: Levels up to 15,000 ft (Upper Wind 1)
+                        foreach ($this->levelColsMe39Table1 as $targetHeight => $cols) {
+                            if (isset($layersByHeight[$targetHeight])) {
+                                $wd = (int) ($layersByHeight[$targetHeight]['wd'] ?? -1);
+                                $ws = (int) ($layersByHeight[$targetHeight]['ws'] ?? -1);
+
+                                if ($wd >= 0 && $ws >= 0) {
+                                    $ddStr = sprintf('%02d', intval($wd / 10));
+                                    $ffStr = sprintf('%02d', $ws);
+
+                                    $sheet->setCellValue("{$cols['d1']}{$rowNumTable1}", $ddStr[0]);
+                                    $sheet->setCellValue("{$cols['d2']}{$rowNumTable1}", $ddStr[1]);
+                                    $sheet->setCellValue("{$cols['f1']}{$rowNumTable1}", $ffStr[0]);
+                                    $sheet->setCellValue("{$cols['f2']}{$rowNumTable1}", $ffStr[1]);
+                                }
+                            }
+                        }
+
+                        // Table 2: Levels beyond 15,000 ft (Upper Wind 2)
+                        foreach ($this->levelColsMe39Table2 as $targetHeight => $cols) {
+                            if (isset($layersByHeight[$targetHeight])) {
+                                $wd = (int) ($layersByHeight[$targetHeight]['wd'] ?? -1);
+                                $ws = (int) ($layersByHeight[$targetHeight]['ws'] ?? -1);
+
+                                if ($wd >= 0 && $ws >= 0) {
+                                    $ddStr = sprintf('%02d', intval($wd / 10));
+                                    $ffStr = sprintf('%02d', $ws);
+
+                                    $sheet->setCellValue("{$cols['d1']}{$rowNumTable2}", $ddStr[0]);
+                                    $sheet->setCellValue("{$cols['d2']}{$rowNumTable2}", $ddStr[1]);
+                                    $sheet->setCellValue("{$cols['f1']}{$rowNumTable2}", $ffStr[0]);
+                                    $sheet->setCellValue("{$cols['f2']}{$rowNumTable2}", $ffStr[1]);
+                                }
+                            }
                         }
                     }
-
-                    // Table 2: Levels beyond 15,000 ft (Upper Wind 2: 18000, 20000, 25000, 30000, 35000, 40000, 45000, 50000 ft)
-                    foreach ($this->levelColsMe39Table2 as $targetHeight => $cols) {
-                        if (isset($layersByHeight[$targetHeight])) {
-                            $wd = $layersByHeight[$targetHeight]['wd'] ?? -1;
-                            $ws = $layersByHeight[$targetHeight]['ws'] ?? -1;
-
-                            if ($wd !== -1) $sheet->setCellValue("{$cols['ddd']}{$rowNumTable2}", $wd);
-                            if ($ws !== -1) $sheet->setCellValue("{$cols['ff']}{$rowNumTable2}", $ws);
-                        }
-                    }
+                } else {
+                    // No record at all -> merge 1000 FT columns K:N and write 'NIL'
+                    $sheet->mergeCells("K{$rowNumTable1}:N{$rowNumTable1}");
+                    $sheet->setCellValue("K{$rowNumTable1}", 'NIL');
+                    $sheet->getStyle("K{$rowNumTable1}:N{$rowNumTable1}")
+                        ->getAlignment()
+                        ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                        ->setVertical(Alignment::VERTICAL_CENTER);
                 }
             }
 
@@ -552,12 +558,9 @@ class LapbulPibalExportService
         foreach ($ae39Sheets as $hour => $sheet) {
             if (!$sheet) continue;
 
-            $sheet->setCellValue('C2', $bulanUpper);
-            $sheet->setCellValue('C3', sprintf('%02d.00 Z', $hour));
-
             for ($day = 1; $day <= $daysInMonth; $day++) {
-                $rowNumTable1 = 5 + $day;  // Table 1 (up to 10,000 ft): Row 6..36
-                $rowNumTable2 = 45 + $day; // Table 2 (15,000 ft & beyond): Row 46..76
+                $rowNumTable1 = 5 + $day;  // Upper Air Steadiness 1: Row 6..36 (Day 1..31)
+                $rowNumTable2 = 45 + $day; // Upper Air Steadiness 2: Row 46..76 (Day 1..31)
 
                 if (isset($mappedData[$day][$hour])) {
                     $r = $mappedData[$day][$hour];
@@ -569,29 +572,27 @@ class LapbulPibalExportService
                         $layersByHeight[$h] = $lap;
                     }
 
-                    // Table 1: Surface & Upper Air Levels up to 10,000 ft
-                    if ($r->wind_dir_surface !== null) {
-                        $sheet->setCellValue("{$this->levelColsAe39Table1['surface']['ddd']}{$rowNumTable1}", $r->wind_dir_surface);
-                    }
-                    if ($r->wind_speed_surface !== null) {
-                        $sheet->setCellValue("{$this->levelColsAe39Table1['surface']['ff']}{$rowNumTable1}", $r->wind_speed_surface);
-                    }
+                    // Table 1: Levels up to 10,000 ft
+                    foreach ($this->levelColsAe39Table1 as $targetHeight => $cols) {
+                        $lap = null;
+                        if ($targetHeight === 'surface') {
+                            $lap = $layersByHeight[0] ?? ($layersByHeight[-1] ?? null);
+                        } else {
+                            $lap = $layersByHeight[$targetHeight] ?? null;
+                        }
 
-                    foreach ([1000, 3000, 5000, 7000, 10000] as $targetHeight) {
-                        if (isset($layersByHeight[$targetHeight])) {
-                            $cols = $this->levelColsAe39Table1[$targetHeight];
-                            $wd = $layersByHeight[$targetHeight]['wd'] ?? -1;
-                            $ws = $layersByHeight[$targetHeight]['ws'] ?? -1;
+                        if ($lap) {
+                            $wd = $lap['wd'] ?? -1;
+                            $ws = $lap['ws'] ?? -1;
 
                             if ($wd !== -1) $sheet->setCellValue("{$cols['ddd']}{$rowNumTable1}", $wd);
                             if ($ws !== -1) $sheet->setCellValue("{$cols['ff']}{$rowNumTable1}", $ws);
                         }
                     }
 
-                    // Table 2: 15,000 ft & beyond (Upper Air Steadiness II)
-                    foreach ([15000, 20000, 25000, 30000, 35000, 40000] as $targetHeight) {
+                    // Table 2: Levels beyond 10,000 ft
+                    foreach ($this->levelColsAe39Table2 as $targetHeight => $cols) {
                         if (isset($layersByHeight[$targetHeight])) {
-                            $cols = $this->levelColsAe39Table2[$targetHeight];
                             $wd = $layersByHeight[$targetHeight]['wd'] ?? -1;
                             $ws = $layersByHeight[$targetHeight]['ws'] ?? -1;
 
@@ -601,6 +602,59 @@ class LapbulPibalExportService
                     }
                 }
             }
+
+            // Populate TTD block on "Ae. 39" / "Ae. 39 (2)"
+            $sheet->mergeCells('S79:W79');
+            $sheet->setCellValue('S79', $exportDateStr);
+            $sheet->getStyle('S79:W79')
+                ->getFont()
+                ->setName('Times New Roman')
+                ->setSize(12);
+            $sheet->getStyle('S79:W79')
+                ->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            $sheet->mergeCells('B80:I80');
+            $sheet->setCellValue('B80', 'Pembuat Laporan');
+            $sheet->getStyle('B80:I80')
+                ->getFont()
+                ->setName('Times New Roman')
+                ->setSize(12)
+                ->setBold(true);
+            $sheet->getStyle('B80:I80')
+                ->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            $sheet->mergeCells('S80:W80');
+            $sheet->setCellValue('S80', 'Kepala');
+            $sheet->getStyle('S80:W80')
+                ->getFont()
+                ->setName('Times New Roman')
+                ->setSize(12)
+                ->setBold(true);
+            $sheet->getStyle('S80:W80')
+                ->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            $sheet->mergeCells('B85:I85');
+            $sheet->setCellValue('B85', 'Mirza Chrisandy Pesulima, S.Tr');
+            $sheet->getStyle('B85:I85')
+                ->getFont()
+                ->setName('Times New Roman')
+                ->setSize(12);
+            $sheet->getStyle('B85:I85')
+                ->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            $sheet->mergeCells('S85:W85');
+            $sheet->setCellValue('S85', 'Ben Arther Molle, S.Tr., M.Si');
+            $sheet->getStyle('S85:W85')
+                ->getFont()
+                ->setName('Times New Roman')
+                ->setSize(12);
+            $sheet->getStyle('S85:W85')
+                ->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
         }
 
         return $spreadsheet;

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\JadwalController;
+use App\Http\Controllers\MetReportController;
 use App\Http\Controllers\MetarController;
 use App\Http\Controllers\PegawaiController;
 use App\Http\Controllers\PibalController;
@@ -9,6 +10,9 @@ use App\Http\Controllers\TaforController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+
+// Public Webhook for WhatsApp Gateway
+Route::post('/api/whatsapp/webhook', [MetReportController::class, 'webhook'])->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
@@ -47,6 +51,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Laporan Bulanan - Data Sinoptik Routes
     Route::get('/laporan/sinoptik', [SinoptikController::class, 'index'])->name('laporan.sinoptik');
     Route::post('/laporan/sinoptik/sync', [SinoptikController::class, 'sync'])->name('laporan.sinoptik.sync');
+
+    // Laporan Bulanan - Data MET REPORT (QAM) Routes
+    Route::get('/laporan/met-report', [MetReportController::class, 'index'])->name('laporan.met-report');
+    Route::post('/laporan/met-report/manual', [MetReportController::class, 'storeManual'])->name('laporan.met-report.manual');
+    Route::post('/laporan/met-report/send-wa', [MetReportController::class, 'sendWhatsApp'])->name('laporan.met-report.send-wa');
 });
 
 require __DIR__.'/settings.php';

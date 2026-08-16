@@ -59,7 +59,7 @@ class BmkgsoftService
     }
 
     /**
-     * Fetch PIBAL observation data from BMKGSoft API.
+     * Fetch PIBAL observation data from BMKGSoft API using active type_name=Pibal endpoint.
      */
     public function fetchPibalDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
     {
@@ -75,23 +75,26 @@ class BmkgsoftService
         try {
             $url = "{$this->baseUrl}/db/bmkgsatu/@export_data";
             $response = Http::withoutVerifying()
-                ->timeout(15)
+                ->timeout(20)
                 ->withHeaders([
                     'accept' => 'application/json',
                     'Authorization' => "Bearer {$token}",
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 ])
                 ->get($url, [
-                    'model' => 'pibal',
-                    'station' => $stationId,
-                    'date_from' => $dateFrom,
-                    'date_to' => $dateTo,
+                    'station_id' => $stationId,
+                    'data_timestamp__gte' => $dateFrom,
+                    'data_timestamp__lte' => $dateTo,
+                    '_size' => 100,
+                    'type_name' => 'Pibal',
+                    '_metadata' => 'station_id,station_name,data_timestamp,alias_station_id,source_data,station_elevation,wind_dir_surface,wind_speed_surface,sandi_pibal,pembacaan_azimuth_elevasi[azimuth],pembacaan_azimuth_elevasi[elevasi],hasil_lapisan_wd_ws_dddff[lapisan],hasil_lapisan_wd_ws_dddff[wd],hasil_lapisan_wd_ws_dddff[ws],hasil_lapisan_wd_ws_dddff[dddff],penghentian_pengamatan,observer_name',
                 ]);
 
             if ($response->successful()) {
+                $payload = $response->json();
                 return [
                     'success' => true,
-                    'data' => $response->json('data', []),
+                    'data' => is_array($payload) ? ($payload['data'] ?? $payload) : [],
                     'error' => null,
                 ];
             }
@@ -159,7 +162,11 @@ class BmkgsoftService
                     [
                         'station_id' => $item['station_id'] ?? $stationId,
                         'station_name' => $item['station_name'] ?? 'Stasiun Meteorologi Oesman Sadik',
-                        'raw_pibal' => $item['raw_pibal'] ?? null,
+                        'raw_pibal' => $item['sandi_pibal'] ?? ($item['raw_pibal'] ?? null),
+                        'sandi_pibal' => $item['sandi_pibal'] ?? null,
+                        'penghentian_pengamatan' => $item['penghentian_pengamatan'] ?? null,
+                        'hasil_lapisan_wd_ws_dddff' => $item['hasil_lapisan_wd_ws_dddff'] ?? null,
+                        'pembacaan_azimuth_elevasi' => $item['pembacaan_azimuth_elevasi'] ?? null,
                         'observer_name' => $observerName,
                         'pegawai_id' => $pegawai ? $pegawai->id : null,
                     ]
@@ -634,7 +641,6 @@ class BmkgsoftService
 
             $totalFetched += count($rowsList);
 
-            // Flip headers array to map column names to row indexes
             $headerMap = array_flip($headersList);
 
             $getValue = function (array $row, string $key) use ($headerMap) {
