@@ -51,7 +51,7 @@ test('authenticated user can store new PPNPN pegawai without NIP or PNS role', f
     $response = $this->actingAs($user)->post('/pegawai', [
         'jenis_pegawai' => 'PPNPN',
         'nama' => 'SITI AMINAH',
-        'jabatan' => 'Pramubakti',
+        'role' => 'Pramubakti',
         'tanggal_masuk_kerja' => '2021-06-15',
     ]);
 
@@ -60,10 +60,10 @@ test('authenticated user can store new PPNPN pegawai without NIP or PNS role', f
         'jenis_pegawai' => 'PPNPN',
         'nama' => 'SITI AMINAH',
         'nip' => null,
-        'role' => null,
+        'role' => 'Pramubakti',
         'pangkat' => null,
         'golongan' => null,
-        'jabatan' => 'Pramubakti',
+        'jabatan' => null,
         'tanggal_masuk_kerja' => '2021-06-15',
     ]);
 });

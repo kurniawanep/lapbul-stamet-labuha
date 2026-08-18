@@ -66,7 +66,7 @@ class PegawaiController extends Controller
             'nip' => [$isPns ? 'required' : 'nullable', 'string', 'max:50', 'unique:pegawai,nip'],
             'pangkat' => ['nullable', 'string', 'max:255'],
             'golongan' => ['nullable', 'string', 'max:50'],
-            'role' => ['nullable', Rule::in(['Kepala Stasiun', 'Tata Usaha', 'Observer & Forecaster', 'Teknisi'])],
+            'role' => ['nullable', 'string', 'max:255'],
             'jabatan' => ['nullable', 'string', 'max:255'],
             'tanggal_masuk_kerja' => ['nullable', 'date'],
         ]);
@@ -81,8 +81,8 @@ class PegawaiController extends Controller
             'nip' => $isPns && $request->input('nip') ? trim($request->input('nip')) : null,
             'pangkat' => $isPns && $request->input('pangkat') ? trim($request->input('pangkat')) : null,
             'golongan' => $isPns && $request->input('golongan') ? trim($request->input('golongan')) : null,
-            'role' => $isPns ? $request->input('role') : null,
-            'jabatan' => $request->input('jabatan') ? trim($request->input('jabatan')) : null,
+            'role' => $request->input('role') ? trim($request->input('role')) : ($isPns ? null : 'PPNPN'),
+            'jabatan' => $isPns && $request->input('jabatan') ? trim($request->input('jabatan')) : null,
             'tanggal_masuk_kerja' => $request->input('tanggal_masuk_kerja') ?: null,
             'is_active' => true,
         ]);
@@ -105,7 +105,7 @@ class PegawaiController extends Controller
             'nip' => [$isPns ? 'required' : 'nullable', 'string', 'max:50', Rule::unique('pegawai', 'nip')->ignore($pegawai->id)],
             'pangkat' => ['nullable', 'string', 'max:255'],
             'golongan' => ['nullable', 'string', 'max:50'],
-            'role' => ['nullable', Rule::in(['Kepala Stasiun', 'Tata Usaha', 'Observer & Forecaster', 'Teknisi'])],
+            'role' => ['nullable', 'string', 'max:255'],
             'jabatan' => ['nullable', 'string', 'max:255'],
             'tanggal_masuk_kerja' => ['nullable', 'date'],
         ]);
@@ -117,8 +117,8 @@ class PegawaiController extends Controller
             'nip' => $isPns && $request->input('nip') ? trim($request->input('nip')) : null,
             'pangkat' => $isPns && $request->input('pangkat') ? trim($request->input('pangkat')) : null,
             'golongan' => $isPns && $request->input('golongan') ? trim($request->input('golongan')) : null,
-            'role' => $isPns ? $request->input('role') : null,
-            'jabatan' => $request->input('jabatan') ? trim($request->input('jabatan')) : null,
+            'role' => $request->input('role') ? trim($request->input('role')) : ($isPns ? null : 'PPNPN'),
+            'jabatan' => $isPns && $request->input('jabatan') ? trim($request->input('jabatan')) : null,
             'tanggal_masuk_kerja' => $request->input('tanggal_masuk_kerja') ?: null,
         ];
 

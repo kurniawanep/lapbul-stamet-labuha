@@ -23,4 +23,31 @@ class JadwalBulanan extends Model
     {
         return $this->hasMany(JadwalDetail::class, 'jadwal_bulanan_id');
     }
+
+    public function shifts(): HasMany
+    {
+        return $this->hasMany(JadwalBulananShift::class, 'jadwal_bulanan_id');
+    }
+
+    public function copyMasterShifts(): void
+    {
+        $masterShifts = MasterShift::all();
+
+        foreach ($masterShifts as $ms) {
+            JadwalBulananShift::updateOrCreate(
+                [
+                    'jadwal_bulanan_id' => $this->id,
+                    'category' => $ms->category,
+                    'kode_shift' => $ms->kode_shift,
+                ],
+                [
+                    'master_shift_id' => $ms->id,
+                    'nama_shift' => $ms->nama_shift,
+                    'jam_masuk' => $ms->jam_masuk,
+                    'jam_keluar' => $ms->jam_keluar,
+                    'is_tidak_masuk_kerja' => $ms->is_tidak_masuk_kerja,
+                ]
+            );
+        }
+    }
 }

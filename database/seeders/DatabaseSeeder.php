@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Pegawai;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -15,7 +14,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call(JadwalInitialSeeder::class);
+        // $this->call(JadwalInitialSeeder::class);
         $this->call(PegawaiSeeder::class);
+        $this->call(MasterShiftSeeder::class);
+        $this->call(JadwalDinasJuli2026Seeder::class);
     }
 }

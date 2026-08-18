@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\JadwalBulanan;
+use App\Models\JadwalBulananShift;
 use App\Models\JadwalDetail;
 use App\Models\MasterShift;
 use App\Models\Pegawai;
@@ -68,7 +69,7 @@ class JadwalController extends Controller
             ->orderBy('id')
             ->get();
 
-        $shifts = MasterShift::where('category', 'operasional')->orderBy('id')->get();
+        $shifts = $this->getShiftsForJadwal($jadwalBulanan, 'operasional');
         $matrix = $this->getMatrixData($jadwalBulanan->id);
         $daysInMonth = Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
         $holidays = $this->getHolidays($tahun);
@@ -102,7 +103,7 @@ class JadwalController extends Controller
             ->orderBy('id')
             ->get();
 
-        $shifts = MasterShift::where('category', 'teknisi')->orderBy('id')->get();
+        $shifts = $this->getShiftsForJadwal($jadwalBulanan, 'teknisi');
         $matrix = $this->getMatrixData($jadwalBulanan->id);
         $daysInMonth = Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
         $holidays = $this->getHolidays($tahun);
@@ -135,7 +136,7 @@ class JadwalController extends Controller
             ->orderBy('id')
             ->get();
 
-        $shifts = MasterShift::where('category', 'ppnpn')->orderBy('id')->get();
+        $shifts = $this->getShiftsForJadwal($jadwalBulanan, 'ppnpn');
         $matrix = $this->getMatrixData($jadwalBulanan->id);
         $daysInMonth = Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
         $holidays = $this->getHolidays($tahun);
@@ -154,12 +155,30 @@ class JadwalController extends Controller
         ]);
     }
 
+    private function getShiftsForJadwal(JadwalBulanan $jadwalBulanan, string $category)
+    {
+        $shifts = JadwalBulananShift::where('jadwal_bulanan_id', $jadwalBulanan->id)
+            ->where('category', $category)
+            ->orderBy('id')
+            ->get();
+
+        if ($shifts->isEmpty()) {
+            $jadwalBulanan->copyMasterShifts();
+            $shifts = JadwalBulananShift::where('jadwal_bulanan_id', $jadwalBulanan->id)
+                ->where('category', $category)
+                ->orderBy('id')
+                ->get();
+        }
+
+        return $shifts;
+    }
+
     /**
      * Get or create monthly schedule record.
      */
     private function getJadwalBulanan(int $bulan, int $tahun): JadwalBulanan
     {
-        return JadwalBulanan::firstOrCreate(
+        $jadwalBulanan = JadwalBulanan::firstOrCreate(
             ['bulan' => $bulan, 'tahun' => $tahun],
             [
                 'stasiun' => 'Stasiun Meteorologi Oesman Sadik Halmahera Selatan',
@@ -168,6 +187,10 @@ class JadwalController extends Controller
                 'kepala_pokjung_nama' => 'MUHD. YUSRAN TITDOY BADER',
             ]
         );
+
+        $jadwalBulanan->copyMasterShifts();
+
+        return $jadwalBulanan;
     }
 
     /**
@@ -201,7 +224,7 @@ class JadwalController extends Controller
             'jadwal_bulanan_id' => ['required', 'exists:jadwal_bulanans,id'],
             'pegawai_id' => ['required', 'exists:pegawai,id'],
             'tanggal' => ['required', 'date'],
-            'shift_id' => ['required', 'exists:master_shifts,id'],
+            'shift_id' => ['required', 'exists:jadwal_bulanan_shifts,id'],
         ]);
 
         JadwalDetail::updateOrCreate(
@@ -228,7 +251,7 @@ class JadwalController extends Controller
             'changes' => ['required', 'array'],
             'changes.*.pegawai_id' => ['required', 'exists:pegawai,id'],
             'changes.*.tanggal' => ['required', 'date'],
-            'changes.*.shift_id' => ['required', 'exists:master_shifts,id'],
+            'changes.*.shift_id' => ['required', 'exists:jadwal_bulanan_shifts,id'],
         ]);
 
         $jadwalBulananId = $request->input('jadwal_bulanan_id');
@@ -263,7 +286,7 @@ class JadwalController extends Controller
             'pegawai_ids.*' => ['exists:pegawai,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-            'shift_id' => ['required', 'exists:master_shifts,id'],
+            'shift_id' => ['required', 'exists:jadwal_bulanan_shifts,id'],
         ]);
 
         $startDate = Carbon::parse($request->input('start_date'));
@@ -292,75 +315,159 @@ class JadwalController extends Controller
     }
 
     /**
-     * Store new master shift for specific category.
+     * Store new shift for specific category.
      */
     public function storeShift(Request $request): RedirectResponse
     {
         $category = $request->input('category', 'operasional');
+        $jadwalBulananId = $request->input('jadwal_bulanan_id');
 
         $request->validate([
             'category' => ['required', 'string', Rule::in(['operasional', 'teknisi', 'ppnpn'])],
-            'kode_shift' => [
-                'required',
-                'string',
-                'max:20',
-                Rule::unique('master_shifts', 'kode_shift')->where(function ($query) use ($category) {
-                    return $query->where('category', $category);
-                }),
-            ],
+            'kode_shift' => ['required', 'string', 'max:20'],
             'nama_shift' => ['required', 'string', 'max:255'],
             'jam_masuk' => ['nullable', 'string'],
             'jam_keluar' => ['nullable', 'string'],
             'is_tidak_masuk_kerja' => ['nullable', 'boolean'],
         ]);
 
-        MasterShift::create([
-            'category' => $category,
-            'kode_shift' => strtoupper(trim($request->input('kode_shift'))),
-            'nama_shift' => $request->input('nama_shift'),
-            'jam_masuk' => $request->input('jam_masuk') ?: null,
-            'jam_keluar' => $request->input('jam_keluar') ?: null,
-            'is_tidak_masuk_kerja' => (bool) $request->input('is_tidak_masuk_kerja', false),
-        ]);
+        $kodeShift = strtoupper(trim($request->input('kode_shift')));
+        $namaShift = $request->input('nama_shift');
+        $jamMasuk = $request->input('jam_masuk') ?: null;
+        $jamKeluar = $request->input('jam_keluar') ?: null;
+        $isTidakMasuk = (bool) $request->input('is_tidak_masuk_kerja', false);
+
+        DB::transaction(function () use ($category, $kodeShift, $namaShift, $jamMasuk, $jamKeluar, $isTidakMasuk, $jadwalBulananId) {
+            $masterShift = MasterShift::create([
+                'category' => $category,
+                'kode_shift' => $kodeShift,
+                'nama_shift' => $namaShift,
+                'jam_masuk' => $jamMasuk,
+                'jam_keluar' => $jamKeluar,
+                'is_tidak_masuk_kerja' => $isTidakMasuk,
+            ]);
+
+            if ($jadwalBulananId) {
+                JadwalBulananShift::create([
+                    'jadwal_bulanan_id' => $jadwalBulananId,
+                    'master_shift_id' => $masterShift->id,
+                    'category' => $category,
+                    'kode_shift' => $kodeShift,
+                    'nama_shift' => $namaShift,
+                    'jam_masuk' => $jamMasuk,
+                    'jam_keluar' => $jamKeluar,
+                    'is_tidak_masuk_kerja' => $isTidakMasuk,
+                ]);
+            }
+        });
 
         return redirect()->back()->with('success', 'Master Shift baru berhasil ditambahkan.');
     }
 
     /**
-     * Update shift item.
+     * Update shift item (monthly or master shift).
      */
-    public function updateShift(Request $request, MasterShift $shift): RedirectResponse
+    public function updateShift(Request $request, int $shiftId): RedirectResponse
     {
-        $category = $request->input('category', $shift->category);
+        $category = $request->input('category', 'operasional');
 
         $request->validate([
             'category' => ['required', 'string', Rule::in(['operasional', 'teknisi', 'ppnpn'])],
-            'kode_shift' => [
-                'required',
-                'string',
-                'max:20',
-                Rule::unique('master_shifts', 'kode_shift')
-                    ->where(function ($query) use ($category) {
-                        return $query->where('category', $category);
-                    })
-                    ->ignore($shift->id),
-            ],
+            'kode_shift' => ['required', 'string', 'max:20'],
             'nama_shift' => ['required', 'string', 'max:255'],
             'jam_masuk' => ['nullable', 'string'],
             'jam_keluar' => ['nullable', 'string'],
             'is_tidak_masuk_kerja' => ['nullable', 'boolean'],
         ]);
 
-        $shift->update([
-            'category' => $category,
-            'kode_shift' => strtoupper(trim($request->input('kode_shift'))),
-            'nama_shift' => $request->input('nama_shift'),
-            'jam_masuk' => $request->input('jam_masuk') ?: null,
-            'jam_keluar' => $request->input('jam_keluar') ?: null,
-            'is_tidak_masuk_kerja' => (bool) $request->input('is_tidak_masuk_kerja', false),
-        ]);
+        $kodeShift = strtoupper(trim($request->input('kode_shift')));
+        $namaShift = $request->input('nama_shift');
+        $jamMasuk = $request->input('jam_masuk') ?: null;
+        $jamKeluar = $request->input('jam_keluar') ?: null;
+        $isTidakMasuk = (bool) $request->input('is_tidak_masuk_kerja', false);
+
+        DB::transaction(function () use ($shiftId, $category, $kodeShift, $namaShift, $jamMasuk, $jamKeluar, $isTidakMasuk) {
+            $monthlyShift = JadwalBulananShift::find($shiftId);
+
+            if ($monthlyShift) {
+                $monthlyShift->update([
+                    'category' => $category,
+                    'kode_shift' => $kodeShift,
+                    'nama_shift' => $namaShift,
+                    'jam_masuk' => $jamMasuk,
+                    'jam_keluar' => $jamKeluar,
+                    'is_tidak_masuk_kerja' => $isTidakMasuk,
+                ]);
+
+                if ($monthlyShift->master_shift_id) {
+                    MasterShift::where('id', $monthlyShift->master_shift_id)->update([
+                        'category' => $category,
+                        'kode_shift' => $kodeShift,
+                        'nama_shift' => $namaShift,
+                        'jam_masuk' => $jamMasuk,
+                        'jam_keluar' => $jamKeluar,
+                        'is_tidak_masuk_kerja' => $isTidakMasuk,
+                    ]);
+                }
+            } else {
+                $masterShift = MasterShift::find($shiftId);
+                if ($masterShift) {
+                    $masterShift->update([
+                        'category' => $category,
+                        'kode_shift' => $kodeShift,
+                        'nama_shift' => $namaShift,
+                        'jam_masuk' => $jamMasuk,
+                        'jam_keluar' => $jamKeluar,
+                        'is_tidak_masuk_kerja' => $isTidakMasuk,
+                    ]);
+                }
+            }
+        });
 
         return redirect()->back()->with('success', 'Master Shift berhasil diperbarui.');
+    }
+
+    /**
+     * Delete shift item (both monthly clone and master catalog if linked).
+     */
+    public function destroyShift(int $shiftId): RedirectResponse
+    {
+        DB::transaction(function () use ($shiftId) {
+            $monthlyShift = JadwalBulananShift::find($shiftId);
+
+            if ($monthlyShift) {
+                $category = $monthlyShift->category;
+                $kodeShift = $monthlyShift->kode_shift;
+                $masterShiftId = $monthlyShift->master_shift_id;
+
+                JadwalDetail::where('shift_id', $monthlyShift->id)->delete();
+                $monthlyShift->delete();
+
+                if ($masterShiftId) {
+                    MasterShift::where('id', $masterShiftId)->delete();
+                } else {
+                    MasterShift::where('category', $category)->where('kode_shift', $kodeShift)->delete();
+                }
+            } else {
+                $masterShift = MasterShift::find($shiftId);
+                if ($masterShift) {
+                    $monthlyShifts = JadwalBulananShift::where('master_shift_id', $masterShift->id)
+                        ->orWhere(function ($q) use ($masterShift) {
+                            $q->where('category', $masterShift->category)
+                              ->where('kode_shift', $masterShift->kode_shift);
+                        })->get();
+
+                    foreach ($monthlyShifts as $ms) {
+                        JadwalDetail::where('shift_id', $ms->id)->delete();
+                        $ms->delete();
+                    }
+
+                    $masterShift->delete();
+                }
+            }
+        });
+
+        return redirect()->back()->with('success', 'Master Shift berhasil dihapus.');
     }
 
     /**
@@ -392,7 +499,7 @@ class JadwalController extends Controller
         }
 
         $pegawais = $query->orderBy('id')->get();
-        $shifts = MasterShift::where('category', $category)->orderBy('id')->get();
+        $shifts = $this->getShiftsForJadwal($jadwalBulanan, $category);
 
         $details = JadwalDetail::with('shift')
             ->where('jadwal_bulanan_id', $jadwalBulanan->id)

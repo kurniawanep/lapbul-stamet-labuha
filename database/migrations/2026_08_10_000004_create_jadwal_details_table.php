@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('jadwal_bulanan_id')->constrained('jadwal_bulanans')->cascadeOnDelete();
             $table->foreignId('pegawai_id')->constrained('pegawai')->cascadeOnDelete();
             $table->date('tanggal');
-            $table->foreignId('shift_id')->constrained('master_shifts');
+            $table->foreignId('shift_id')->constrained('jadwal_bulanan_shifts')->cascadeOnDelete();
             $table->timestamps();
 
             $table->unique(['pegawai_id', 'tanggal']);

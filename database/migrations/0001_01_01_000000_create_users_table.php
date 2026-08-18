@@ -21,8 +21,8 @@ return new class extends Migration
             $table->string('password')->nullable();
             $table->string('pangkat')->nullable();
             $table->string('golongan')->nullable();
-            $table->string('role')->nullable(); // Kepala Stasiun, Tata Usaha, Observer & Forecaster, Teknisi
-            $table->string('jabatan')->nullable();
+            $table->string('role')->nullable(); // Role PNS: Kepala Stasiun, Tata Usaha, Observer & Forecaster, Teknisi | Role PPNPN: PPNPN, Tata Usaha, Pramubakti, etc.
+            $table->string('jabatan')->nullable(); // Jabatan Fungsional PNS (e.g. PMG Pertama, PMG Muda, PMG Penyelia)
             $table->date('tanggal_masuk_kerja')->nullable();
             $table->boolean('is_active')->default(true);
             $table->rememberToken();

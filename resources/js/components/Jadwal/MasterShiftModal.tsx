@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 import {
     Dialog,
     DialogContent,
@@ -19,7 +19,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Edit2, Plus, Save, Sparkles, X } from 'lucide-react';
+import { Clock, Edit2, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
 import InputError from '@/components/input-error';
 
 interface MasterShift {
@@ -108,6 +108,19 @@ export default function MasterShiftModal({
                 preserveScroll: true,
                 onSuccess: () => {
                     handleCancelForm();
+                },
+            });
+        }
+    };
+
+    const handleDelete = (shift: MasterShift) => {
+        if (confirm(`Yakin ingin menghapus shift ${shift.kode_shift} (${shift.nama_shift})?`)) {
+            router.delete(`/jadwal/shifts/${shift.id}`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    if (editingShift?.id === shift.id) {
+                        handleCancelForm();
+                    }
                 },
             });
         }
@@ -258,7 +271,7 @@ export default function MasterShiftModal({
                                 <TableHead className="font-bold text-slate-700 text-center w-24">Jam Masuk</TableHead>
                                 <TableHead className="font-bold text-slate-700 text-center w-24">Jam Keluar</TableHead>
                                 <TableHead className="font-bold text-slate-700 text-center w-36">Kategori Kerja</TableHead>
-                                <TableHead className="font-bold text-slate-700 text-center w-16">Aksi</TableHead>
+                                <TableHead className="font-bold text-slate-700 text-center w-24">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -296,15 +309,26 @@ export default function MasterShiftModal({
                                             )}
                                         </TableCell>
                                         <TableCell className="text-center">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => openEditForm(shift)}
-                                                className="h-7 w-7 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                                                title="Edit Master Shift"
-                                            >
-                                                <Edit2 className="h-3.5 w-3.5" />
-                                            </Button>
+                                            <div className="flex items-center justify-center gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => openEditForm(shift)}
+                                                    className="h-7 w-7 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                                    title="Edit Shift"
+                                                >
+                                                    <Edit2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleDelete(shift)}
+                                                    className="h-7 w-7 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                                                    title="Hapus Shift"
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))

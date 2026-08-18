@@ -6,7 +6,6 @@ use App\Models\JadwalBulanan;
 use App\Models\JadwalDetail;
 use App\Models\MasterShift;
 use App\Models\Pegawai;
-use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -63,117 +62,6 @@ class JadwalInitialSeeder extends Seeder
         }
 
         $defaultPassword = Hash::make('password');
-
-        $pegawaisData = [
-            [
-                'nama' => 'BEN ARTHER MOLLE',
-                'email' => 'ben.molle@bmkg.go.id',
-                'password' => $defaultPassword,
-                'jenis_pegawai' => 'PNS',
-                'nip' => '198001012005011001',
-                'pangkat' => 'Penata Tk. I',
-                'golongan' => 'III/d',
-                'role' => 'Kepala Stasiun',
-                'jabatan' => 'Kepala Stasiun',
-                'tanggal_masuk_kerja' => '2005-01-01',
-            ],
-            [
-                'nama' => 'ANGGI FERINA LARASATI',
-                'email' => 'anggi.larasati@bmkg.go.id',
-                'password' => $defaultPassword,
-                'jenis_pegawai' => 'PNS',
-                'nip' => '199502022018012001',
-                'pangkat' => 'Penata Muda',
-                'golongan' => 'III/a',
-                'role' => 'Observer & Forecaster',
-                'jabatan' => 'PMG Ahli Pertama',
-                'tanggal_masuk_kerja' => '2018-01-01',
-            ],
-            [
-                'nama' => 'SYAMSUL MARASAOLY',
-                'email' => 'syamsul.marasaoly@bmkg.go.id',
-                'password' => $defaultPassword,
-                'jenis_pegawai' => 'PNS',
-                'nip' => '199203032015011002',
-                'pangkat' => 'Pengatur',
-                'golongan' => 'II/c',
-                'role' => 'Tata Usaha',
-                'jabatan' => 'PMG Pelaksana',
-                'tanggal_masuk_kerja' => '2015-01-01',
-            ],
-            [
-                'nama' => 'MUHD. YUSRAN T.B',
-                'email' => 'yusran.tb@bmkg.go.id',
-                'password' => $defaultPassword,
-                'jenis_pegawai' => 'PNS',
-                'nip' => '198804042010011003',
-                'pangkat' => 'Penata Muda Tk. I',
-                'golongan' => 'III/b',
-                'role' => 'Teknisi',
-                'jabatan' => 'Kepala Pokjung',
-                'tanggal_masuk_kerja' => '2010-01-01',
-            ],
-            [
-                'nama' => 'MIRZA CH. PESULIMA',
-                'email' => 'mirza.pesulima@bmkg.go.id',
-                'password' => $defaultPassword,
-                'jenis_pegawai' => 'PNS',
-                'nip' => '199405052017011004',
-                'pangkat' => 'Penata Muda',
-                'golongan' => 'III/a',
-                'role' => 'Observer & Forecaster',
-                'jabatan' => 'PMG Mahir',
-                'tanggal_masuk_kerja' => '2017-01-01',
-            ],
-            [
-                'nama' => 'DINAR CAHYA NIRWANA',
-                'email' => 'dinar.nirwana@bmkg.go.id',
-                'password' => $defaultPassword,
-                'jenis_pegawai' => 'PNS',
-                'nip' => '199606062019012002',
-                'pangkat' => 'Penata Muda',
-                'golongan' => 'III/a',
-                'role' => 'Observer & Forecaster',
-                'jabatan' => 'PMG Ahli Pertama',
-                'tanggal_masuk_kerja' => '2019-01-01',
-            ],
-            [
-                'nama' => 'REZKY RAMADHAN',
-                'email' => 'rezky.ramadhan@bmkg.go.id',
-                'password' => $defaultPassword,
-                'jenis_pegawai' => 'PNS',
-                'nip' => '199707072020011005',
-                'pangkat' => 'Pengatur Muda',
-                'golongan' => 'II/a',
-                'role' => 'Observer & Forecaster',
-                'jabatan' => 'Observer',
-                'tanggal_masuk_kerja' => '2020-01-01',
-            ],
-            [
-                'nama' => 'IRSYAD HUMAIDI',
-                'email' => 'irsyad.humaidi@bmkg.go.id',
-                'password' => $defaultPassword,
-                'jenis_pegawai' => 'PNS',
-                'nip' => '199808082021011006',
-                'pangkat' => 'Pengatur Muda',
-                'golongan' => 'II/a',
-                'role' => 'Observer & Forecaster',
-                'jabatan' => 'Observer',
-                'tanggal_masuk_kerja' => '2021-01-01',
-            ],
-            [
-                'nama' => 'A. RAFI PERDANA',
-                'email' => 'rafi.perdana@bmkg.go.id',
-                'password' => $defaultPassword,
-                'jenis_pegawai' => 'PNS',
-                'nip' => '199909092022011007',
-                'pangkat' => 'Pengatur Muda',
-                'golongan' => 'II/a',
-                'role' => 'Observer & Forecaster',
-                'jabatan' => 'Observer',
-                'tanggal_masuk_kerja' => '2022-01-01',
-            ],
-        ];
 
         $pegawaiModels = [];
         foreach ($pegawaisData as $pd) {

@@ -9,7 +9,9 @@ use App\Http\Controllers\SinoptikController;
 use App\Http\Controllers\TaforController;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'welcome')->name('home');
+Route::get('/', function () {
+    return redirect()->route('dashboard');
+})->name('home');
 
 // Public Webhook for WhatsApp Gateway
 Route::post('/api/whatsapp/webhook', [MetReportController::class, 'webhook'])->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
@@ -31,6 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/jadwal/shifts', [JadwalController::class, 'shiftsIndex'])->name('jadwal.shifts.index');
     Route::post('/jadwal/shifts', [JadwalController::class, 'storeShift'])->name('jadwal.shifts.store');
     Route::patch('/jadwal/shifts/{shift}', [JadwalController::class, 'updateShift'])->name('jadwal.shifts.update');
+    Route::delete('/jadwal/shifts/{shift}', [JadwalController::class, 'destroyShift'])->name('jadwal.shifts.destroy');
     Route::get('/jadwal/pdf', [JadwalController::class, 'exportPdf'])->name('jadwal.pdf');
 
     // Laporan Bulanan - Data PIBAL Routes

@@ -161,13 +161,17 @@ class BmkgsoftService
                     ],
                     [
                         'station_id' => $item['station_id'] ?? $stationId,
+                        'alias_station_id' => $item['alias_station_id'] ?? 97460,
                         'station_name' => $item['station_name'] ?? 'Stasiun Meteorologi Oesman Sadik',
+                        'wind_dir_surface' => $item['wind_dir_surface'] ?? null,
+                        'wind_speed_surface' => $item['wind_speed_surface'] ?? null,
+                        'station_elevation' => $item['station_elevation'] ?? null,
                         'raw_pibal' => $item['sandi_pibal'] ?? ($item['raw_pibal'] ?? null),
                         'sandi_pibal' => $item['sandi_pibal'] ?? null,
                         'penghentian_pengamatan' => $item['penghentian_pengamatan'] ?? null,
                         'hasil_lapisan_wd_ws_dddff' => $item['hasil_lapisan_wd_ws_dddff'] ?? null,
                         'pembacaan_azimuth_elevasi' => $item['pembacaan_azimuth_elevasi'] ?? null,
-                        'observer_name' => $observerName,
+                        'observer_name' => $pegawai ? $pegawai->nama : ($observerName ?? null),
                         'pegawai_id' => $pegawai ? $pegawai->id : null,
                     ]
                 );
@@ -327,7 +331,7 @@ class BmkgsoftService
                             'sandi' => $item['sandi'] ?? null,
                             'status' => $item['status'] ?? 'sent',
                             'sender_username' => $item['sender_username'] ?? null,
-                            'observer_name' => $observerName,
+                            'observer_name' => $pegawai ? $pegawai->nama : ($observerName ?? null),
                             'pegawai_id' => $pegawai ? $pegawai->id : null,
                         ]
                     );
@@ -502,7 +506,7 @@ class BmkgsoftService
                             'sandi' => $item['sandi'] ?? null,
                             'status' => $item['status'] ?? 'sent',
                             'sender_username' => $item['sender_username'] ?? null,
-                            'observer_name' => $observerName,
+                            'observer_name' => $pegawai ? $pegawai->nama : ($observerName ?? null),
                             'pegawai_id' => $pegawai ? $pegawai->id : null,
                         ]
                     );
@@ -691,7 +695,7 @@ class BmkgsoftService
                             'visibility' => $getValue($row, 'visibility_vv'),
                             'rainfall' => $getValue($row, 'rainfall_last_mm'),
                             'cloud_cover' => $getValue($row, 'cloud_cover_oktas_m'),
-                            'observer_name' => $observerName,
+                            'observer_name' => $pegawai ? $pegawai->nama : ($observerName ?? null),
                             'pegawai_id' => $pegawai ? $pegawai->id : null,
                         ]
                     );

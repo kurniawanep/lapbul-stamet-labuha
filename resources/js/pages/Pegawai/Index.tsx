@@ -546,16 +546,28 @@ export default function PegawaiIndex({ pegawais, filters, rolesPns }: Props) {
                                 </>
                             )}
 
-                            {/* Jabatan (PNS / PPNPN) */}
-                            <div className="grid gap-2">
-                                <Label htmlFor="add_jabatan">Jabatan Operasional (Opsional)</Label>
-                                <Input
-                                    id="add_jabatan"
-                                    value={addForm.data.jabatan}
-                                    onChange={(e) => addForm.setData('jabatan', e.target.value)}
-                                    placeholder="Contoh: PMG Ahli Pertama / Pramubakti"
-                                />
-                            </div>
+                            {/* Role PPNPN or Jabatan PNS */}
+                            {addForm.data.jenis_pegawai === 'PPNPN' ? (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="add_role_ppnpn">Role PPNPN</Label>
+                                    <Input
+                                        id="add_role_ppnpn"
+                                        value={addForm.data.role}
+                                        onChange={(e) => addForm.setData('role', e.target.value)}
+                                        placeholder="Contoh: PPNPN / Tata Usaha / Pramubakti"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="add_jabatan">Jabatan Fungsional (Opsional)</Label>
+                                    <Input
+                                        id="add_jabatan"
+                                        value={addForm.data.jabatan}
+                                        onChange={(e) => addForm.setData('jabatan', e.target.value)}
+                                        placeholder="Contoh: PMG Ahli Pertama / PMG Penyelia"
+                                    />
+                                </div>
+                            )}
 
                             {/* Tanggal Pertama Masuk Kerja */}
                             <div className="grid gap-2">
@@ -774,16 +786,28 @@ export default function PegawaiIndex({ pegawais, filters, rolesPns }: Props) {
                                 </>
                             )}
 
-                            {/* Jabatan (PNS / PPNPN) */}
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit_jabatan">Jabatan Operasional (Opsional)</Label>
-                                <Input
-                                    id="edit_jabatan"
-                                    value={editForm.data.jabatan}
-                                    onChange={(e) => editForm.setData('jabatan', e.target.value)}
-                                    placeholder="Contoh: PMG Ahli Pertama / Pramubakti"
-                                />
-                            </div>
+                            {/* Role PPNPN or Jabatan PNS */}
+                            {editForm.data.jenis_pegawai === 'PPNPN' ? (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit_role_ppnpn">Role PPNPN</Label>
+                                    <Input
+                                        id="edit_role_ppnpn"
+                                        value={editForm.data.role}
+                                        onChange={(e) => editForm.setData('role', e.target.value)}
+                                        placeholder="Contoh: PPNPN / Tata Usaha / Pramubakti"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit_jabatan">Jabatan Fungsional (Opsional)</Label>
+                                    <Input
+                                        id="edit_jabatan"
+                                        value={editForm.data.jabatan}
+                                        onChange={(e) => editForm.setData('jabatan', e.target.value)}
+                                        placeholder="Contoh: PMG Ahli Pertama / PMG Penyelia"
+                                    />
+                                </div>
+                            )}
 
                             {/* Tanggal Pertama Masuk Kerja */}
                             <div className="grid gap-2">

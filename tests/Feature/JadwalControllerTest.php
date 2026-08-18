@@ -32,8 +32,8 @@ test('authenticated user can view ppnpn schedule matrix page', function () {
 test('authenticated user can update single cell shift', function () {
     $user = User::factory()->create();
     $pegawai = Pegawai::create(['nama' => 'BEN ARTHER MOLLE']);
-    $shift = MasterShift::create(['category' => 'operasional', 'kode_shift' => 'S', 'nama_shift' => 'SIANG OBS']);
     $jadwalBulanan = JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
+    $shift = \App\Models\JadwalBulananShift::create(['jadwal_bulanan_id' => $jadwalBulanan->id, 'category' => 'operasional', 'kode_shift' => 'S', 'nama_shift' => 'SIANG OBS']);
 
     $response = $this->actingAs($user)->post('/jadwal/update-cell', [
         'jadwal_bulanan_id' => $jadwalBulanan->id,
@@ -54,9 +54,9 @@ test('authenticated user can batch update multiple matrix cells', function () {
     $user = User::factory()->create();
     $p1 = Pegawai::create(['nama' => 'BEN ARTHER MOLLE']);
     $p2 = Pegawai::create(['nama' => 'ANGGI FERINA']);
-    $shift1 = MasterShift::create(['category' => 'operasional', 'kode_shift' => 'M1', 'nama_shift' => 'MALAM 1']);
-    $shift2 = MasterShift::create(['category' => 'operasional', 'kode_shift' => 'M2', 'nama_shift' => 'MALAM 2']);
     $jadwalBulanan = JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
+    $shift1 = \App\Models\JadwalBulananShift::create(['jadwal_bulanan_id' => $jadwalBulanan->id, 'category' => 'operasional', 'kode_shift' => 'M1', 'nama_shift' => 'MALAM 1']);
+    $shift2 = \App\Models\JadwalBulananShift::create(['jadwal_bulanan_id' => $jadwalBulanan->id, 'category' => 'operasional', 'kode_shift' => 'M2', 'nama_shift' => 'MALAM 2']);
 
     $response = $this->actingAs($user)->post('/jadwal/batch-update-cells', [
         'jadwal_bulanan_id' => $jadwalBulanan->id,
@@ -83,8 +83,8 @@ test('authenticated user can bulk update shifts', function () {
     $user = User::factory()->create();
     $p1 = Pegawai::create(['nama' => 'PEG 1']);
     $p2 = Pegawai::create(['nama' => 'PEG 2']);
-    $shift = MasterShift::create(['category' => 'operasional', 'kode_shift' => 'M2', 'nama_shift' => 'MALAM 2']);
     $jadwalBulanan = JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
+    $shift = \App\Models\JadwalBulananShift::create(['jadwal_bulanan_id' => $jadwalBulanan->id, 'category' => 'operasional', 'kode_shift' => 'M2', 'nama_shift' => 'MALAM 2']);
 
     $response = $this->actingAs($user)->post('/jadwal/bulk-update', [
         'jadwal_bulanan_id' => $jadwalBulanan->id,
@@ -170,4 +170,20 @@ test('authenticated user can export pdf schedule per category', function () {
 
     $responsePpnpn = $this->actingAs($user)->get('/jadwal/pdf?bulan=8&tahun=2026&category=ppnpn');
     $responsePpnpn->assertStatus(200);
+});
+
+test('authenticated user can delete a shift', function () {
+    $user = User::factory()->create();
+    $shift = MasterShift::create([
+        'category' => 'operasional',
+        'kode_shift' => 'DEL',
+        'nama_shift' => 'TO DELETE',
+    ]);
+
+    $response = $this->actingAs($user)->delete("/jadwal/shifts/{$shift->id}");
+
+    $response->assertRedirect();
+    $this->assertDatabaseMissing('master_shifts', [
+        'id' => $shift->id,
+    ]);
 });

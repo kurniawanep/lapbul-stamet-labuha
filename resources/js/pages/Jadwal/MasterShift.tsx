@@ -157,14 +157,29 @@ export default function MasterShiftPage({ shifts }: Props) {
                                             {shift.jam_keluar ? shift.jam_keluar.substring(0, 5) : '-'}
                                         </TableCell>
                                         <TableCell className="text-center">
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => openEditModal(shift)}
-                                                className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                                            >
-                                                <Edit3 className="h-4 w-4 mr-1" /> Edit
-                                            </Button>
+                                            <div className="flex items-center justify-center gap-1">
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => openEditModal(shift)}
+                                                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                                >
+                                                    <Edit3 className="h-4 w-4 mr-1" /> Edit
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => {
+                                                        if (confirm(`Yakin ingin menghapus shift ${shift.kode_shift}?`)) {
+                                                            const { router } = require('@inertiajs/react');
+                                                            router.delete(`/jadwal/shifts/${shift.id}`, { preserveScroll: true });
+                                                        }
+                                                    }}
+                                                    className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                                                >
+                                                    <Edit3 className="h-4 w-4 mr-1 text-red-500" /> Hapus
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}

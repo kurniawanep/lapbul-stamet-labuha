@@ -33,6 +33,6 @@ class JadwalDetail extends Model
 
     public function shift(): BelongsTo
     {
-        return $this->belongsTo(MasterShift::class, 'shift_id');
+        return $this->belongsTo(JadwalBulananShift::class, 'shift_id');
     }
 }

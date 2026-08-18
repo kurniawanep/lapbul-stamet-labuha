@@ -38,7 +38,7 @@ export default function Dashboard() {
                             </Badge>
                         </div>
                         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                            Selamat Datang, {user?.nama || user?.name || 'Pegawai BMKG'}!
+                            Selamat Datang, {String(user?.nama || user?.name || 'Pegawai BMKG')}!
                         </h1>
                         <p className="text-blue-200/80 text-sm max-w-2xl">
                             Sistem Informasi Jadwal Dinas & Otomasi Pelaporan Stasiun Meteorologi Oesman Sadik Halmahera Selatan.
