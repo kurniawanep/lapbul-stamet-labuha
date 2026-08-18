@@ -152,7 +152,7 @@ class BmkgsoftService
                 continue;
             }
 
-            $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName);
+            $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName, 'UTC');
 
             try {
                 DataPibal::updateOrCreate(
@@ -310,7 +310,7 @@ class BmkgsoftService
                     continue;
                 }
 
-                $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName);
+                $pegawai = $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC');
 
                 try {
                     DataTafor::updateOrCreate(
@@ -331,7 +331,7 @@ class BmkgsoftService
                             'sandi' => $item['sandi'] ?? null,
                             'status' => $item['status'] ?? 'sent',
                             'sender_username' => $item['sender_username'] ?? null,
-                            'observer_name' => $pegawai ? $pegawai->nama : ($observerName ?? null),
+                            'observer_name' => $pegawai ? $pegawai->nama : null,
                             'pegawai_id' => $pegawai ? $pegawai->id : null,
                         ]
                     );
@@ -441,6 +441,8 @@ class BmkgsoftService
      */
     public function syncMetarData(string $startDate, string $endDate, int $stationId = 138): array
     {
+        @set_time_limit(120);
+
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
 
@@ -452,7 +454,7 @@ class BmkgsoftService
 
         $chunkStart = $start->copy();
         while ($chunkStart->lte($end)) {
-            $chunkEnd = $chunkStart->copy()->addDays(1)->endOfDay();
+            $chunkEnd = $chunkStart->copy()->addDays(4)->endOfDay();
             if ($chunkEnd->gt($end)) {
                 $chunkEnd = $end->copy();
             }
@@ -485,7 +487,7 @@ class BmkgsoftService
                     continue;
                 }
 
-                $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName);
+                $pegawai = $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC');
 
                 try {
                     DataMetar::updateOrCreate(
@@ -506,7 +508,7 @@ class BmkgsoftService
                             'sandi' => $item['sandi'] ?? null,
                             'status' => $item['status'] ?? 'sent',
                             'sender_username' => $item['sender_username'] ?? null,
-                            'observer_name' => $pegawai ? $pegawai->nama : ($observerName ?? null),
+                            'observer_name' => $pegawai ? $pegawai->nama : null,
                             'pegawai_id' => $pegawai ? $pegawai->id : null,
                         ]
                     );
@@ -671,7 +673,7 @@ class BmkgsoftService
                     continue;
                 }
 
-                $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName);
+                $pegawai = $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC');
 
                 try {
                     DataSinoptik::updateOrCreate(
@@ -695,7 +697,7 @@ class BmkgsoftService
                             'visibility' => $getValue($row, 'visibility_vv'),
                             'rainfall' => $getValue($row, 'rainfall_last_mm'),
                             'cloud_cover' => $getValue($row, 'cloud_cover_oktas_m'),
-                            'observer_name' => $pegawai ? $pegawai->nama : ($observerName ?? null),
+                            'observer_name' => $pegawai ? $pegawai->nama : null,
                             'pegawai_id' => $pegawai ? $pegawai->id : null,
                         ]
                     );

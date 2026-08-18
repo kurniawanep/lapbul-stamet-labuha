@@ -68,12 +68,19 @@ class MetarController extends Controller
      */
     public function sync(Request $request): RedirectResponse
     {
+        @set_time_limit(120);
+
         $bulan = (int) $request->input('bulan', 8);
         $tahun = (int) $request->input('tahun', 2026);
 
-        $startDate = sprintf('%04d-%02d-01T00:00:00Z', $tahun, $bulan);
-        $daysInMonth = Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
-        $endDate = sprintf('%04d-%02d-%02dT23:59:59Z', $tahun, $bulan, $daysInMonth);
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $startDate = (string) $request->input('start_date');
+            $endDate = (string) $request->input('end_date');
+        } else {
+            $startDate = sprintf('%04d-%02d-01T00:00:00Z', $tahun, $bulan);
+            $daysInMonth = Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
+            $endDate = sprintf('%04d-%02d-%02dT23:59:59Z', $tahun, $bulan, $daysInMonth);
+        }
 
         $result = $this->bmkgsoftService->syncMetarData($startDate, $endDate);
 

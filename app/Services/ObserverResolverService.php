@@ -11,7 +11,7 @@ class ObserverResolverService
     /**
      * Resolve Pegawai model by observer name or duty schedule timestamp.
      */
-    public function resolvePegawai(?string $timestamp, ?string $observerName = null): ?Pegawai
+    public function resolvePegawai(?string $timestamp, ?string $observerName = null, ?string $fromTz = null): ?Pegawai
     {
         // 1. Try matching by observer name if provided
         if (!empty($observerName)) {
@@ -23,7 +23,7 @@ class ObserverResolverService
 
         // 2. Fall back to duty schedule by timestamp if available
         if (!empty($timestamp)) {
-            return $this->getObserverByTimestamp($timestamp);
+            return $this->getObserverByTimestamp($timestamp, $fromTz);
         }
 
         return null;
@@ -156,9 +156,16 @@ class ObserverResolverService
     /**
      * Resolve the duty observer (Pegawai) for a given date-time string in WIT timezone.
      */
-    public function getObserverByTimestamp(string $dateTimeString): ?Pegawai
+    public function getObserverByTimestamp(string $dateTimeString, ?string $fromTz = null): ?Pegawai
     {
-        $dt = Carbon::parse($dateTimeString, 'Asia/Jayapura');
+        if ($fromTz) {
+            $dt = Carbon::parse($dateTimeString, $fromTz)->setTimezone('Asia/Jayapura');
+        } elseif (preg_match('/[Z\+\-]/i', $dateTimeString)) {
+            $dt = Carbon::parse($dateTimeString)->setTimezone('Asia/Jayapura');
+        } else {
+            $dt = Carbon::parse($dateTimeString, 'Asia/Jayapura');
+        }
+
         $timeStr = $dt->format('H:i:s');
         $currentDateStr = $dt->toDateString();
         $previousDateStr = $dt->copy()->subDay()->toDateString();
@@ -166,6 +173,13 @@ class ObserverResolverService
         // 1. Check details starting on the current date
         $currentDetails = JadwalDetail::with(['pegawai', 'shift'])
             ->where('tanggal', $currentDateStr)
+            ->whereHas('shift', function ($q) {
+                $q->where('kode_shift', '!=', 'A')
+                  ->where('is_tidak_masuk_kerja', false);
+            })
+            ->whereHas('pegawai', function ($q) {
+                $q->where('role', 'LIKE', '%Observer%');
+            })
             ->get();
 
         foreach ($currentDetails as $detail) {
@@ -189,6 +203,13 @@ class ObserverResolverService
         // 2. Check overnight details starting on the previous date (e.g., 00:00:00 to 01:45:00)
         $previousDetails = JadwalDetail::with(['pegawai', 'shift'])
             ->where('tanggal', $previousDateStr)
+            ->whereHas('shift', function ($q) {
+                $q->where('kode_shift', '!=', 'A')
+                  ->where('is_tidak_masuk_kerja', false);
+            })
+            ->whereHas('pegawai', function ($q) {
+                $q->where('role', 'LIKE', '%Observer%');
+            })
             ->get();
 
         foreach ($previousDetails as $detail) {

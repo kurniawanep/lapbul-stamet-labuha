@@ -7,7 +7,7 @@ use App\Models\Pegawai;
 use App\Services\ObserverResolverService;
 
 test('resolves daytime observer correctly', function () {
-    $pegawai = Pegawai::create(['nama' => 'ANGGI FERINA LARASATI']);
+    $pegawai = Pegawai::create(['nama' => 'ANGGI FERINA LARASATI', 'role' => 'Observer & Forecaster']);
     $jadwalBulanan = JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
     $shift = JadwalBulananShift::create([
         'jadwal_bulanan_id' => $jadwalBulanan->id,
@@ -33,7 +33,7 @@ test('resolves daytime observer correctly', function () {
 });
 
 test('resolves overnight shift observer starting on current date', function () {
-    $pegawai = Pegawai::create(['nama' => 'REZKY RAMADHAN']);
+    $pegawai = Pegawai::create(['nama' => 'REZKY RAMADHAN', 'role' => 'Observer & Forecaster']);
     $jadwalBulanan = JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
     $shift = JadwalBulananShift::create([
         'jadwal_bulanan_id' => $jadwalBulanan->id,
@@ -58,7 +58,7 @@ test('resolves overnight shift observer starting on current date', function () {
 });
 
 test('resolves overnight shift observer extending into next date early morning', function () {
-    $pegawai = Pegawai::create(['nama' => 'IRSYAD HUMAIDI']);
+    $pegawai = Pegawai::create(['nama' => 'IRSYAD HUMAIDI', 'role' => 'Observer & Forecaster']);
     $jadwalBulanan = JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
     $shift = JadwalBulananShift::create([
         'jadwal_bulanan_id' => $jadwalBulanan->id,
@@ -96,4 +96,31 @@ test('resolves observer name with initials, title differences, and middle name o
     expect($service->resolvePegawai(null, 'Mirza Pesulima')?->id)->toBe($peg3->id);
     expect($service->resolvePegawai(null, 'A Rafi Perdana')?->id)->toBe($peg4->id);
 });
+
+test('resolves observer with UTC to WIT timezone conversion', function () {
+    $pegawai = Pegawai::create(['nama' => 'SYAMSUL MARASAOLY', 'role' => 'Observer & Forecaster']);
+    $jadwalBulanan = JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026, 'zona_waktu' => 'WIT']);
+    $shift = JadwalBulananShift::create([
+        'jadwal_bulanan_id' => $jadwalBulanan->id,
+        'kode_shift' => 'P',
+        'nama_shift' => 'PAGI OBS',
+        'jam_masuk' => '07:30:00',
+        'jam_keluar' => '13:45:00',
+    ]);
+
+    JadwalDetail::create([
+        'jadwal_bulanan_id' => $jadwalBulanan->id,
+        'pegawai_id' => $pegawai->id,
+        'tanggal' => '2026-08-10',
+        'shift_id' => $shift->id,
+    ]);
+
+    $service = new ObserverResolverService();
+    // 00:00:00 UTC on Aug 10 is 09:00:00 WIT on Aug 10 (PAGI OBS shift)
+    $observer = $service->getObserverByTimestamp('2026-08-10 00:00:00', 'UTC');
+
+    expect($observer)->not->toBeNull();
+    expect($observer->id)->toBe($pegawai->id);
+});
+
 

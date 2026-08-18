@@ -102,7 +102,7 @@ class MetReportController extends Controller
 
         $count = 0;
         foreach ($items as $parsed) {
-            $pegawai = $this->observerResolver->resolvePegawai($parsed['data_timestamp']);
+            $pegawai = $this->observerResolver->getObserverByTimestamp($parsed['data_timestamp']);
 
             DataMetReport::updateOrCreate(
                 ['data_timestamp' => Carbon::parse($parsed['data_timestamp'])->format('Y-m-d H:i:s')],
@@ -122,7 +122,7 @@ class MetReportController extends Controller
                     'remarks' => $parsed['remarks'],
                     'trend' => $parsed['trend'],
                     'raw_message' => $parsed['raw_message'],
-                    'observer_name' => $pegawai ? $pegawai->nama : 'Unassigned',
+                    'observer_name' => $pegawai ? $pegawai->nama : null,
                     'pegawai_id' => $pegawai ? $pegawai->id : null,
                 ]
             );
@@ -159,7 +159,7 @@ class MetReportController extends Controller
 
         $savedIds = [];
         foreach ($items as $parsed) {
-            $pegawai = $this->observerResolver->resolvePegawai($parsed['data_timestamp'], $senderName);
+            $pegawai = $this->observerResolver->getObserverByTimestamp($parsed['data_timestamp']);
 
             $record = DataMetReport::updateOrCreate(
                 ['data_timestamp' => Carbon::parse($parsed['data_timestamp'])->format('Y-m-d H:i:s')],
@@ -179,7 +179,7 @@ class MetReportController extends Controller
                     'remarks' => $parsed['remarks'],
                     'trend' => $parsed['trend'],
                     'raw_message' => $parsed['raw_message'],
-                    'observer_name' => $pegawai ? $pegawai->nama : ($senderName ?? 'Unassigned'),
+                    'observer_name' => $pegawai ? $pegawai->nama : null,
                     'pegawai_id' => $pegawai ? $pegawai->id : null,
                 ]
             );

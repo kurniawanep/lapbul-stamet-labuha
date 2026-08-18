@@ -51,6 +51,7 @@ test('sinoptik sync fetches and stores observation data into data_sinoptik table
         'email' => 'dinar@bmkg.go.id',
         'password' => Hash::make('password'),
         'jenis_pegawai' => 'PNS',
+        'role' => 'Observer & Forecaster',
     ]);
 
     Http::fake([
@@ -83,6 +84,21 @@ test('sinoptik sync fetches and stores observation data into data_sinoptik table
                 ],
             ],
         ], 200),
+    ]);
+
+    $jadwalBulanan = \App\Models\JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
+    $shift = \App\Models\JadwalBulananShift::create([
+        'jadwal_bulanan_id' => $jadwalBulanan->id,
+        'kode_shift' => 'P',
+        'nama_shift' => 'PAGI',
+        'jam_masuk' => '00:00:00',
+        'jam_keluar' => '23:59:59',
+    ]);
+    \App\Models\JadwalDetail::create([
+        'jadwal_bulanan_id' => $jadwalBulanan->id,
+        'pegawai_id' => $user->id,
+        'tanggal' => '2026-08-01',
+        'shift_id' => $shift->id,
     ]);
 
     $service = new BmkgsoftService();
