@@ -16,6 +16,8 @@ return new class extends Migration
             $table->unsignedBigInteger('station_id')->default(138);
             $table->string('station_name')->default('Stasiun Meteorologi Oesman Sadik');
             $table->dateTime('data_timestamp')->index();
+            $table->dateTime('received_timestamp')->nullable();
+            $table->dateTime('sent_timestamp')->nullable();
             $table->text('sandi')->nullable();
             
             // Key Synoptic Meteorological Parameters

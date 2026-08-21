@@ -6,6 +6,7 @@ use App\Models\DataPibal;
 use App\Services\Ae31ExportService;
 use App\Services\BmkgsoftService;
 use App\Services\LapbulPibalExportService;
+use App\Services\PibalDashboardService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,18 +17,20 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class PibalController extends Controller
 {
     protected BmkgsoftService $bmkgsoftService;
+    protected PibalDashboardService $dashboardService;
 
-    public function __construct(BmkgsoftService $bmkgsoftService)
+    public function __construct(BmkgsoftService $bmkgsoftService, PibalDashboardService $dashboardService)
     {
         $this->bmkgsoftService = $bmkgsoftService;
+        $this->dashboardService = $dashboardService;
     }
 
     /**
-     * Display PIBAL observations list with filtering (observer & reason) and sorting.
+     * Display PIBAL observations list with filtering (observer & reason), sorting, and dashboard stats.
      */
     public function index(Request $request): Response
     {
-        $bulan = (int) $request->input('bulan', 8);
+        $bulan = (int) $request->input('bulan', 7);
         $tahun = (int) $request->input('tahun', 2026);
         $perPage = (int) $request->input('per_page', 10);
         $sortOrder = strtolower($request->input('sort_order', 'desc'));
@@ -69,7 +72,40 @@ class PibalController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
+        // Transform records to append monitoring evaluation status
+        $pibalRecords->through(function ($item) {
+            $rawSlotStr = is_string($item->data_timestamp) ? $item->data_timestamp : $item->data_timestamp->format('Y-m-d H:i:s');
+            $slotTime = Carbon::parse($rawSlotStr, 'UTC');
+            $sentTs = $item->sent_timestamp ?? $item->received_timestamp ?? $item->data_timestamp;
+            $rawSentStr = is_string($sentTs) ? $sentTs : $sentTs->format('Y-m-d H:i:s');
+            $sentCarbon = Carbon::parse($rawSentStr, 'UTC');
+
+            $windowStart = $slotTime->copy();
+            $windowEnd = $slotTime->copy()->addMinutes(45)->endOfMinute();
+
+            $status = 'tepat_waktu';
+            $delayMinutes = 0;
+
+            if ($sentCarbon->between($windowStart, $windowEnd)) {
+                $status = 'tepat_waktu';
+            } elseif ($sentCarbon->lt($windowStart)) {
+                $status = 'lebih_awal';
+            } else {
+                $status = 'terlambat';
+                $deadline = $slotTime->copy()->addMinutes(45);
+                $diffSec = max(0, $sentCarbon->getTimestamp() - $deadline->getTimestamp());
+                $delayMinutes = max(1, (int) ceil($diffSec / 60.0));
+            }
+
+            $item->monitoring_status = $status;
+            $item->delay_minutes = $delayMinutes;
+            $item->sent_timestamp_display = $sentCarbon->format('Y-m-d H:i:s') . ' UTC';
+
+            return $item;
+        });
+
         $daysInMonth = $startDate->daysInMonth;
+        $dashboardStats = $this->dashboardService->getDashboardStats($bulan, $tahun);
 
         return Inertia::render('Laporan/Pibal', [
             'pibalRecords' => $pibalRecords,
@@ -82,6 +118,7 @@ class PibalController extends Controller
             'reasonFilter' => $reasonFilter ?: 'ALL',
             'availableObservers' => $availableObservers,
             'availableReasons' => $availableReasons,
+            'dashboardStats' => $dashboardStats,
         ]);
     }
 
@@ -90,7 +127,7 @@ class PibalController extends Controller
      */
     public function sync(Request $request): RedirectResponse
     {
-        $bulan = (int) $request->input('bulan', 8);
+        $bulan = (int) $request->input('bulan', 7);
         $tahun = (int) $request->input('tahun', 2026);
 
         $startDate = sprintf('%04d-%02d-01T00:00', $tahun, $bulan);
@@ -113,7 +150,7 @@ class PibalController extends Controller
      */
     public function exportAe31(Request $request, Ae31ExportService $exportService): StreamedResponse
     {
-        $bulan = (int) $request->input('bulan', 8);
+        $bulan = (int) $request->input('bulan', 7);
         $tahun = (int) $request->input('tahun', 2026);
 
         $spreadsheet = $exportService->generateAe31Spreadsheet($bulan, $tahun);
@@ -134,7 +171,7 @@ class PibalController extends Controller
      */
     public function exportLapbulPibal(Request $request, LapbulPibalExportService $exportService): StreamedResponse
     {
-        $bulan = (int) $request->input('bulan', 8);
+        $bulan = (int) $request->input('bulan', 7);
         $tahun = (int) $request->input('tahun', 2026);
 
         $spreadsheet = $exportService->generateLapbulPibalSpreadsheet($bulan, $tahun);

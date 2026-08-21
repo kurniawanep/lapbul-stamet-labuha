@@ -30,13 +30,16 @@ import {
     AlertCircle,
     AlertTriangle,
     ArrowDownUp,
+    BarChart3,
     Calendar,
     CheckCircle2,
+    Clock,
     CloudRain,
     Compass,
     Eye,
     FileSpreadsheet,
     Filter,
+    Gauge,
     Info,
     Radio,
     RefreshCw,
@@ -104,14 +107,53 @@ interface SyncResultPayload {
     details?: SyncDetailItem[];
 }
 
+interface SummaryRow {
+    jenis: string;
+    target: number;
+    target_pct: number;
+    timely: number;
+    timely_pct: number;
+    late: number;
+    late_pct: number;
+    early: number;
+    early_pct: number;
+    missing: number;
+    missing_pct: number;
+}
+
+interface MonthlyTrendItem {
+    label: string;
+    target: number;
+    sent: number;
+    missing: number;
+    pct: number;
+}
+
+interface AnomalyRecord {
+    slot_timestamp: string;
+    slot_label: string;
+    status: 'missing';
+    status_label: string;
+    sent_timestamp: string;
+    observer: string;
+}
+
+interface DashboardStats {
+    summary: SummaryRow;
+    monthlyTrendReport: MonthlyTrendItem[];
+    anomalyRecords?: AnomalyRecord[];
+}
+
 interface Props {
     taforRecords: PaginatedResponse<DataTaforItem>;
     bulan: number;
     tahun: number;
+    daysInMonth: number;
     totalRecords: number;
     sortOrder?: string;
     observerFilter?: string;
     availableObservers?: string[];
+    dashboardStats?: DashboardStats;
 }
 
 const NAMA_BULAN = [
@@ -168,10 +210,12 @@ export default function TaforIndex({
     taforRecords,
     bulan,
     tahun,
+    daysInMonth,
     totalRecords,
     sortOrder = 'desc',
     observerFilter = 'ALL',
     availableObservers = [],
+    dashboardStats,
 }: Props) {
     const { flash } = usePage<{
         flash?: {
@@ -181,10 +225,10 @@ export default function TaforIndex({
         }
     }>().props;
 
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'records'>('dashboard');
     const [isSyncing, setIsSyncing] = useState(false);
     const [selectedTafor, setSelectedTafor] = useState<DataTaforItem | null>(null);
     const [showSyncModal, setShowSyncModal] = useState(false);
-    const [syncFilter, setSyncFilter] = useState<'ALL' | 'BERHASIL' | 'GAGAL'>('ALL');
 
     const syncResult = flash?.sync_result;
     const flashSuccess = flash?.success;
@@ -202,121 +246,144 @@ export default function TaforIndex({
         newObserver?: string;
         newSortOrder?: string;
         newPerPage?: number;
-        newBulan?: number;
-        newTahun?: number;
     }) => {
-        const activeObserver = params.newObserver !== undefined ? params.newObserver : observerFilter;
-        const activeSortOrder = params.newSortOrder !== undefined ? params.newSortOrder : sortOrder;
-        const activePerPage = params.newPerPage !== undefined ? params.newPerPage : taforRecords.per_page;
-        const activeBulan = params.newBulan !== undefined ? params.newBulan : bulan;
-        const activeTahun = params.newTahun !== undefined ? params.newTahun : tahun;
+        const obs = params.newObserver !== undefined ? params.newObserver : observerFilter;
+        const sOrder = params.newSortOrder !== undefined ? params.newSortOrder : sortOrder;
+        const pPage = params.newPerPage !== undefined ? params.newPerPage : taforRecords.per_page;
 
-        const queryData: Record<string, any> = {
-            bulan: activeBulan,
-            tahun: activeTahun,
-            per_page: activePerPage,
-            sort_order: activeSortOrder,
-        };
+        router.get(
+            '/laporan/tafor',
+            {
+                bulan,
+                tahun,
+                observer: obs === 'ALL' ? undefined : obs,
+                sort_order: sOrder,
+                per_page: pPage,
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+            }
+        );
+    };
 
-        if (activeObserver && activeObserver !== 'ALL') {
-            queryData.observer = activeObserver;
-        }
-
-        router.get('/laporan/tafor', queryData, { preserveState: true });
+    const handleMonthYearChange = (newBulan: number, newTahun: number) => {
+        router.get(
+            '/laporan/tafor',
+            {
+                bulan: newBulan,
+                tahun: newTahun,
+                observer: observerFilter === 'ALL' ? undefined : observerFilter,
+                sort_order: sortOrder,
+                per_page: taforRecords.per_page,
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+            }
+        );
     };
 
     const handleSync = () => {
         setIsSyncing(true);
-        router.post('/laporan/tafor/sync', { bulan, tahun }, {
-            preserveScroll: true,
-            onSuccess: () => setShowSyncModal(true),
-            onError: () => setShowSyncModal(true),
-            onFinish: () => setIsSyncing(false),
-        });
+        router.post(
+            '/laporan/tafor/sync',
+            { bulan, tahun },
+            {
+                onFinish: () => {
+                    setIsSyncing(false);
+                },
+            }
+        );
     };
 
-    const filteredDetails = (syncResult?.details || []).filter((item) => {
-        if (syncFilter === 'BERHASIL') return item.status === 'berhasil';
-        if (syncFilter === 'GAGAL') return item.status === 'gagal';
-        return true;
-    });
+    const handleExportExcel = () => {
+        window.location.href = `/laporan/tafor/export-verifikasi?bulan=${bulan}&tahun=${tahun}`;
+    };
+
+    const renderPagination = () => {
+        if (!taforRecords.links || taforRecords.links.length <= 1) return null;
+
+        return (
+            <div className="flex flex-wrap items-center justify-between gap-2 p-4 bg-slate-50 border-t border-slate-200 text-xs">
+                <span className="text-slate-500 font-medium">
+                    Menampilkan {taforRecords.from || 0} - {taforRecords.to || 0} dari {totalRecords} data TAFOR
+                </span>
+                <div className="flex items-center gap-1">
+                    {taforRecords.links.map((link, idx) => {
+                        const isPrev = link.label.includes('Previous') || link.label.includes('&laquo;');
+                        const isNext = link.label.includes('Next') || link.label.includes('&raquo;');
+                        const displayLabel = isPrev ? '«' : isNext ? '»' : link.label;
+
+                        return (
+                            <Button
+                                key={idx}
+                                variant={link.active ? 'default' : 'outline'}
+                                size="sm"
+                                disabled={!link.url}
+                                onClick={() => {
+                                    if (link.url) {
+                                        router.get(link.url, {}, { preserveState: true, preserveScroll: true });
+                                    }
+                                }}
+                                className={`h-8 min-w-[32px] px-2 text-xs font-semibold ${
+                                    link.active
+                                        ? 'bg-sky-600 hover:bg-sky-700 text-white font-bold'
+                                        : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
+                                }`}
+                            >
+                                {displayLabel}
+                            </Button>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
 
     return (
         <>
-            <Head title="Laporan Bulanan - Data TAFOR BMKG" />
+            <Head title="Laporan Bulanan TAFOR - Stasion Meteorologi Labuha" />
 
-            <div className="flex flex-col gap-6 p-4 md:p-6 bg-slate-50 min-h-screen">
-                {/* Flash Banner Result Notification if active */}
-                {flashSuccess && !showSyncModal && (
-                    <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl shadow-sm">
-                        <div className="flex items-center gap-2.5 text-sm font-medium">
-                            <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
-                            <span>{flashSuccess}</span>
-                        </div>
-                        {syncResult && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setShowSyncModal(true)}
-                                className="h-8 text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-100"
-                            >
-                                Lihat Rincian Response
-                            </Button>
-                        )}
-                    </div>
-                )}
+            <div className="p-4 md:p-6 space-y-6 pb-12">
+                {/* TOP HERO HEADER */}
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 p-6 rounded-3xl text-white shadow-xl border border-sky-500/20 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 transform translate-x-12 -translate-y-12 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
-                {flashError && !showSyncModal && (
-                    <div className="flex items-center justify-between p-4 bg-rose-50 border border-rose-200 text-rose-900 rounded-xl shadow-sm">
-                        <div className="flex items-center gap-2.5 text-sm font-medium">
-                            <XCircle className="h-5 w-5 text-rose-600 flex-shrink-0" />
-                            <span>{flashError}</span>
-                        </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowSyncModal(true)}
-                            className="h-8 text-xs border-rose-300 text-rose-800 hover:bg-rose-100"
-                        >
-                            Detail Peringatan
-                        </Button>
-                    </div>
-                )}
-
-                {/* Header Branding */}
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-xl">
-                    <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
-                            <Badge className="bg-blue-500/20 text-blue-200 border-blue-400/30 px-3 py-1 text-xs">
-                                <Sparkles className="h-3.5 w-3.5 mr-1" /> BMKGSoft Synchronizer
+                    <div className="space-y-2 z-10">
+                        <div className="flex items-center gap-3">
+                            <Badge className="bg-gradient-to-r from-sky-500 to-blue-500 text-white font-bold px-3 py-1 text-xs shadow-md">
+                                Prakiraan Cuaca Bandara (TAFOR)
                             </Badge>
-                            <Badge className="bg-emerald-500/20 text-emerald-200 border-emerald-400/30 px-3 py-1 text-xs">
-                                Stasiun Meteorologi Oesman Sadik
-                            </Badge>
+                            <span className="text-xs text-sky-300 font-mono tracking-widest uppercase">
+                                Stasion Meteorologi Kelas III Oesman Sadik (WAEL / 97460)
+                            </span>
                         </div>
-                        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-2.5">
-                            <CloudRain className="h-7 w-7 text-cyan-400 animate-pulse" />
-                            Data Pengamatan TAFOR (Terminal Aerodrome Forecast)
+
+                        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
+                            <CloudRain className="h-7 w-7 text-sky-400 animate-pulse" />
+                            Laporan Bulanan Pengamatan TAFOR
                         </h1>
-                        <p className="text-blue-200/80 text-sm">
-                            Integrasi Otomatis BMKGSoft API &amp; Rekap Prakiraan Cuaca Bandara (ICAO: WAEL)
+
+                        <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
+                            Rekapitulasi Kepatuhan &amp; Pengiriman Berita TAFOR (4 Slot Per Hari: 05, 11, 17, 23 UTC).
                         </p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3">
-                        {/* Month Year Filter */}
-                        <div className="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl backdrop-blur-md border border-white/10">
+                    {/* ACTION CONTROLS */}
+                    <div className="flex flex-wrap items-center gap-3 z-10 w-full md:w-auto">
+                        <div className="flex items-center gap-2 bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700/60 shadow-inner">
                             <Select
                                 value={String(bulan)}
-                                onValueChange={(val) => handleFilterChange({ newBulan: Number(val) })}
+                                onValueChange={(val) => handleMonthYearChange(Number(val), tahun)}
                             >
-                                <SelectTrigger className="w-[130px] bg-transparent border-0 text-white focus:ring-0">
-                                    <SelectValue placeholder="Bulan" />
+                                <SelectTrigger className="w-[120px] h-9 text-xs font-semibold bg-slate-900/90 text-white border-slate-700">
+                                    <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="bg-slate-900 text-white border-slate-800">
-                                    {NAMA_BULAN.map((m, idx) => (
-                                        <SelectItem key={idx + 1} value={String(idx + 1)}>
-                                            {m}
+                                <SelectContent className="bg-slate-900 text-white border-slate-800 text-xs font-semibold">
+                                    {NAMA_BULAN.map((n, i) => (
+                                        <SelectItem key={i + 1} value={String(i + 1)}>
+                                            {n}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -324,13 +391,13 @@ export default function TaforIndex({
 
                             <Select
                                 value={String(tahun)}
-                                onValueChange={(val) => handleFilterChange({ newTahun: Number(val) })}
+                                onValueChange={(val) => handleMonthYearChange(bulan, Number(val))}
                             >
-                                <SelectTrigger className="w-[100px] bg-transparent border-0 text-white focus:ring-0">
-                                    <SelectValue placeholder="Tahun" />
+                                <SelectTrigger className="w-[90px] h-9 text-xs font-semibold bg-slate-900/90 text-white border-slate-700">
+                                    <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="bg-slate-900 text-white border-slate-800">
-                                    {[2025, 2026, 2027].map((y) => (
+                                <SelectContent className="bg-slate-900 text-white border-slate-800 text-xs font-semibold">
+                                    {[2024, 2025, 2026, 2027].map((y) => (
                                         <SelectItem key={y} value={String(y)}>
                                             {y}
                                         </SelectItem>
@@ -339,25 +406,18 @@ export default function TaforIndex({
                             </Select>
                         </div>
 
-                        {/* Export Verifikasi TAFOR (.xlsx) Button */}
-                        <a
-                            href={`/laporan/tafor/export-verifikasi?bulan=${bulan}&tahun=${tahun}`}
-                            target="_blank"
-                            rel="noreferrer"
+                        <Button
+                            onClick={handleExportExcel}
+                            className="h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 rounded-xl shadow-md transition-all flex items-center gap-1.5 text-xs"
                         >
-                            <Button
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-lg shadow-emerald-900/30"
-                            >
-                                <FileSpreadsheet className="h-4 w-4" />
-                                Export Verifikasi TAF (.xlsx)
-                            </Button>
-                        </a>
+                            <FileSpreadsheet className="h-4 w-4" />
+                            Export Excel Verifikasi
+                        </Button>
 
-                        {/* Sync Button */}
                         <Button
                             onClick={handleSync}
                             disabled={isSyncing}
-                            className="bg-cyan-600 hover:bg-cyan-700 text-white gap-2 shadow-lg shadow-cyan-900/30"
+                            className="h-10 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold px-4 rounded-xl shadow-lg hover:shadow-sky-500/20 transition-all flex items-center gap-2"
                         >
                             <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
                             {isSyncing ? 'Menyinkronkan...' : 'Sinkronkan BMKGSoft'}
@@ -365,333 +425,515 @@ export default function TaforIndex({
                     </div>
                 </div>
 
-                {/* KPI Summary Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <Card className="border border-slate-200 shadow-sm bg-white">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                Total Record TAFOR
-                            </CardTitle>
-                            <Activity className="h-4 w-4 text-blue-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-black text-slate-900">{totalRecords} Records</div>
-                            <p className="text-xs text-slate-500 mt-1">
-                                Data terdata bulan {NAMA_BULAN[bulan - 1]} {tahun}
-                            </p>
-                        </CardContent>
-                    </Card>
+                {/* VIEW SWITCH TABS (Dashboard vs Data Table) */}
+                <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+                    <Button
+                        type="button"
+                        variant={activeTab === 'dashboard' ? 'default' : 'ghost'}
+                        onClick={() => setActiveTab('dashboard')}
+                        className={`h-9 px-4 text-xs font-bold rounded-xl transition-all flex items-center gap-2 ${
+                            activeTab === 'dashboard'
+                                ? 'bg-slate-900 text-white shadow-md'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }`}
+                    >
+                        <BarChart3 className="h-4 w-4 text-sky-400" />
+                        Dashboard Monitoring Kinerja TAFOR
+                    </Button>
 
-                    <Card className="border border-slate-200 shadow-sm bg-white">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                Stasiun &amp; Kode ICAO
-                            </CardTitle>
-                            <Compass className="h-4 w-4 text-indigo-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-black text-slate-900">WAEL / 97460</div>
-                            <p className="text-xs text-slate-500 mt-1">Stamet Oesman Sadik Labuha</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border border-slate-200 shadow-sm bg-white">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                Header Berita GTS
-                            </CardTitle>
-                            <Radio className="h-4 w-4 text-cyan-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-black text-cyan-700">FTID40 WAEL</div>
-                            <p className="text-xs text-slate-500 mt-1">Prakiraan TAF Bandara Oesman Sadik</p>
-                        </CardContent>
-                    </Card>
+                    <Button
+                        type="button"
+                        variant={activeTab === 'records' ? 'default' : 'ghost'}
+                        onClick={() => setActiveTab('records')}
+                        className={`h-9 px-4 text-xs font-bold rounded-xl transition-all flex items-center gap-2 ${
+                            activeTab === 'records'
+                                ? 'bg-slate-900 text-white shadow-md'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }`}
+                    >
+                        <Calendar className="h-4 w-4 text-sky-400" />
+                        Daftar Data Pengamatan TAFOR ({totalRecords})
+                    </Button>
                 </div>
 
-                {/* TAFOR Records Table Card */}
-                <Card className="border border-slate-200 shadow-md bg-white overflow-hidden">
-                    <CardHeader className="bg-slate-50/50 border-b pb-4">
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                            <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-                                <Calendar className="h-5 w-5 text-blue-600" />
-                                Daftar Pengamatan TAFOR ({NAMA_BULAN[bulan - 1]} {tahun})
-                            </CardTitle>
-
-                            {/* Sort & Filter Control Bar */}
-                            <div className="flex flex-wrap items-center gap-3 text-xs">
-                                {/* Filter Observer */}
-                                <div className="flex items-center gap-1.5">
-                                    <span className="font-semibold text-slate-600 whitespace-nowrap flex items-center gap-1">
-                                        <Filter className="h-3.5 w-3.5 text-blue-600" /> Observer:
+                {/* TAB 1: TAFOR DASHBOARD VIEW */}
+                {activeTab === 'dashboard' && dashboardStats && (
+                    <div className="space-y-6">
+                        {/* CHART SECTION 1: Donut Ring Chart & Stat KPI Cards */}
+                        <Card className="border border-slate-200 shadow-md bg-white overflow-hidden">
+                            <CardHeader className="bg-slate-900 text-white p-4">
+                                <CardTitle className="text-base font-bold flex items-center justify-between">
+                                    <span className="flex items-center gap-2">
+                                        <Activity className="h-5 w-5 text-sky-400" />
+                                        Ringkasan Kepatuhan &amp; Ketepatan Waktu Berita TAFOR
                                     </span>
-                                    <Select
-                                        value={observerFilter}
-                                        onValueChange={(val) => handleFilterChange({ newObserver: val })}
-                                    >
-                                        <SelectTrigger className="w-[150px] h-8 text-xs bg-white border-slate-200">
-                                            <SelectValue placeholder="Semua Observer" />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-white max-h-60">
-                                            <SelectItem value="ALL">Semua Observer</SelectItem>
-                                            {availableObservers.map((obs) => (
-                                                <SelectItem key={obs} value={obs}>
-                                                    {obs}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                    <Badge className="bg-sky-500 text-white font-bold">
+                                        {NAMA_BULAN[bulan - 1]} {tahun}
+                                    </Badge>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-6">
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                                    {/* Donut Chart (5 cols) */}
+                                    <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
+                                        <div className="relative w-56 h-56 flex items-center justify-center">
+                                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                                <circle cx="50" cy="50" r="40" className="stroke-slate-200" strokeWidth="16" fill="transparent" />
+                                                <circle
+                                                    cx="50" cy="50" r="40"
+                                                    className="stroke-indigo-900 transition-all duration-1000 ease-out"
+                                                    strokeWidth="16"
+                                                    strokeDasharray={`${(dashboardStats.summary.timely_pct / 100) * 251.2} 251.2`}
+                                                    strokeDashoffset="0"
+                                                    fill="transparent"
+                                                />
+                                                <circle
+                                                    cx="50" cy="50" r="40"
+                                                    className="stroke-rose-400 transition-all duration-1000 ease-out"
+                                                    strokeWidth="16"
+                                                    strokeDasharray={`${(dashboardStats.summary.missing_pct / 100) * 251.2} 251.2`}
+                                                    strokeDashoffset={`-${(dashboardStats.summary.timely_pct / 100) * 251.2}`}
+                                                    fill="transparent"
+                                                />
+                                            </svg>
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                                <span className="text-3xl font-black text-sky-600 tracking-tight">
+                                                    {dashboardStats.summary.target} Data
+                                                </span>
+                                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
+                                                    Total Evaluasi
+                                                </span>
+                                            </div>
+                                        </div>
 
-                                {/* Sort Order Dropdown */}
-                                <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
-                                    <span className="font-semibold text-slate-600 whitespace-nowrap flex items-center gap-1">
-                                        <ArrowDownUp className="h-3.5 w-3.5 text-indigo-600" /> Urutan:
-                                    </span>
-                                    <Select
-                                        value={sortOrder}
-                                        onValueChange={(val) => handleFilterChange({ newSortOrder: val })}
-                                    >
-                                        <SelectTrigger className="w-[160px] h-8 text-xs bg-white border-slate-200">
-                                            <SelectValue placeholder="Urutan Tanggal" />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-white">
-                                            <SelectItem value="desc">Terbaru → Terlama</SelectItem>
-                                            <SelectItem value="asc">Terlama → Terbaru</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                        <div className="flex items-center justify-center gap-6 mt-6">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3.5 h-3.5 rounded-sm bg-indigo-900" />
+                                                <span className="text-xs font-bold text-slate-700">Terkirim</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3.5 h-3.5 rounded-sm bg-rose-400" />
+                                                <span className="text-xs font-bold text-slate-700">Missing</span>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                {/* Per Page Dropdown */}
-                                <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
-                                    <span className="font-semibold text-slate-600 whitespace-nowrap">Baris:</span>
-                                    <Select
-                                        value={String(taforRecords.per_page)}
-                                        onValueChange={(val) => handleFilterChange({ newPerPage: Number(val) })}
-                                    >
-                                        <SelectTrigger className="w-[75px] h-8 text-xs bg-white border-slate-200">
-                                            <SelectValue placeholder="10" />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-white">
-                                            <SelectItem value="10">10</SelectItem>
-                                            <SelectItem value="25">25</SelectItem>
-                                            <SelectItem value="50">50</SelectItem>
-                                            <SelectItem value="100">100</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                        </div>
-                    </CardHeader>
+                                    {/* Metric Cards (7 cols) */}
+                                    <div className="lg:col-span-7 space-y-6">
+                                        <div className="p-4 bg-sky-50/60 rounded-xl border border-sky-200/60 text-slate-700 leading-relaxed text-sm">
+                                            <p className="font-medium">
+                                                Pengiriman berita TAFOR pada periode{' '}
+                                                <span className="font-bold text-slate-900">{NAMA_BULAN[bulan - 1]} {tahun}</span>{' '}
+                                                mengevaluasi 4 slot pengamatan per hari (05:00, 11:00, 17:00, dan 23:00 UTC) untuk mendukung layanan keselamatan penerbangan bandara.
+                                            </p>
+                                        </div>
 
-                    <CardContent className="p-0">
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader className="bg-slate-100/70 border-b">
-                                    <TableRow className="hover:bg-transparent">
-                                        <TableHead className="w-12 text-center text-xs font-extrabold text-slate-700">No</TableHead>
-                                        <TableHead className="w-48 text-xs font-extrabold text-slate-700">Waktu Data (UTC &amp; WIT)</TableHead>
-                                        <TableHead className="w-32 text-center text-xs font-extrabold text-slate-700">Header GTS</TableHead>
-                                        <TableHead className="w-24 text-center text-xs font-extrabold text-slate-700">BBB</TableHead>
-                                        <TableHead className="text-xs font-extrabold text-slate-700">Raw Sandi TAFOR</TableHead>
-                                        <TableHead className="w-44 text-xs font-extrabold text-slate-700">Observer / Sender</TableHead>
-                                        <TableHead className="w-28 text-center text-xs font-extrabold text-slate-700">Status</TableHead>
-                                        <TableHead className="w-24 text-center text-xs font-extrabold text-slate-700">Aksi</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody className="divide-y divide-slate-100">
-                                    {recordsList.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={8} className="text-center py-12 text-slate-500">
-                                                <div className="flex flex-col items-center justify-center gap-2">
-                                                    <Info className="h-8 w-8 text-slate-300" />
-                                                    <p className="font-semibold text-slate-700">Tidak Ada Data TAFOR</p>
-                                                    <p className="text-xs text-slate-400">
-                                                        Belum ada data TAFOR terdata untuk periode bulan {NAMA_BULAN[bulan - 1]} {tahun}.
-                                                    </p>
-                                                    <Button
-                                                        onClick={handleSync}
-                                                        disabled={isSyncing}
-                                                        size="sm"
-                                                        className="mt-2 bg-cyan-600 hover:bg-cyan-700 text-white gap-2"
-                                                    >
-                                                        <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                                                        Sinkronkan dari BMKGSoft
-                                                    </Button>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 shadow-sm flex flex-col justify-between">
+                                                <span className="text-2xl font-black text-indigo-950">
+                                                    {dashboardStats.summary.timely_pct.toLocaleString('id-ID')}%
+                                                </span>
+                                                <div className="mt-2 flex items-center justify-between text-xs font-bold text-indigo-800">
+                                                    <span>Terkirim</span>
+                                                    <span className="text-indigo-950 font-extrabold">{dashboardStats.summary.timely} Data</span>
                                                 </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        recordsList.map((item, idx) => {
-                                            const recordIndex = ((taforRecords.current_page || 1) - 1) * (taforRecords.per_page || 10) + idx + 1;
-                                            const dt = formatDateTimeDisplay(item.data_timestamp);
+                                            </div>
+
+                                            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 shadow-sm flex flex-col justify-between">
+                                                <span className="text-2xl font-black text-rose-950">
+                                                    {dashboardStats.summary.missing_pct.toLocaleString('id-ID')}%
+                                                </span>
+                                                <div className="mt-2 flex items-center justify-between text-xs font-bold text-rose-800">
+                                                    <span>Missing</span>
+                                                    <span className="text-rose-950 font-extrabold">{dashboardStats.summary.missing} Data</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-4 rounded-2xl bg-sky-50 border border-sky-200 shadow-sm flex flex-col justify-between">
+                                                <span className="text-2xl font-black text-sky-950">
+                                                    {dashboardStats.summary.target} Data
+                                                </span>
+                                                <div className="mt-2 flex items-center justify-between text-xs font-bold text-sky-800">
+                                                    <span>Target Total</span>
+                                                    <span className="text-sky-950 font-extrabold">100%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* CHART SECTION 2 & 3: Rekap Pengiriman Tafor (Chart + Data Table + Miss Data List - Image 1 & Image 2) */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            {/* CHART & TREND TABLE (8 cols - Image 1) */}
+                            <Card className="lg:col-span-8 border border-slate-200 shadow-md bg-white overflow-hidden">
+                                <CardHeader className="bg-slate-900 text-white p-4">
+                                    <CardTitle className="text-base font-bold flex items-center justify-between">
+                                        <span>Rekap Pengiriman Tafor {tahun}</span>
+                                        <Badge className="bg-sky-400 text-slate-950 font-bold">Trend Bulanan</Badge>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-6 space-y-6">
+                                    {/* Grouped Bar Chart */}
+                                    <div className="h-64 flex items-end justify-between gap-3 pt-8 pb-4 px-2 border-b border-slate-200">
+                                        {dashboardStats.monthlyTrendReport.map((item, idx) => {
+                                            const maxVal = 140;
+                                            const targetHeight = Math.max(10, Math.min(100, (item.target / maxVal) * 100));
+                                            const sentHeight = Math.max(10, Math.min(100, (item.sent / maxVal) * 100));
 
                                             return (
-                                                <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                                                    <TableCell className="text-center font-mono text-xs font-semibold text-slate-400">
-                                                        {recordIndex}
-                                                    </TableCell>
+                                                <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group">
+                                                    {/* Percentage Label */}
+                                                    <span className="text-[10px] font-black text-slate-800 mb-1">
+                                                        {item.pct.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%
+                                                    </span>
 
-                                                    <TableCell className="whitespace-nowrap">
-                                                        <div className="flex flex-col text-xs">
-                                                            <span className="font-bold text-slate-900">{dt.topUtc}</span>
-                                                            <span className="text-[11px] font-medium text-slate-500">{dt.bottomWit}</span>
-                                                        </div>
-                                                    </TableCell>
+                                                    {/* Dual Bars Container */}
+                                                    <div className="flex items-end gap-1 w-full justify-center">
+                                                        {/* Light Blue Bar (Seharusnya) */}
+                                                        <div
+                                                            style={{ height: `${targetHeight}%` }}
+                                                            className="w-1/2 max-w-[16px] bg-sky-200 rounded-t-sm shadow transition-all relative"
+                                                            title={`Seharusnya: ${item.target}`}
+                                                        />
+                                                        {/* Dark Blue Bar (Terkirim) */}
+                                                        <div
+                                                            style={{ height: `${sentHeight}%` }}
+                                                            className="w-1/2 max-w-[16px] bg-indigo-900 rounded-t-sm shadow hover:bg-indigo-800 transition-all relative"
+                                                            title={`Terkirim: ${item.sent}`}
+                                                        />
+                                                    </div>
 
-                                                    <TableCell className="text-center">
-                                                        <Badge variant="outline" className="font-mono text-xs bg-cyan-50 text-cyan-700 border-cyan-200">
-                                                            {item.ttaaii || 'TAF'} {item.cccc || 'WAEL'}
-                                                        </Badge>
-                                                    </TableCell>
-
-                                                    <TableCell className="text-center">
-                                                        {item.bbb ? (
-                                                            <Badge variant="secondary" className="font-mono text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
-                                                                {item.bbb}
-                                                            </Badge>
-                                                        ) : (
-                                                            <span className="text-xs text-slate-400">-</span>
-                                                        )}
-                                                    </TableCell>
-
-                                                    <TableCell className="font-mono text-xs max-w-[350px]">
-                                                        <p className="truncate bg-slate-50 p-1.5 rounded border border-slate-200 text-slate-800 font-mono whitespace-pre-wrap leading-relaxed">
-                                                            {item.sandi || '-'}
-                                                        </p>
-                                                    </TableCell>
-
-                                                    <TableCell>
-                                                        <div className="flex flex-col text-xs">
-                                                            {item.pegawai ? (
-                                                                <div className="flex items-center gap-1">
-                                                                    <UserCheck className="h-3.5 w-3.5 text-emerald-600" />
-                                                                    <span className="font-bold text-slate-900">{item.pegawai.nama}</span>
-                                                                </div>
-                                                            ) : (
-                                                                <span className="font-bold text-slate-900">{item.observer_name || item.sender_username || '-'}</span>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-
-                                                    <TableCell className="text-center">
-                                                        <Badge
-                                                            className={
-                                                                item.status === 'sent'
-                                                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                                                                    : 'bg-amber-100 text-amber-800 border-amber-200'
-                                                            }
-                                                        >
-                                                            {item.status || 'saved'}
-                                                        </Badge>
-                                                    </TableCell>
-
-                                                    <TableCell className="text-center">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => setSelectedTafor(item)}
-                                                            className="h-8 px-2 text-xs border-slate-200 text-slate-700 hover:bg-blue-50 hover:text-blue-700"
-                                                        >
-                                                            <Eye className="h-3.5 w-3.5 mr-1 text-blue-600" /> Detail
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
+                                                    <span className="text-[11px] font-bold text-slate-600 mt-2 truncate w-full text-center">
+                                                        {item.label}
+                                                    </span>
+                                                </div>
                                             );
-                                        })
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                        })}
+                                    </div>
 
-                        {/* Pagination Section */}
-                        {taforRecords.total > 0 && (
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t bg-slate-50/50">
-                                <div className="text-xs text-slate-500">
-                                    Menampilkan <span className="font-semibold text-slate-700">{taforRecords.from || 0}</span> sampai{' '}
-                                    <span className="font-semibold text-slate-700">{taforRecords.to || 0}</span> dari{' '}
-                                    <span className="font-semibold text-slate-700">{taforRecords.total}</span> data pengamatan
-                                </div>
+                                    {/* Table Legend & Values (Matching User Image 1) */}
+                                    <div className="overflow-x-auto">
+                                        <Table className="border-collapse w-full text-xs">
+                                            <TableBody>
+                                                <TableRow className="bg-slate-50 font-bold border-b border-slate-200">
+                                                    <TableCell className="w-28 font-sans text-slate-700 flex items-center gap-2">
+                                                        <div className="w-3 h-3 bg-sky-200 rounded-xs shrink-0" />
+                                                        Seharusnya
+                                                    </TableCell>
+                                                    {dashboardStats.monthlyTrendReport.map((item, idx) => (
+                                                        <TableCell key={idx} className="text-center font-mono text-slate-900">
+                                                            {item.target}
+                                                        </TableCell>
+                                                    ))}
+                                                </TableRow>
+                                                <TableRow className="bg-slate-50 font-bold border-b border-slate-200">
+                                                    <TableCell className="w-28 font-sans text-slate-700 flex items-center gap-2">
+                                                        <div className="w-3 h-3 bg-indigo-900 rounded-xs shrink-0" />
+                                                        Terkirim
+                                                    </TableCell>
+                                                    {dashboardStats.monthlyTrendReport.map((item, idx) => (
+                                                        <TableCell key={idx} className="text-center font-mono text-indigo-900 font-extrabold">
+                                                            {item.sent}
+                                                        </TableCell>
+                                                    ))}
+                                                </TableRow>
+                                                <TableRow className="bg-slate-100 font-black">
+                                                    <TableCell className="w-28 font-sans text-slate-900">
+                                                        Persentase
+                                                    </TableCell>
+                                                    {dashboardStats.monthlyTrendReport.map((item, idx) => (
+                                                        <TableCell key={idx} className="text-center font-mono text-slate-950">
+                                                            {item.pct.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%
+                                                        </TableCell>
+                                                    ))}
+                                                </TableRow>
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </CardContent>
+                            </Card>
 
-                                <div className="flex items-center gap-1.5">
-                                    {taforRecords.links.map((link, key) => {
-                                        let label = link.label;
-                                        if (label.includes('&laquo;') || label.includes('Previous')) {
-                                            label = 'Prev';
-                                        } else if (label.includes('&raquo;') || label.includes('Next')) {
-                                            label = 'Next';
-                                        }
+                            {/* MISS DATA TAFOR LIST CARD (4 cols - Image 2) */}
+                            <Card className="lg:col-span-4 border border-slate-200 shadow-md bg-white overflow-hidden">
+                                <CardHeader className="bg-slate-900 text-white p-4">
+                                    <CardTitle className="text-base font-bold flex items-center justify-between">
+                                        <span>Rincian Miss Data TAFOR {tahun}</span>
+                                        <Badge className="bg-rose-600 text-white font-bold">Missing Count</Badge>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-6 space-y-3 font-mono text-xs">
+                                    {dashboardStats.monthlyTrendReport.map((item, idx) => {
+                                        const fullMonthName = [
+                                            'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
+                                            'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'
+                                        ][idx] || item.label.toUpperCase();
 
-                                        return link.url ? (
-                                            <Button
-                                                key={key}
-                                                variant={link.active ? 'default' : 'outline'}
-                                                size="sm"
-                                                className={`h-8 min-w-[32px] text-xs px-2.5 ${
-                                                    link.active
-                                                        ? 'bg-blue-600 hover:bg-blue-700 text-white font-bold'
-                                                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                                                    item.missing > 0
+                                                        ? 'bg-rose-50/80 border-rose-200 text-rose-950 font-extrabold'
+                                                        : 'bg-emerald-50/50 border-emerald-100 text-emerald-900 font-bold'
                                                 }`}
-                                                onClick={() => router.get(link.url!, {}, { preserveState: true })}
                                             >
-                                                {label}
-                                            </Button>
-                                        ) : (
-                                            <span
-                                                key={key}
-                                                className="h-8 min-w-[32px] px-2.5 flex items-center justify-center text-xs text-slate-400 border border-slate-100 rounded-md bg-slate-50 cursor-not-allowed"
-                                            >
-                                                {label}
-                                            </span>
+                                                <span className="tracking-tight">MISS DATA TAFOR {fullMonthName}</span>
+                                                <span className="text-sm font-black tracking-wider">
+                                                    = {item.missing} DATA
+                                                </span>
+                                            </div>
                                         );
                                     })}
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* TABLE SECTION 4: Detail Rincian Sandi TAFOR Evaluasi Kepatuhan GTS */}
+                        {(() => {
+                            const taforAnomalies = dashboardStats.anomalyRecords || [];
+
+                            return (
+                                <Card className="border border-slate-200 shadow-md bg-white overflow-hidden">
+                                    <CardHeader className="bg-slate-900 text-white p-4">
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="text-base font-bold flex items-center gap-2">
+                                                <AlertTriangle className="h-5 w-5 text-sky-400" />
+                                                Rincian Miss Data TAFOR Evaluasi Kepatuhan GTS ({NAMA_BULAN[bulan - 1]} {tahun})
+                                            </CardTitle>
+                                            <Badge className="bg-rose-600 text-white font-bold">
+                                                {taforAnomalies.length} Missing Data
+                                            </Badge>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        {taforAnomalies.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center p-8 text-center bg-emerald-50/50">
+                                                <CheckCircle2 className="h-10 w-10 text-emerald-600 mb-2" />
+                                                <p className="font-extrabold text-emerald-950 text-base">
+                                                    Tidak Ada Data Missing TAFOR!
+                                                </p>
+                                                <p className="text-xs text-emerald-800 mt-1">
+                                                    Seluruh pengiriman berita TAFOR pada bulan {NAMA_BULAN[bulan - 1]} {tahun} 100% Terkirim.
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="overflow-x-auto">
+                                                <Table className="w-full">
+                                                    <TableHeader className="bg-slate-100 border-b border-slate-200">
+                                                        <TableRow className="hover:bg-transparent">
+                                                            <TableHead className="w-12 text-center text-xs font-black text-slate-800">NO</TableHead>
+                                                            <TableHead className="w-48 text-left text-xs font-black text-slate-800">WAKTU SLOT PENGAMATAN</TableHead>
+                                                            <TableHead className="w-44 text-left text-xs font-black text-slate-800">JENIS BERITA / SLOT</TableHead>
+                                                            <TableHead className="w-44 text-center text-xs font-black text-slate-800">STATUS EVALUASI</TableHead>
+                                                            <TableHead className="w-48 text-left text-xs font-black text-slate-800">WAKTU PENGIRIMAN GTS</TableHead>
+                                                            <TableHead className="text-left text-xs font-black text-slate-800">OBSERVER / PENGAMAT</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody className="divide-y divide-slate-100 font-mono text-xs">
+                                                        {taforAnomalies.map((item, idx) => {
+                                                            const dtSlot = formatDateTimeDisplay(item.slot_timestamp);
+                                                            return (
+                                                                <TableRow key={idx} className="hover:bg-slate-50">
+                                                                    <TableCell className="text-center font-bold border-r border-slate-100 text-slate-400">
+                                                                        {idx + 1}
+                                                                    </TableCell>
+                                                                    <TableCell className="font-sans border-r border-slate-100">
+                                                                        <div className="flex flex-col">
+                                                                            <span className="font-bold text-slate-900">{dtSlot.topUtc}</span>
+                                                                            <span className="text-[11px] text-slate-500">{dtSlot.bottomWit}</span>
+                                                                        </div>
+                                                                    </TableCell>
+                                                                    <TableCell className="font-sans font-bold border-r border-slate-100 text-slate-800">
+                                                                        {item.slot_label}
+                                                                    </TableCell>
+                                                                    <TableCell className="text-center border-r border-slate-100 whitespace-nowrap">
+                                                                        <Badge className="bg-rose-100 text-rose-900 border-rose-300 font-bold">
+                                                                            <XCircle className="h-3 w-3 mr-1 text-rose-600" /> {item.status_label}
+                                                                        </Badge>
+                                                                    </TableCell>
+                                                                    <TableCell className="font-mono text-slate-700 border-r border-slate-100">
+                                                                        {item.sent_timestamp}
+                                                                    </TableCell>
+                                                                    <TableCell className="font-sans font-bold text-slate-900">
+                                                                        {item.observer}
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            );
+                                                        })}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            );
+                        })()}
+                    </div>
+                )}
+
+                {/* TAB 2: OBSERVATIONS DATA LIST TABLE */}
+                {(activeTab === 'records' || !dashboardStats) && (
+                    <Card className="border border-slate-200 shadow-md bg-white overflow-hidden">
+                        <CardHeader className="bg-slate-50/50 border-b pb-4">
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                                    <Calendar className="h-5 w-5 text-sky-600" />
+                                    Daftar Pengamatan TAFOR ({NAMA_BULAN[bulan - 1]} {tahun})
+                                </CardTitle>
+
+                                <div className="flex flex-wrap items-center gap-3 text-xs">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="font-semibold text-slate-600 whitespace-nowrap flex items-center gap-1">
+                                            <Filter className="h-3.5 w-3.5 text-sky-600" /> Observer:
+                                        </span>
+                                        <Select
+                                            value={observerFilter}
+                                            onValueChange={(val) => handleFilterChange({ newObserver: val })}
+                                        >
+                                            <SelectTrigger className="w-[150px] h-8 text-xs bg-white border-slate-200">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="ALL">Semua Observer</SelectItem>
+                                                {availableObservers.map((obs, idx) => (
+                                                    <SelectItem key={idx} value={obs}>
+                                                        {obs}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="font-semibold text-slate-600 whitespace-nowrap flex items-center gap-1">
+                                            <ArrowDownUp className="h-3.5 w-3.5 text-sky-600" /> Urutan:
+                                        </span>
+                                        <Select
+                                            value={sortOrder}
+                                            onValueChange={(val) => handleFilterChange({ newSortOrder: val })}
+                                        >
+                                            <SelectTrigger className="w-[120px] h-8 text-xs bg-white border-slate-200">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="desc">Terbaru</SelectItem>
+                                                <SelectItem value="asc">Terlama</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
                             </div>
-                        )}
-                    </CardContent>
-                </Card>
+                        </CardHeader>
+
+                        <CardContent className="p-0">
+                            {recordsList.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center p-12 text-center">
+                                    <Info className="h-10 w-10 text-slate-400 mb-3" />
+                                    <p className="font-bold text-slate-700 text-base">Tidak ada data TAFOR</p>
+                                    <p className="text-xs text-slate-500 mt-1 max-w-md">
+                                        Tidak ditemukan data pengamatan TAFOR untuk periode {NAMA_BULAN[bulan - 1]} {tahun}.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <Table className="w-full">
+                                        <TableHeader className="bg-slate-100/70 border-b border-slate-200">
+                                            <TableRow className="hover:bg-transparent">
+                                                <TableHead className="w-12 text-center text-xs font-bold text-slate-800">NO</TableHead>
+                                                <TableHead className="w-48 text-left text-xs font-bold text-slate-800">WAKTU SLOTS PENGAMATAN</TableHead>
+                                                <TableHead className="text-left text-xs font-bold text-slate-800">BERITA SANDI TAFOR</TableHead>
+                                                <TableHead className="w-48 text-left text-xs font-bold text-slate-800">WAKTU PENGIRIMAN GTS</TableHead>
+                                                <TableHead className="w-56 text-left text-xs font-bold text-slate-800">OBSERVER / PENGAMAT</TableHead>
+                                                <TableHead className="w-16 text-center text-xs font-bold text-slate-800">AKSI</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+
+                                        <TableBody className="divide-y divide-slate-100 text-xs">
+                                            {recordsList.map((item, idx) => {
+                                                const rowNum = (taforRecords.current_page - 1) * taforRecords.per_page + idx + 1;
+                                                const observerDisplay = item.pegawai?.nama || item.observer_name || '-';
+                                                const dtDisplay = formatDateTimeDisplay(item.data_timestamp);
+
+                                                return (
+                                                    <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                                                        <TableCell className="text-center font-bold text-slate-500 border-r border-slate-100">
+                                                            {rowNum}
+                                                        </TableCell>
+                                                        <TableCell className="border-r border-slate-100">
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold text-slate-900">{dtDisplay.topUtc}</span>
+                                                                <span className="text-[11px] text-slate-500">{dtDisplay.bottomWit}</span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="font-mono text-[11px] text-slate-800 max-w-xs truncate border-r border-slate-100">
+                                                            {item.sandi || '-'}
+                                                        </TableCell>
+                                                        <TableCell className="font-mono text-[11px] text-slate-600 border-r border-slate-100">
+                                                            {item.sent_timestamp || item.received_timestamp || '-'}
+                                                        </TableCell>
+                                                        <TableCell className="font-semibold text-slate-900 border-r border-slate-100">
+                                                            {observerDisplay}
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => setSelectedTafor(item)}
+                                                                className="h-7 w-7 p-0 hover:bg-sky-50 hover:text-sky-700"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            )}
+                            {renderPagination()}
+                        </CardContent>
+                    </Card>
+                )}
             </div>
 
-            {/* Modal Detail Sandi TAFOR */}
+            {/* DETAIL MODAL DIALOG */}
             <Dialog open={!!selectedTafor} onOpenChange={() => setSelectedTafor(null)}>
-                <DialogContent className="max-w-2xl bg-white border-slate-200">
-                    <DialogHeader className="border-b pb-3">
+                <DialogContent className="max-w-2xl bg-white border border-slate-200">
+                    <DialogHeader>
                         <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <CloudRain className="h-5 w-5 text-blue-600" />
-                            Detail Raw Sandi TAFOR GTS
+                            <CloudRain className="h-5 w-5 text-sky-600" />
+                            Detail Pengamatan TAFOR
                         </DialogTitle>
                     </DialogHeader>
 
                     {selectedTafor && (
                         <div className="space-y-4 pt-2">
-                            <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                            <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
                                 <div>
-                                    <p className="text-slate-500 font-medium">Waktu Pengamatan (UTC &amp; WIT)</p>
-                                    <p className="font-bold text-slate-900 mt-0.5">{formatDateTimeDisplay(selectedTafor.data_timestamp).topUtc}</p>
-                                    <p className="text-[11px] text-slate-600">{formatDateTimeDisplay(selectedTafor.data_timestamp).bottomWit}</p>
+                                    <span className="text-slate-500 block">Waktu Slot (UTC)</span>
+                                    <span className="font-bold text-slate-900">{selectedTafor.data_timestamp}</span>
                                 </div>
                                 <div>
-                                    <p className="text-slate-500 font-medium">Header GTS &amp; ICAO</p>
-                                    <p className="font-bold text-slate-900 mt-0.5">
-                                        {selectedTafor.ttaaii || 'TAF'} {selectedTafor.cccc || 'WAEL'} {selectedTafor.bbb ? `(${selectedTafor.bbb})` : ''}
-                                    </p>
+                                    <span className="text-slate-500 block">Waktu Pengiriman (GTS)</span>
+                                    <span className="font-bold text-slate-900">{selectedTafor.sent_timestamp || selectedTafor.received_timestamp || '-'}</span>
                                 </div>
                                 <div>
-                                    <p className="text-slate-500 font-medium">Observer / Sender</p>
-                                    <p className="font-bold text-slate-900 mt-0.5">
-                                        {selectedTafor.pegawai?.nama || selectedTafor.observer_name || selectedTafor.sender_username || '-'}
-                                    </p>
+                                    <span className="text-slate-500 block">Stasion / Station ID</span>
+                                    <span className="font-bold text-slate-900">{selectedTafor.station_name} ({selectedTafor.station_id})</span>
                                 </div>
                                 <div>
-                                    <p className="text-slate-500 font-medium">Status Pengiriman</p>
-                                    <p className="font-bold text-slate-900 mt-0.5">{selectedTafor.status || 'saved'}</p>
+                                    <span className="text-slate-500 block">Observer / Pengamat</span>
+                                    <span className="font-bold text-slate-900">{selectedTafor.pegawai?.nama || selectedTafor.observer_name || '-'}</span>
                                 </div>
                             </div>
 
-                            <div>
-                                <p className="text-xs font-bold text-slate-700 mb-1.5">Isi Teks Sandi TAFOR (Raw GTS):</p>
-                                <div className="bg-slate-950 text-emerald-400 font-mono text-xs p-4 rounded-xl border border-slate-800 whitespace-pre-wrap leading-relaxed shadow-inner overflow-x-auto">
-                                    {selectedTafor.sandi || 'Sandi tidak tersedia'}
+                            <div className="space-y-1.5">
+                                <span className="text-xs font-bold text-slate-700 block">Sandi Berita TAFOR</span>
+                                <div className="p-3 bg-slate-900 text-sky-300 font-mono text-xs rounded-xl shadow-inner break-all">
+                                    {selectedTafor.sandi || 'NIL'}
                                 </div>
                             </div>
                         </div>
@@ -699,178 +941,45 @@ export default function TaforIndex({
                 </DialogContent>
             </Dialog>
 
-            {/* Modal Response Detail Result Sync BMKGSoft */}
-            <Dialog open={showSyncModal} onOpenChange={setShowSyncModal}>
-                <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col bg-white border-slate-200 p-0 overflow-hidden">
-                    <DialogHeader className="p-6 pb-3 border-b bg-slate-50/50">
+            {/* SYNC RESULT MODAL DIALOG */}
+            <Dialog open={showSyncModal} onOpenChange={() => setShowSyncModal(false)}>
+                <DialogContent className="max-w-2xl bg-white border border-slate-200">
+                    <DialogHeader>
                         <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <RefreshCw className="h-5 w-5 text-cyan-600" />
-                            Rincian Response Sinkronisasi BMKGSoft
+                            <Sparkles className="h-5 w-5 text-sky-600" />
+                            Hasil Sinkronisasi Data TAFOR
                         </DialogTitle>
                     </DialogHeader>
 
-                    <div className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
-                        {/* Summary Status Box */}
-                        {syncResult ? (
-                            <div className="p-4 rounded-xl border bg-slate-50 space-y-3">
-                                <div className="flex items-start gap-3">
-                                    {syncResult.success && syncResult.failed_count === 0 ? (
-                                        <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                                    ) : syncResult.synced_count > 0 ? (
-                                        <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                                    ) : (
-                                        <AlertCircle className="h-5 w-5 text-rose-600 mt-0.5 flex-shrink-0" />
-                                    )}
-                                    <div>
-                                        <p className="font-bold text-sm text-slate-900">{syncResult.message}</p>
-                                        {syncResult.error_reason && (
-                                            <p className="text-slate-600 text-xs mt-1">{syncResult.error_reason}</p>
-                                        )}
-                                    </div>
-                                </div>
+                    {flashError && (
+                        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 text-xs font-medium flex items-start gap-2">
+                            <AlertCircle className="h-4 w-4 text-rose-600 mt-0.5 shrink-0" />
+                            <div>{flashError}</div>
+                        </div>
+                    )}
 
-                                <div className="grid grid-cols-3 gap-3 pt-2 text-center font-medium">
-                                    <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-sm">
-                                        <span className="text-slate-500 block text-[11px]">Total Diterima</span>
-                                        <span className="text-base font-black text-slate-900">{syncResult.total_fetched}</span>
-                                    </div>
-                                    <div className="p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 shadow-sm text-emerald-900">
-                                        <span className="text-emerald-700 block text-[11px]">Sukses</span>
-                                        <span className="text-base font-black text-emerald-700">{syncResult.synced_count}</span>
-                                    </div>
-                                    <div className="p-2.5 bg-rose-50 rounded-lg border border-rose-200 shadow-sm text-rose-900">
-                                        <span className="text-rose-700 block text-[11px]">Gagal / Warn</span>
-                                        <span className="text-base font-black text-rose-700">{syncResult.failed_count}</span>
-                                    </div>
+                    {syncResult && (
+                        <div className="space-y-4 pt-2">
+                            <div className="grid grid-cols-3 gap-3 text-center">
+                                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                                    <span className="text-xl font-black text-emerald-700 block">{syncResult.synced_count}</span>
+                                    <span className="text-[11px] font-bold text-emerald-800">Berhasil Disimpan</span>
+                                </div>
+                                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl">
+                                    <span className="text-xl font-black text-rose-700 block">{syncResult.failed_count}</span>
+                                    <span className="text-[11px] font-bold text-rose-800">Gagal</span>
+                                </div>
+                                <div className="p-3 bg-sky-50 border border-sky-200 rounded-xl">
+                                    <span className="text-xl font-black text-sky-700 block">{syncResult.total_fetched}</span>
+                                    <span className="text-[11px] font-bold text-sky-800">Total Diambil</span>
                                 </div>
                             </div>
-                        ) : flashError ? (
-                            <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-900 space-y-1">
-                                <p className="font-bold text-sm flex items-center gap-2">
-                                    <AlertCircle className="h-4 w-4 text-rose-600" /> Gagal Koneksi / Server Error
-                                </p>
-                                <p className="text-xs text-rose-700">{flashError}</p>
-                            </div>
-                        ) : null}
 
-                        {/* Filter Tabs for Response Details */}
-                        {syncResult?.details && syncResult.details.length > 0 && (
-                            <div className="space-y-3 pt-2">
-                                <div className="flex items-center justify-between">
-                                    <span className="font-bold text-slate-800 text-xs">
-                                        Log Rincian Record ({syncResult.details.length} Data)
-                                    </span>
-
-                                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
-                                        <button
-                                            type="button"
-                                            onClick={() => setSyncFilter('ALL')}
-                                            className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors ${
-                                                syncFilter === 'ALL'
-                                                    ? 'bg-white text-slate-900 shadow-sm'
-                                                    : 'text-slate-600 hover:text-slate-900'
-                                            }`}
-                                        >
-                                            Semua ({syncResult.details.length})
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setSyncFilter('BERHASIL')}
-                                            className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors ${
-                                                syncFilter === 'BERHASIL'
-                                                    ? 'bg-emerald-600 text-white shadow-sm'
-                                                    : 'text-slate-600 hover:text-slate-900'
-                                            }`}
-                                        >
-                                            Sukses ({syncResult.synced_count})
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setSyncFilter('GAGAL')}
-                                            className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors ${
-                                                syncFilter === 'GAGAL'
-                                                    ? 'bg-rose-600 text-white shadow-sm'
-                                                    : 'text-slate-600 hover:text-slate-900'
-                                            }`}
-                                        >
-                                            Gagal ({syncResult.failed_count})
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="border border-slate-200 rounded-xl overflow-hidden max-h-[300px] overflow-y-auto shadow-sm">
-                                    <Table>
-                                        <TableHeader className="bg-slate-100 sticky top-0 z-10 border-b">
-                                            <TableRow>
-                                                <TableHead className="py-2 text-[11px] font-bold text-slate-700">Timestamp Data (UTC)</TableHead>
-                                                <TableHead className="py-2 text-[11px] font-bold text-slate-700">Observer</TableHead>
-                                                <TableHead className="py-2 text-[11px] font-bold text-slate-700 text-center">Status</TableHead>
-                                                <TableHead className="py-2 text-[11px] font-bold text-slate-700">Alasan / Catatan</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody className="divide-y divide-slate-100">
-                                            {filteredDetails.length === 0 ? (
-                                                <TableRow>
-                                                    <TableCell colSpan={4} className="text-center py-6 text-slate-400">
-                                                        Tidak ada item log dengan filter ini.
-                                                    </TableCell>
-                                                </TableRow>
-                                            ) : (
-                                                filteredDetails.map((detail, i) => (
-                                                    <TableRow key={i} className="hover:bg-slate-50/80">
-                                                        <TableCell className="py-2 font-mono text-[11px] text-slate-900">
-                                                            {detail.timestamp}
-                                                        </TableCell>
-                                                        <TableCell className="py-2 text-[11px] font-medium text-slate-800">
-                                                            {detail.observer || 'Unassigned'}
-                                                        </TableCell>
-                                                        <TableCell className="py-2 text-center">
-                                                            {detail.status === 'berhasil' ? (
-                                                                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px]">
-                                                                    <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-600" /> Sukses
-                                                                </Badge>
-                                                            ) : (
-                                                                <Badge className="bg-rose-100 text-rose-800 border-rose-200 text-[10px]">
-                                                                    <XCircle className="h-3 w-3 mr-1 text-rose-600" /> Gagal
-                                                                </Badge>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="py-2 text-[11px] text-slate-600 max-w-[200px] truncate" title={detail.reason || ''}>
-                                                            {detail.reason || '-'}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="p-4 border-t bg-slate-50 flex justify-end">
-                        <Button
-                            variant="default"
-                            onClick={() => setShowSyncModal(false)}
-                            className="bg-slate-900 text-white hover:bg-slate-800 px-6"
-                        >
-                            Tutup Rincian
-                        </Button>
-                    </div>
+                            <p className="text-xs text-slate-600 font-medium">{syncResult.message}</p>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </>
     );
 }
-
-TaforIndex.layout = (page: React.ReactNode) => (
-    <AppLayout
-        breadcrumbs={[
-            { title: 'Dashboard', href: '/dashboard' },
-            { title: 'Laporan Bulanan', href: '/laporan/tafor' },
-            { title: 'Data TAFOR', href: '/laporan/tafor' },
-        ]}
-    >
-        {page}
-    </AppLayout>
-);

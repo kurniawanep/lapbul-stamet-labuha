@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DataMetar;
 use App\Services\BmkgsoftService;
+use App\Services\MetarDashboardService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,10 +14,12 @@ use Inertia\Response;
 class MetarController extends Controller
 {
     protected BmkgsoftService $bmkgsoftService;
+    protected MetarDashboardService $dashboardService;
 
-    public function __construct(BmkgsoftService $bmkgsoftService)
+    public function __construct(BmkgsoftService $bmkgsoftService, MetarDashboardService $dashboardService)
     {
         $this->bmkgsoftService = $bmkgsoftService;
+        $this->dashboardService = $dashboardService;
     }
 
     /**
@@ -38,7 +41,7 @@ class MetarController extends Controller
         $query = DataMetar::with('pegawai')
             ->whereBetween('data_timestamp', [$startDate, $endDate]);
 
-        if ($request->filled('observer')) {
+        if ($request->filled('observer') && $request->input('observer') !== 'ALL') {
             $query->where('observer_name', $request->input('observer'));
         }
 
@@ -46,20 +49,56 @@ class MetarController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
+        $metarRecords->through(function ($item) {
+            $rawSlotStr = is_string($item->data_timestamp) ? $item->data_timestamp : $item->data_timestamp->format('Y-m-d H:i:s');
+            $slotTime = Carbon::parse($rawSlotStr, 'UTC');
+            $sentTs = $item->sent_timestamp ?? $item->received_timestamp ?? $item->data_timestamp;
+            $rawSentStr = is_string($sentTs) ? $sentTs : $sentTs->format('Y-m-d H:i:s');
+            $sentCarbon = Carbon::parse($rawSentStr, 'UTC');
+
+            $windowStart = $slotTime->copy()->subMinutes(2);
+            $windowEnd = $slotTime->copy()->addMinutes(2)->endOfMinute();
+
+            $status = 'tepat_waktu';
+            $delayMinutes = 0;
+
+            if ($sentCarbon->between($windowStart, $windowEnd)) {
+                $status = 'tepat_waktu';
+            } elseif ($sentCarbon->lt($windowStart)) {
+                $status = 'lebih_awal';
+            } else {
+                $status = 'terlambat';
+                $deadline = $slotTime->copy()->addMinutes(2);
+                $diffSec = max(0, $sentCarbon->getTimestamp() - $deadline->getTimestamp());
+                $delayMinutes = max(1, (int) ceil($diffSec / 60.0));
+            }
+
+            $item->monitoring_status = $status;
+            $item->delay_minutes = $delayMinutes;
+            $item->sent_timestamp_display = $sentCarbon->format('Y-m-d H:i:s') . ' UTC';
+
+            return $item;
+        });
+
         $availableObservers = DataMetar::whereBetween('data_timestamp', [$startDate, $endDate])
             ->whereNotNull('observer_name')
             ->distinct()
             ->orderBy('observer_name')
             ->pluck('observer_name');
 
+        $daysInMonth = $startDate->daysInMonth;
+        $dashboardStats = $this->dashboardService->getDashboardStats($bulan, $tahun);
+
         return Inertia::render('Laporan/Metar', [
             'metarRecords' => $metarRecords,
             'bulan' => $bulan,
             'tahun' => $tahun,
+            'daysInMonth' => $daysInMonth,
             'totalRecords' => $metarRecords->total(),
             'sortOrder' => $sortOrder,
             'availableObservers' => $availableObservers,
             'observerFilter' => $request->input('observer', 'ALL'),
+            'dashboardStats' => $dashboardStats,
         ]);
     }
 

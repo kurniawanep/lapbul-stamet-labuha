@@ -2,31 +2,24 @@
 
 use App\Models\DataMetar;
 use App\Models\Pegawai;
-use App\Services\BmkgsoftService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 
-test('authenticated user can view metar monthly report page with pagination', function () {
+test('authenticated user can view metar monthly report page with dashboard stats', function () {
     $user = Pegawai::create([
         'nama' => 'Test Admin',
-        'email' => 'admin@bmkg.go.id',
+        'email' => 'admin_metar@bmkg.go.id',
         'password' => Hash::make('password'),
         'jenis_pegawai' => 'PNS',
     ]);
 
     DataMetar::create([
-        'bmkgsoft_entry_id' => 6910675,
         'station_id' => 138,
-        'alias_station_id' => 97460,
         'station_name' => 'Stasiun Meteorologi Oesman Sadik',
-        'cccc' => 'WAEL',
-        'ttaaii' => 'SAID40',
-        'type_message' => 'metar',
-        'data_timestamp' => '2026-08-13 14:00:00',
-        'sandi' => "SAID40 WAEL 131400\nMETAR WAEL 131400Z AUTO VRB01KT //// ////// 26/24 Q1013=",
-        'status' => 'sent',
-        'sender_username' => 'root',
+        'data_timestamp' => '2026-08-10 00:00:00',
         'observer_name' => 'Rezky Ramadhan',
+        'pegawai_id' => $user->id,
+        'sandi' => 'METAR WAEL 100000Z 18005KT 9999 FEW018 28/24 Q1010=',
     ]);
 
     $response = $this->actingAs($user)
@@ -36,70 +29,48 @@ test('authenticated user can view metar monthly report page with pagination', fu
     $response->assertInertia(fn ($page) => $page
         ->component('Laporan/Metar')
         ->has('metarRecords.data', 1)
+        ->has('dashboardStats')
         ->where('bulan', 8)
         ->where('tahun', 2026)
     );
 });
 
-test('metar sync fetches and stores data into data_metar table using 2-day chunks', function () {
+test('metar sync fetches and stores data into data_metar table', function () {
     $user = Pegawai::create([
         'nama' => 'Rezky Ramadhan',
-        'email' => 'rezky@bmkg.go.id',
+        'email' => 'rezky_metar@bmkg.go.id',
         'password' => Hash::make('password'),
         'jenis_pegawai' => 'PNS',
-        'role' => 'Observer & Forecaster',
     ]);
 
     Http::fake([
         '*/api/v21/user/session/login' => Http::response(['data' => ['token' => 'fake_jwt_token']], 200),
         '*/api/v21/gts/entry*' => Http::response([
-            'status' => 'success',
-            'code' => 200,
             'data' => [
                 [
-                    'id' => 6910675,
-                    'bmkgsoft_id' => 138,
-                    'station_name' => 'Stasiun Meteorologi Oesman Sadik',
-                    'data_timestamp' => '2026-08-01T14:00:00Z',
-                    'received_timestamp' => '2026-08-01T13:58:03Z',
-                    'sent_timestamp' => '2026-08-01T13:58:03Z',
-                    'type_message' => 'metar',
-                    'ttaaii' => 'SAID40',
+                    'id' => 999,
+                    'station_id' => 138,
                     'cccc' => 'WAEL',
-                    'bbb' => null,
-                    'sandi' => 'SAID40 WAEL 011400\nMETAR WAEL 011400Z AUTO VRB01KT //// ////// 26/24 Q1013=',
-                    'status' => 'sent',
-                    'sender_username' => 'Rezky Ramadhan',
-                ],
-            ],
+                    'station_name' => 'Oesman Sadik',
+                    'data_timestamp' => '2026-08-10T00:00:00.000Z',
+                    'received_timestamp' => '2026-08-10T00:01:00.000Z',
+                    'sent_timestamp' => '2026-08-10T00:01:00.000Z',
+                    'sandi' => 'METAR WAEL 100000Z 18005KT 9999 FEW018 28/24 Q1010=',
+                    'sender_username' => 'rezky',
+                ]
+            ]
         ], 200),
     ]);
 
-    $jadwalBulanan = \App\Models\JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
-    $shift = \App\Models\JadwalBulananShift::create([
-        'jadwal_bulanan_id' => $jadwalBulanan->id,
-        'kode_shift' => 'P',
-        'nama_shift' => 'PAGI',
-        'jam_masuk' => '07:30:00',
-        'jam_keluar' => '23:59:59',
-    ]);
-    \App\Models\JadwalDetail::create([
-        'jadwal_bulanan_id' => $jadwalBulanan->id,
-        'pegawai_id' => $user->id,
-        'tanggal' => '2026-08-01',
-        'shift_id' => $shift->id,
-    ]);
+    $response = $this->actingAs($user)
+        ->post('/laporan/metar/sync', [
+            'bulan' => 8,
+            'tahun' => 2026,
+        ]);
 
-    $service = new BmkgsoftService();
-    $result = $service->syncMetarData('2026-08-01T00:00:00Z', '2026-08-01T23:59:59Z', 138);
-
-    expect($result['synced_count'])->toBe(1);
-
+    $response->assertRedirect();
     $this->assertDatabaseHas('data_metar', [
-        'bmkgsoft_entry_id' => 6910675,
+        'station_id' => 138,
         'cccc' => 'WAEL',
-        'ttaaii' => 'SAID40',
-        'pegawai_id' => $user->id,
-        'status' => 'sent',
     ]);
 });

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DataTafor;
 use App\Services\BmkgsoftService;
+use App\Services\TaforDashboardService;
 use App\Services\VerifikasiTaforExportService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -15,10 +16,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class TaforController extends Controller
 {
     protected BmkgsoftService $bmkgsoftService;
+    protected TaforDashboardService $dashboardService;
 
-    public function __construct(BmkgsoftService $bmkgsoftService)
+    public function __construct(BmkgsoftService $bmkgsoftService, TaforDashboardService $dashboardService)
     {
         $this->bmkgsoftService = $bmkgsoftService;
+        $this->dashboardService = $dashboardService;
     }
 
     /**
@@ -40,7 +43,7 @@ class TaforController extends Controller
         $query = DataTafor::with('pegawai')
             ->whereBetween('data_timestamp', [$startDate, $endDate]);
 
-        if ($request->filled('observer')) {
+        if ($request->filled('observer') && $request->input('observer') !== 'ALL') {
             $query->where('observer_name', $request->input('observer'));
         }
 
@@ -54,14 +57,19 @@ class TaforController extends Controller
             ->orderBy('observer_name')
             ->pluck('observer_name');
 
+        $daysInMonth = $startDate->daysInMonth;
+        $dashboardStats = $this->dashboardService->getDashboardStats($bulan, $tahun);
+
         return Inertia::render('Laporan/Tafor', [
             'taforRecords' => $taforRecords,
             'bulan' => $bulan,
             'tahun' => $tahun,
+            'daysInMonth' => $daysInMonth,
             'totalRecords' => $taforRecords->total(),
             'sortOrder' => $sortOrder,
             'availableObservers' => $availableObservers,
             'observerFilter' => $request->input('observer', 'ALL'),
+            'dashboardStats' => $dashboardStats,
         ]);
     }
 
@@ -98,14 +106,14 @@ class TaforController extends Controller
 
         $spreadsheet = $exportService->generateVerifikasiTaforSpreadsheet($bulan, $tahun);
 
-        $fileName = sprintf('Verifikasi_TAF_%02d_%04d.xlsx', $bulan, $tahun);
+        $fileName = sprintf('Verifikasi_TAFOR_%02d_%04d.xlsx', $bulan, $tahun);
 
-        $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
-
-        return response()->streamDownload(function () use ($writer) {
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
             $writer->save('php://output');
         }, $fileName, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
         ]);
     }
 }

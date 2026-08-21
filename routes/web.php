@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\FlightDocumentController;
 use App\Http\Controllers\JadwalController;
 use App\Http\Controllers\MetReportController;
 use App\Http\Controllers\MetarController;
+use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\PegawaiController;
 use App\Http\Controllers\PibalController;
 use App\Http\Controllers\SinoptikController;
@@ -18,6 +20,9 @@ Route::post('/api/whatsapp/webhook', [MetReportController::class, 'webhook'])->w
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
+
+    // Monitoring Performa untuk Kepala Stasiun
+    Route::get('/monitoring', [MonitoringController::class, 'index'])->name('monitoring.index');
 
     // Pegawai Management Routes
     Route::resource('pegawai', PegawaiController::class)->except(['create', 'edit', 'show']);
@@ -59,6 +64,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/laporan/met-report', [MetReportController::class, 'index'])->name('laporan.met-report');
     Route::post('/laporan/met-report/manual', [MetReportController::class, 'storeManual'])->name('laporan.met-report.manual');
     Route::post('/laporan/met-report/send-wa', [MetReportController::class, 'sendWhatsApp'])->name('laporan.met-report.send-wa');
+
+    // Laporan Bulanan - Flight Document (FD) Routes
+    Route::get('/laporan/flight-document', [FlightDocumentController::class, 'index'])->name('laporan.flight-document');
+    Route::post('/laporan/flight-document/sync-inasiam', [FlightDocumentController::class, 'syncInasiam'])->name('laporan.flight-document.sync-inasiam');
+    Route::post('/laporan/flight-document/manual', [FlightDocumentController::class, 'storeManual'])->name('laporan.flight-document.manual');
+    Route::post('/laporan/flight-document/{id}/toggle-wa', [FlightDocumentController::class, 'toggleWaStatus'])->name('laporan.flight-document.toggle-wa');
+    Route::delete('/laporan/flight-document/{id}', [FlightDocumentController::class, 'destroy'])->name('laporan.flight-document.destroy');
 });
 
 require __DIR__.'/settings.php';

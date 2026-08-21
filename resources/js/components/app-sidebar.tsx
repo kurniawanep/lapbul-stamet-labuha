@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Briefcase, Calendar, CloudRain, Eye, FileText, Gauge, LayoutGrid, MessageSquare, Sun, Users, Wind, Wrench } from 'lucide-react';
+import { Briefcase, Calendar, CloudRain, Eye, FileCheck, FileText, Gauge, LayoutGrid, MessageSquare, ShieldCheck, Sun, TrendingUp, Users, Wind, Wrench } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -20,6 +20,11 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Monitoring Performa',
+        href: '/monitoring',
+        icon: TrendingUp,
     },
     {
         title: 'Pegawai',
@@ -77,6 +82,11 @@ const mainNavItems: NavItem[] = [
                 title: 'MET REPORT (QAM)',
                 href: '/laporan/met-report',
                 icon: MessageSquare,
+            },
+            {
+                title: 'Flight Document',
+                href: '/laporan/flight-document',
+                icon: FileCheck,
             },
         ],
     },

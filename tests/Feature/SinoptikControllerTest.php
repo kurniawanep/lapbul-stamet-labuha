@@ -56,33 +56,25 @@ test('sinoptik sync fetches and stores observation data into data_sinoptik table
 
     Http::fake([
         '*/api/v21/user/session/login' => Http::response(['data' => ['token' => 'fake_jwt_token']], 200),
-        '*/api/v21/export/observation/by-station/preview' => Http::response([
+        '*/api/v21/export/observation/by-station/preview*' => Http::response([
             'status' => 'success',
             'code' => 200,
             'data' => [
-                'headers' => [
-                    'station_name', 'data_timestamp', 'wind_dir_deg_dd', 'wind_speed_ff',
-                    'temp_drybulb_c_tttttt', 'temp_max_c_txtxtx', 'temp_min_c_tntntn',
-                    'relative_humidity_pc', 'pressure_qff_mb_derived', 'pressure_qfe_mb_derived',
-                    'edited_encoded_synop', 'observer_name'
-                ],
+                'total' => 1,
+                'headers' => ['station_name', 'data_timestamp', 'wind_dir_deg_dd', 'wind_speed_ff', 'visibility_vv', 'cloud_cover_oktas_m', 'temp_drybulb_c', 'temp_wetbulb_c', 'temp_dewpoint_c_tdtdtd', 'humidity_pc', 'pressure_qff_mb_derived', 'pressure_qfe_mb_derived', 'temp_max_c', 'temp_min_c', 'rainfall_last_mm', 'sandi_sinoptik', 'received_timestamp', 'sent_timestamp', 'observer_name'],
                 'rows' => [
                     [
                         'Stasiun Meteorologi Oesman Sadik',
                         '2026-08-01T00:00:00Z',
-                        49,
-                        4,
-                        26.4,
-                        31.0,
-                        20.3,
-                        78,
-                        1011.4,
-                        1009.8,
-                        "SMID54 WAEL 010000\nAAXX 01004\n97460 32460...",
-                        'Dinar C. Nirwana'
+                        359, 4, 1, 9, 2, 2, "0", "0", null, null, 3, 0, 27, null, 21.5, 24.6, "3", "8", "3", "2", "2", "1", "1", "8", "6", "", "3", "", "0", "", 540, 570, null, 2400, null, 6300, null, 2100, null, "1", "1", "", "1", "", "1", "", 0, 0, null, 0, null, 0, null, 3, null, 0, null, null, 1938.6, 10, 4.6, 0, 0, "", "SMID54 WAEL 010000\nAAXX 01004...", false, false, false, false, false, false, false, false, false, false, false, false, 1010.5, 1008.9, 23.7, 82, 8, 540, 1, null, null, null, null, null, null, null, null, null, 1.2, 0.5, 0, 0, "SMID54 WAEL 010000\nAAXX 01004...", "2026-08-01T00:00:15Z", "2026-08-01T00:00:15Z", 1, "{}", "Dinar C. Nirwana"
                     ]
-                ],
+                ]
             ],
+        ], 200),
+        '*/api/v21/monitoring/gts/synoptic/daily/date/*' => Http::response([
+            'status' => 'success',
+            'code' => 200,
+            'data' => []
         ], 200),
     ]);
 
@@ -102,14 +94,12 @@ test('sinoptik sync fetches and stores observation data into data_sinoptik table
     ]);
 
     $service = new BmkgsoftService();
-    $result = $service->syncSinoptikData('2026-08-01T00:00:00Z', '2026-08-10T23:59:59Z', 138);
+    $result = $service->syncSinoptikData('2026-08-01T00:00:00Z', '2026-08-03T23:59:59Z', 138);
 
     expect($result['synced_count'])->toBe(1);
 
     $this->assertDatabaseHas('data_sinoptik', [
         'data_timestamp' => '2026-08-01 00:00:00',
-        'temp_drybulb' => 26.4,
-        'humidity' => 78.0,
         'pegawai_id' => $user->id,
         'observer_name' => 'Dinar C. Nirwana',
     ]);

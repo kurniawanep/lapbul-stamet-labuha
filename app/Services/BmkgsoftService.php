@@ -7,6 +7,8 @@ use App\Models\DataPibal;
 use App\Models\DataSinoptik;
 use App\Models\DataTafor;
 use Carbon\Carbon;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -26,36 +28,45 @@ class BmkgsoftService
     }
 
     /**
-     * Get bearer authentication token from BMKGSoft API.
+     * Get bearer authentication token from BMKGSoft API (cached for 6 hours).
      */
-    public function getToken(): ?string
+    public function getToken(bool $forceRefresh = false): ?string
     {
-        try {
-            $response = Http::withoutVerifying()
-                ->timeout(15)
-                ->withHeaders([
-                    'accept' => 'application/json',
-                    'content-type' => 'application/json',
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                ])
-                ->post("{$this->baseUrl}/api/v21/user/session/login", [
-                    'username' => $this->username,
-                    'password' => $this->password,
-                ]);
-
-            if ($response->successful()) {
-                return $response->json('data.token');
-            }
-
-            Log::error("BMKGSoft Login Failed", [
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-            return null;
-        } catch (\Exception $e) {
-            Log::error("BMKGSoft Login Exception: " . $e->getMessage());
-            return null;
+        if ($forceRefresh) {
+            Cache::forget('bmkgsoft_token');
         }
+
+        return Cache::remember('bmkgsoft_token', now()->addHours(6), function () {
+            try {
+                $response = Http::withoutVerifying()
+                    ->timeout(15)
+                    ->withHeaders([
+                        'accept' => 'application/json',
+                        'content-type' => 'application/json',
+                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    ])
+                    ->post("{$this->baseUrl}/api/v21/user/session/login", [
+                        'username' => $this->username,
+                        'password' => $this->password,
+                    ]);
+
+                if ($response->successful()) {
+                    $token = $response->json('data.token');
+                    if ($token) {
+                        return $token;
+                    }
+                }
+
+                Log::error("BMKGSoft Login Failed", [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return null;
+            } catch (\Exception $e) {
+                Log::error("BMKGSoft Login Exception: " . $e->getMessage());
+                return null;
+            }
+        });
     }
 
     /**
@@ -75,7 +86,8 @@ class BmkgsoftService
         try {
             $url = "{$this->baseUrl}/db/bmkgsatu/@export_data";
             $response = Http::withoutVerifying()
-                ->timeout(20)
+                ->retry(2, 500)
+                ->timeout(30)
                 ->withHeaders([
                     'accept' => 'application/json',
                     'Authorization' => "Bearer {$token}",
@@ -89,6 +101,28 @@ class BmkgsoftService
                     'type_name' => 'Pibal',
                     '_metadata' => 'station_id,station_name,data_timestamp,alias_station_id,source_data,station_elevation,wind_dir_surface,wind_speed_surface,sandi_pibal,pembacaan_azimuth_elevasi[azimuth],pembacaan_azimuth_elevasi[elevasi],hasil_lapisan_wd_ws_dddff[lapisan],hasil_lapisan_wd_ws_dddff[wd],hasil_lapisan_wd_ws_dddff[ws],hasil_lapisan_wd_ws_dddff[dddff],penghentian_pengamatan,observer_name',
                 ]);
+
+            if ($response->status() === 401) {
+                $token = $this->getToken(true);
+                if ($token) {
+                    $response = Http::withoutVerifying()
+                        ->retry(2, 500)
+                        ->timeout(30)
+                        ->withHeaders([
+                            'accept' => 'application/json',
+                            'Authorization' => "Bearer {$token}",
+                            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        ])
+                        ->get($url, [
+                            'station_id' => $stationId,
+                            'data_timestamp__gte' => $dateFrom,
+                            'data_timestamp__lte' => $dateTo,
+                            '_size' => 100,
+                            'type_name' => 'Pibal',
+                            '_metadata' => 'station_id,station_name,data_timestamp,alias_station_id,source_data,station_elevation,wind_dir_surface,wind_speed_surface,sandi_pibal,pembacaan_azimuth_elevasi[azimuth],pembacaan_azimuth_elevasi[elevasi],hasil_lapisan_wd_ws_dddff[lapisan],hasil_lapisan_wd_ws_dddff[wd],hasil_lapisan_wd_ws_dddff[ws],hasil_lapisan_wd_ws_dddff[dddff],penghentian_pengamatan,observer_name',
+                        ]);
+                }
+            }
 
             if ($response->successful()) {
                 $payload = $response->json();
@@ -118,6 +152,8 @@ class BmkgsoftService
      */
     public function syncPibalData(string $startDate, string $endDate, int $stationId = 138): array
     {
+        @set_time_limit(120);
+
         $fetchResult = $this->fetchPibalDataWithResult($startDate, $endDate, $stationId);
 
         if (!$fetchResult['success']) {
@@ -153,6 +189,9 @@ class BmkgsoftService
             }
 
             $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName, 'UTC');
+            if (!$pegawai) {
+                $pegawai = $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC');
+            }
 
             try {
                 DataPibal::updateOrCreate(
@@ -194,6 +233,98 @@ class BmkgsoftService
             }
         }
 
+        // GTS Pilot Monitoring Enrichment Loop (Concurrent HTTP Pool)
+        try {
+            $token = $this->getToken();
+            if ($token) {
+                $start = Carbon::parse($startDate);
+                $end = Carbon::parse($endDate);
+                $maxMonDate = $end->gt(now()) ? now() : $end;
+
+                $dates = [];
+                $currentDate = $start->copy();
+                while ($currentDate->lte($maxMonDate)) {
+                    $dates[] = $currentDate->format('Y-m-d');
+                    $currentDate->addDay();
+                }
+
+                $dateChunks = array_chunk($dates, 7);
+                foreach ($dateChunks as $dateChunk) {
+                    $responses = Http::pool(function (Pool $pool) use ($dateChunk, $token) {
+                        $requests = [];
+                        foreach ($dateChunk as $dateStr) {
+                            $requests[$dateStr] = $pool->withoutVerifying()
+                                ->timeout(10)
+                                ->withHeaders([
+                                    'accept' => 'application/json',
+                                    'Authorization' => "Bearer {$token}",
+                                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                ])
+                                ->get("{$this->baseUrl}/api/v21/monitoring/gts/pilot/daily/date/{$dateStr}");
+                        }
+                        return $requests;
+                    });
+
+                    foreach ($responses as $resMon) {
+                        if ($resMon instanceof \Illuminate\Http\Client\Response && $resMon->successful()) {
+                            $monData = $resMon->json('data') ?? [];
+                            $foundStn = null;
+                            foreach ($monData as $stn) {
+                                $stnStr = strtoupper(json_encode($stn));
+                                if (str_contains($stnStr, '97460') || str_contains($stnStr, 'WAEL') || str_contains($stnStr, 'OESMAN') || str_contains($stnStr, 'LABUHA')) {
+                                    $foundStn = $stn;
+                                    break;
+                                }
+                            }
+
+                            if ($foundStn) {
+                                foreach ($foundStn as $field) {
+                                    if (is_array($field) && isset($field['raw']) && is_array($field['raw']) && count($field['raw']) > 0) {
+                                        $firstRaw = $field['raw'][0];
+                                        $tsData = $firstRaw['timestamp_data'] ?? null;
+                                        $tsSent = $firstRaw['timestamp_sent_data'] ?? null;
+
+                                        if ($tsData && $tsSent) {
+                                            $dtSlot = Carbon::parse($tsData)->setTimezone('UTC')->format('Y-m-d H:i:s');
+                                            $dtSent = Carbon::parse($tsSent)->setTimezone('UTC')->format('Y-m-d H:i:s');
+                                            $deltaMin = isset($firstRaw['delta_min']) ? (float) $firstRaw['delta_min'] : null;
+
+                                            $status = 'tepat_waktu';
+                                            $delayMinutes = 0;
+
+                                            if ($deltaMin !== null) {
+                                                if ($deltaMin >= 0 && $deltaMin <= 45) {
+                                                    $status = 'tepat_waktu';
+                                                } elseif ($deltaMin < 0) {
+                                                    $status = 'lebih_awal';
+                                                } else {
+                                                    $status = 'terlambat';
+                                                    $delayMinutes = max(1, (int) ceil($deltaMin - 45));
+                                                }
+                                            }
+
+                                            $rec = DataPibal::where('data_timestamp', $dtSlot)->first();
+                                            if ($rec) {
+                                                $rec->update([
+                                                    'received_timestamp' => $dtSent,
+                                                    'sent_timestamp' => $dtSent,
+                                                    'delta_min' => $deltaMin,
+                                                    'monitoring_status' => $status,
+                                                    'delay_minutes' => $delayMinutes,
+                                                ]);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning("GTS Pilot monitoring enrichment error: " . $e->getMessage());
+        }
+
         return [
             'success' => true,
             'synced_count' => $syncedCount,
@@ -222,7 +353,8 @@ class BmkgsoftService
         try {
             $url = "{$this->baseUrl}/api/v21/gts/entry";
             $response = Http::withoutVerifying()
-                ->timeout(15)
+                ->retry(2, 500)
+                ->timeout(30)
                 ->withHeaders([
                     'accept' => 'application/json',
                     'Authorization' => "Bearer {$token}",
@@ -238,6 +370,30 @@ class BmkgsoftService
                     'order_by' => 'data_timestamp',
                     'is_order_by_asc' => 'true',
                 ]);
+
+            if ($response->status() === 401) {
+                $token = $this->getToken(true);
+                if ($token) {
+                    $response = Http::withoutVerifying()
+                        ->retry(2, 500)
+                        ->timeout(30)
+                        ->withHeaders([
+                            'accept' => 'application/json',
+                            'Authorization' => "Bearer {$token}",
+                            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        ])
+                        ->get($url, [
+                            'start' => 0,
+                            'size' => 100,
+                            'type_message' => 'taf',
+                            'cccc' => 'WAEL',
+                            'date_from' => $dateFrom,
+                            'date_to' => $dateTo,
+                            'order_by' => 'data_timestamp',
+                            'is_order_by_asc' => 'true',
+                        ]);
+                }
+            }
 
             if ($response->successful()) {
                 return [
@@ -266,6 +422,8 @@ class BmkgsoftService
      */
     public function syncTaforData(string $startDate, string $endDate, int $stationId = 138): array
     {
+        @set_time_limit(120);
+
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
 
@@ -397,7 +555,8 @@ class BmkgsoftService
         try {
             $url = "{$this->baseUrl}/api/v21/gts/entry";
             $response = Http::withoutVerifying()
-                ->timeout(15)
+                ->retry(2, 500)
+                ->timeout(30)
                 ->withHeaders([
                     'accept' => 'application/json',
                     'Authorization' => "Bearer {$token}",
@@ -413,6 +572,30 @@ class BmkgsoftService
                     'order_by' => 'data_timestamp',
                     'is_order_by_asc' => 'true',
                 ]);
+
+            if ($response->status() === 401) {
+                $token = $this->getToken(true);
+                if ($token) {
+                    $response = Http::withoutVerifying()
+                        ->retry(2, 500)
+                        ->timeout(30)
+                        ->withHeaders([
+                            'accept' => 'application/json',
+                            'Authorization' => "Bearer {$token}",
+                            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        ])
+                        ->get($url, [
+                            'start' => 0,
+                            'size' => 100,
+                            'type_message' => 'metar',
+                            'cccc' => 'WAEL',
+                            'date_from' => $dateFrom,
+                            'date_to' => $dateTo,
+                            'order_by' => 'data_timestamp',
+                            'is_order_by_asc' => 'true',
+                        ]);
+                }
+            }
 
             if ($response->successful()) {
                 return [
@@ -454,7 +637,7 @@ class BmkgsoftService
 
         $chunkStart = $start->copy();
         while ($chunkStart->lte($end)) {
-            $chunkEnd = $chunkStart->copy()->addDays(4)->endOfDay();
+            $chunkEnd = $chunkStart->copy()->addDays(1)->endOfDay();
             if ($chunkEnd->gt($end)) {
                 $chunkEnd = $end->copy();
             }
@@ -534,6 +717,81 @@ class BmkgsoftService
             $chunkStart = $chunkEnd->copy()->addSecond();
         }
 
+        // Enrich delay/transmission timestamps from GTS METAR daily monitoring endpoint (Concurrent HTTP Pool)
+        try {
+            $token = $this->getToken();
+            if ($token) {
+                $start = Carbon::parse($startDate);
+                $end = Carbon::parse($endDate);
+                $maxMonDate = $end->gt(now()) ? now() : $end;
+
+                $dates = [];
+                $currentDate = $start->copy();
+                while ($currentDate->lte($maxMonDate)) {
+                    $dates[] = $currentDate->format('Y-m-d');
+                    $currentDate->addDay();
+                }
+
+                $dateChunks = array_chunk($dates, 7);
+                foreach ($dateChunks as $dateChunk) {
+                    $responses = Http::pool(function (Pool $pool) use ($dateChunk, $token) {
+                        $requests = [];
+                        foreach ($dateChunk as $dateStr) {
+                            $requests[$dateStr] = $pool->withoutVerifying()
+                                ->timeout(10)
+                                ->withHeaders([
+                                    'accept' => 'application/json',
+                                    'Authorization' => "Bearer {$token}",
+                                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                ])
+                                ->get("{$this->baseUrl}/api/v21/monitoring/gts/metar/daily/date/{$dateStr}");
+                        }
+                        return $requests;
+                    });
+
+                    foreach ($responses as $resMon) {
+                        if ($resMon instanceof \Illuminate\Http\Client\Response && $resMon->successful()) {
+                            $monData = $resMon->json('data') ?? [];
+                            $foundStn = null;
+                            foreach ($monData as $stn) {
+                                $stnStr = strtoupper(json_encode($stn));
+                                if (str_contains($stnStr, '97460') || str_contains($stnStr, 'WAEL') || str_contains($stnStr, 'OESMAN') || str_contains($stnStr, 'LABUHA')) {
+                                    $foundStn = $stn;
+                                    break;
+                                }
+                            }
+
+                            if ($foundStn) {
+                                foreach ($foundStn as $field) {
+                                    if (isset($field['raw']) && is_array($field['raw']) && count($field['raw']) > 0) {
+                                        // Always use the FIRST transmission time (field['raw'][0])
+                                        $firstRaw = $field['raw'][0];
+                                        $tsData = $firstRaw['timestamp_data'] ?? null;
+                                        $tsSent = $firstRaw['timestamp_sent_data'] ?? null;
+
+                                        if ($tsData && $tsSent) {
+                                            $dtSlot = Carbon::parse($tsData)->setTimezone('UTC')->format('Y-m-d H:i:s');
+                                            $dtSent = Carbon::parse($tsSent)->setTimezone('UTC')->format('Y-m-d H:i:s');
+
+                                            $rec = DataMetar::where('data_timestamp', $dtSlot)->first();
+                                            if ($rec) {
+                                                $rec->update([
+                                                    'received_timestamp' => $dtSent,
+                                                    'sent_timestamp' => $dtSent,
+                                                ]);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning("GTS METAR monitoring enrichment error: " . $e->getMessage());
+        }
+
         if ($overallError && $totalSynced === 0) {
             return [
                 'success' => false,
@@ -574,7 +832,8 @@ class BmkgsoftService
         try {
             $url = "{$this->baseUrl}/api/v21/export/observation/by-station/preview";
             $response = Http::withoutVerifying()
-                ->timeout(20)
+                ->retry(2, 500)
+                ->timeout(30)
                 ->withHeaders([
                     'accept' => 'application/json',
                     'content-type' => 'application/json',
@@ -587,6 +846,28 @@ class BmkgsoftService
                     'date_from' => $dateFrom,
                     'date_to' => $dateTo,
                 ]);
+
+            if ($response->status() === 401) {
+                // Token might be expired, force refresh once
+                $token = $this->getToken(true);
+                if ($token) {
+                    $response = Http::withoutVerifying()
+                        ->retry(2, 500)
+                        ->timeout(30)
+                        ->withHeaders([
+                            'accept' => 'application/json',
+                            'content-type' => 'application/json',
+                            'Authorization' => "Bearer {$token}",
+                            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        ])
+                        ->post($url, [
+                            'station_id' => [$stationId],
+                            'data_type' => 'sinoptik',
+                            'date_from' => $dateFrom,
+                            'date_to' => $dateTo,
+                        ]);
+                }
+            }
 
             if ($response->successful()) {
                 return [
@@ -611,10 +892,12 @@ class BmkgsoftService
     }
 
     /**
-     * Sync Synoptic observation data into data_sinoptik table using 10-day chunked looping.
+     * Sync Synoptic observation data into data_sinoptik table using chunked looping.
      */
     public function syncSinoptikData(string $startDate, string $endDate, int $stationId = 138): array
     {
+        @set_time_limit(120);
+
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
 
@@ -626,7 +909,7 @@ class BmkgsoftService
 
         $chunkStart = $start->copy();
         while ($chunkStart->lte($end)) {
-            $chunkEnd = $chunkStart->copy()->addDays(9)->endOfDay();
+            $chunkEnd = $chunkStart->copy()->addDays(3)->endOfDay();
             if ($chunkEnd->gt($end)) {
                 $chunkEnd = $end->copy();
             }
@@ -721,6 +1004,98 @@ class BmkgsoftService
             }
 
             $chunkStart = $chunkEnd->copy()->addSecond();
+        }
+
+        // GTS Synoptic Monitoring Enrichment Loop (Concurrent HTTP Pool)
+        try {
+            $token = $this->getToken();
+            if ($token) {
+                $start = Carbon::parse($startDate);
+                $end = Carbon::parse($endDate);
+                $maxMonDate = $end->gt(now()) ? now() : $end;
+
+                $dates = [];
+                $currentDate = $start->copy();
+                while ($currentDate->lte($maxMonDate)) {
+                    $dates[] = $currentDate->format('Y-m-d');
+                    $currentDate->addDay();
+                }
+
+                $dateChunks = array_chunk($dates, 7);
+                foreach ($dateChunks as $dateChunk) {
+                    $responses = Http::pool(function (Pool $pool) use ($dateChunk, $token) {
+                        $requests = [];
+                        foreach ($dateChunk as $dateStr) {
+                            $requests[$dateStr] = $pool->withoutVerifying()
+                                ->timeout(10)
+                                ->withHeaders([
+                                    'accept' => 'application/json',
+                                    'Authorization' => "Bearer {$token}",
+                                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                ])
+                                ->get("{$this->baseUrl}/api/v21/monitoring/gts/synoptic/daily/date/{$dateStr}");
+                        }
+                        return $requests;
+                    });
+
+                    foreach ($responses as $resMon) {
+                        if ($resMon instanceof \Illuminate\Http\Client\Response && $resMon->successful()) {
+                            $monData = $resMon->json('data') ?? [];
+                            $foundStn = null;
+                            foreach ($monData as $stn) {
+                                $stnStr = strtoupper(json_encode($stn));
+                                if (str_contains($stnStr, '97460') || str_contains($stnStr, 'WAEL') || str_contains($stnStr, 'OESMAN') || str_contains($stnStr, 'LABUHA')) {
+                                    $foundStn = $stn;
+                                    break;
+                                }
+                            }
+
+                            if ($foundStn) {
+                                foreach ($foundStn as $field) {
+                                    if (is_array($field) && isset($field['raw']) && is_array($field['raw']) && count($field['raw']) > 0) {
+                                        $firstRaw = $field['raw'][0];
+                                        $tsData = $firstRaw['timestamp_data'] ?? null;
+                                        $tsSent = $firstRaw['timestamp_sent_data'] ?? null;
+                                        $deltaMin = isset($firstRaw['delta_min']) ? (float) $firstRaw['delta_min'] : null;
+
+                                        if ($tsData && $tsSent) {
+                                            $dtSlot = Carbon::parse($tsData)->setTimezone('UTC')->format('Y-m-d H:i:s');
+                                            $dtSent = Carbon::parse($tsSent)->setTimezone('UTC')->format('Y-m-d H:i:s');
+
+                                            $status = 'tepat_waktu';
+                                            $delayMinutes = 0;
+
+                                            if ($deltaMin !== null) {
+                                                if ($deltaMin >= -10 && $deltaMin <= 15) {
+                                                    $status = 'tepat_waktu';
+                                                } elseif ($deltaMin < -10) {
+                                                    $status = 'lebih_awal';
+                                                } else {
+                                                    $status = 'terlambat';
+                                                    $delayMinutes = max(1, (int) ceil($deltaMin - 15));
+                                                }
+                                            }
+
+                                            $rec = DataSinoptik::where('data_timestamp', $dtSlot)->first();
+                                            if ($rec) {
+                                                $rec->update([
+                                                    'received_timestamp' => $dtSent,
+                                                    'sent_timestamp' => $dtSent,
+                                                    'delta_min' => $deltaMin,
+                                                    'monitoring_status' => $status,
+                                                    'delay_minutes' => $delayMinutes,
+                                                ]);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning("GTS Synoptic monitoring enrichment error: " . $e->getMessage());
         }
 
         if ($overallError && $totalSynced === 0) {
