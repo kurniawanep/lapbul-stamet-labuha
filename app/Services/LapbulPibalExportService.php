@@ -574,19 +574,37 @@ class LapbulPibalExportService
 
                     // Table 1: Levels up to 10,000 ft
                     foreach ($this->levelColsAe39Table1 as $targetHeight => $cols) {
-                        $lap = null;
+                        $wd = -1;
+                        $ws = -1;
+
                         if ($targetHeight === 'surface') {
-                            $lap = $layersByHeight[0] ?? ($layersByHeight[-1] ?? null);
+                            if (!is_null($r->wind_dir_surface) && $r->wind_dir_surface !== '') {
+                                $wd = $r->wind_dir_surface;
+                            }
+                            if (!is_null($r->wind_speed_surface) && $r->wind_speed_surface !== '') {
+                                $ws = $r->wind_speed_surface;
+                            }
+
+                            if ($wd == -1 || $ws == -1) {
+                                $lap = $layersByHeight[0] ?? ($layersByHeight[-1] ?? null);
+                                if ($lap) {
+                                    if ($wd == -1 && isset($lap['wd'])) $wd = $lap['wd'];
+                                    if ($ws == -1 && isset($lap['ws'])) $ws = $lap['ws'];
+                                }
+                            }
                         } else {
                             $lap = $layersByHeight[$targetHeight] ?? null;
+                            if ($lap) {
+                                $wd = $lap['wd'] ?? -1;
+                                $ws = $lap['ws'] ?? -1;
+                            }
                         }
 
-                        if ($lap) {
-                            $wd = $lap['wd'] ?? -1;
-                            $ws = $lap['ws'] ?? -1;
-
-                            if ($wd !== -1) $sheet->setCellValue("{$cols['ddd']}{$rowNumTable1}", $wd);
-                            if ($ws !== -1) $sheet->setCellValue("{$cols['ff']}{$rowNumTable1}", $ws);
+                        if ($wd !== -1 && $wd !== null && $wd !== '') {
+                            $sheet->setCellValue("{$cols['ddd']}{$rowNumTable1}", $wd);
+                        }
+                        if ($ws !== -1 && $ws !== null && $ws !== '') {
+                            $sheet->setCellValue("{$cols['ff']}{$rowNumTable1}", $ws);
                         }
                     }
 
