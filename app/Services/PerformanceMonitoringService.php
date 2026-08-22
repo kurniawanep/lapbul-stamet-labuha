@@ -102,31 +102,25 @@ class PerformanceMonitoringService
             }
         }
 
-        $pibalRecords = DataPibal::whereBetween('data_timestamp', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])
-            ->orWhereBetween('tanggal', [$startDate->toDateString(), $endDate->toDateString()])
-            ->get();
+        $pibalRecords = DataPibal::whereBetween('data_timestamp', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])->get();
         $pibalMap = [];
         foreach ($pibalRecords as $p) {
-            $ts = $p->data_timestamp ?? $p->tanggal;
-            $dt = $this->parseUtc($ts);
+            $dt = $this->parseUtc($p->data_timestamp);
             if ($dt) {
                 $day = $dt->day;
-                $h = ($p->jam_utc !== null && $p->jam_utc !== '') ? (int)$p->jam_utc : $dt->hour;
+                $h = $dt->hour;
                 $key = "{$day}_{$h}";
                 $pibalMap[$key] = $p;
             }
         }
 
-        $taforRecords = \App\Models\DataTafor::whereBetween('data_timestamp', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])
-            ->orWhereBetween('tanggal', [$startDate->toDateString(), $endDate->toDateString()])
-            ->get();
+        $taforRecords = \App\Models\DataTafor::whereBetween('data_timestamp', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])->get();
         $taforMap = [];
         foreach ($taforRecords as $t) {
-            $ts = $t->data_timestamp ?? $t->tanggal;
-            $dt = $this->parseUtc($ts);
+            $dt = $this->parseUtc($t->data_timestamp);
             if ($dt) {
                 $day = $dt->day;
-                $h = ($t->jam_utc !== null && $t->jam_utc !== '') ? (int)$t->jam_utc : $dt->hour;
+                $h = $dt->hour;
                 $key = "{$day}_{$h}";
                 $taforMap[$key] = $t;
             }
