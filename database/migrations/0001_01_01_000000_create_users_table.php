@@ -19,6 +19,9 @@ return new class extends Migration
             $table->string('email')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
+            $table->text('two_factor_secret')->nullable();
+            $table->text('two_factor_recovery_codes')->nullable();
+            $table->timestamp('two_factor_confirmed_at')->nullable();
             $table->string('pangkat')->nullable();
             $table->string('golongan')->nullable();
             $table->string('role')->nullable(); // Role PNS: Kepala Stasiun, Tata Usaha, Observer & Forecaster, Teknisi | Role PPNPN: PPNPN, Tata Usaha, Pramubakti, etc.

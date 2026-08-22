@@ -17,6 +17,11 @@ return new class extends Migration
             $table->integer('alias_station_id')->default(97460);
             $table->string('station_name')->default('Stasiun Meteorologi Oesman Sadik');
             $table->dateTime('data_timestamp')->unique();
+            $table->dateTime('received_timestamp')->nullable();
+            $table->dateTime('sent_timestamp')->nullable();
+            $table->float('delta_min')->nullable();
+            $table->string('monitoring_status')->nullable();
+            $table->integer('delay_minutes')->default(0);
             $table->string('observer_name')->nullable();
             $table->foreignId('pegawai_id')->nullable()->constrained('pegawai')->nullOnDelete();
             $table->decimal('wind_dir_surface', 5, 1)->nullable();

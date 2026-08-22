@@ -25,6 +25,9 @@ return new class extends Migration
             $table->timestamp('data_timestamp')->index();
             $table->timestamp('received_timestamp')->nullable();
             $table->timestamp('sent_timestamp')->nullable();
+            $table->float('delta_min')->nullable();
+            $table->string('monitoring_status')->nullable();
+            $table->integer('delay_minutes')->default(0);
             $table->text('sandi')->nullable();
             $table->string('status', 50)->nullable();
             $table->string('sender_username', 100)->nullable();

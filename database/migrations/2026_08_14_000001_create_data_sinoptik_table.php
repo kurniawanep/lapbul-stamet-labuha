@@ -18,6 +18,9 @@ return new class extends Migration
             $table->dateTime('data_timestamp')->index();
             $table->dateTime('received_timestamp')->nullable();
             $table->dateTime('sent_timestamp')->nullable();
+            $table->float('delta_min')->nullable();
+            $table->string('monitoring_status')->nullable();
+            $table->integer('delay_minutes')->default(0);
             $table->text('sandi')->nullable();
             
             // Key Synoptic Meteorological Parameters
