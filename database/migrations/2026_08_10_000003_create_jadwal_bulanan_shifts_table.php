@@ -23,7 +23,7 @@ return new class extends Migration
             $table->boolean('is_tidak_masuk_kerja')->default(false);
             $table->timestamps();
 
-            $table->unique(['jadwal_bulanan_id', 'category', 'kode_shift']);
+            $table->unique(['jadwal_bulanan_id', 'category', 'kode_shift'], 'jbs_bulanan_cat_kode_unique');
         });
     }
 
