@@ -46,6 +46,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/laporan/pibal/sync', [PibalController::class, 'sync'])->name('laporan.pibal.sync');
     Route::get('/laporan/pibal/export-ae31', [PibalController::class, 'exportAe31'])->name('laporan.pibal.export-ae31');
     Route::get('/laporan/pibal/export-lapbul', [PibalController::class, 'exportLapbulPibal'])->name('laporan.pibal.export-lapbul');
+    Route::get('/laporan/pibal/export-lapbul-pibal', [PibalController::class, 'exportLapbulPibal'])->name('laporan.pibal.export-lapbul-pibal');
 
     // Laporan Bulanan - Data TAFOR Routes
     Route::get('/laporan/tafor', [TaforController::class, 'index'])->name('laporan.tafor');

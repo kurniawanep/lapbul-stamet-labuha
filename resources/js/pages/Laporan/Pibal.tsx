@@ -410,7 +410,7 @@ export default function PibalIndex({
 
                         {/* Export Lapbul Pibal */}
                         <a
-                            href={`/laporan/pibal/export-lapbul-pibal?bulan=${bulan}&tahun=${tahun}`}
+                            href={`/laporan/pibal/export-lapbul?bulan=${bulan}&tahun=${tahun}`}
                             target="_blank"
                             rel="noopener noreferrer"
                         >
