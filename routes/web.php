@@ -72,6 +72,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/laporan/flight-document/manual', [FlightDocumentController::class, 'storeManual'])->name('laporan.flight-document.manual');
     Route::post('/laporan/flight-document/{id}/toggle-wa', [FlightDocumentController::class, 'toggleWaStatus'])->name('laporan.flight-document.toggle-wa');
     Route::delete('/laporan/flight-document/{id}', [FlightDocumentController::class, 'destroy'])->name('laporan.flight-document.destroy');
+
+    // Pengaturan WhatsApp Gateway Routes
+    Route::get('/pengaturan/whatsapp', [\App\Http\Controllers\WhatsAppManagementController::class, 'index'])->name('pengaturan.whatsapp');
+    Route::post('/pengaturan/whatsapp/logout', [\App\Http\Controllers\WhatsAppManagementController::class, 'logout'])->name('pengaturan.whatsapp.logout');
+    Route::post('/pengaturan/whatsapp/send-test', [\App\Http\Controllers\WhatsAppManagementController::class, 'sendTest'])->name('pengaturan.whatsapp.send-test');
 });
 
 require __DIR__.'/settings.php';

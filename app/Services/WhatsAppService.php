@@ -75,6 +75,98 @@ class WhatsAppService
     }
 
     /**
+     * Get live connection status and QR code (if disconnected) from WA Gateway.
+     */
+    public function getStatus(): array
+    {
+        if (!$this->isConfigured()) {
+            return [
+                'configured' => false,
+                'connected' => false,
+                'user' => null,
+                'qr' => null,
+                'gateway_url' => $this->gatewayUrl,
+                'message' => 'WHATSAPP_GATEWAY_URL belum dikonfigurasi',
+            ];
+        }
+
+        try {
+            $request = Http::timeout(5)->contentType('application/json');
+            if ($this->apiKey) {
+                $request->withHeaders(['X-Api-Key' => $this->apiKey]);
+            }
+
+            $response = $request->get("{$this->gatewayUrl}/api/qr");
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return [
+                    'configured' => true,
+                    'connected' => (bool) ($data['connected'] ?? false),
+                    'user' => $data['user'] ?? null,
+                    'qr' => $data['qr'] ?? null,
+                    'gateway_url' => $this->gatewayUrl,
+                    'message' => ($data['connected'] ?? false) ? 'WhatsApp Connected & Active' : 'Waiting for QR Code Scan',
+                ];
+            }
+
+            return [
+                'configured' => true,
+                'connected' => false,
+                'user' => null,
+                'qr' => null,
+                'gateway_url' => $this->gatewayUrl,
+                'message' => 'Gagal terhubung ke WA Gateway HTTP API',
+            ];
+        } catch (\Exception $e) {
+            return [
+                'configured' => true,
+                'connected' => false,
+                'user' => null,
+                'qr' => null,
+                'gateway_url' => $this->gatewayUrl,
+                'message' => 'Error koneksi Gateway: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Trigger logout session on WA Gateway and clear auth credentials.
+     */
+    public function logoutSession(): array
+    {
+        if (!$this->isConfigured()) {
+            return ['success' => false, 'message' => 'Gateway URL not configured'];
+        }
+
+        try {
+            $request = Http::timeout(10)->contentType('application/json');
+            if ($this->apiKey) {
+                $request->withHeaders(['X-Api-Key' => $this->apiKey]);
+            }
+
+            $response = $request->post("{$this->gatewayUrl}/api/logout");
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'message' => $response->json('message') ?? 'Sesi WhatsApp berhasil di-logout',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Gagal logout dari Gateway (Status ' . $response->status() . ')',
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Exception logout: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Format recipient string into proper WhatsApp JID.
      */
     protected function formatChatId(string $to): string

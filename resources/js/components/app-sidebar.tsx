@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Briefcase, Calendar, CloudRain, Eye, FileCheck, FileText, Gauge, LayoutGrid, MessageSquare, ShieldCheck, Sun, TrendingUp, Users, Wind, Wrench } from 'lucide-react';
+import { Briefcase, Calendar, CloudRain, Eye, FileCheck, FileText, Gauge, LayoutGrid, MessageSquare, Radio, ShieldCheck, Sun, TrendingUp, Users, Wind, Wrench } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -87,6 +87,11 @@ const mainNavItems: NavItem[] = [
                 title: 'Flight Document',
                 href: '/laporan/flight-document',
                 icon: FileCheck,
+            },
+            {
+                title: 'WhatsApp Gateway',
+                href: '/pengaturan/whatsapp',
+                icon: Radio,
             },
         ],
     },
