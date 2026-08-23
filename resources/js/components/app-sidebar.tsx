@@ -88,12 +88,12 @@ const mainNavItems: NavItem[] = [
                 href: '/laporan/flight-document',
                 icon: FileCheck,
             },
-            {
-                title: 'WhatsApp Gateway',
-                href: '/pengaturan/whatsapp',
-                icon: Radio,
-            },
         ],
+    },
+    {
+        title: 'WhatsApp Gateway',
+        href: '/pengaturan/whatsapp',
+        icon: Radio,
     },
 ];
 

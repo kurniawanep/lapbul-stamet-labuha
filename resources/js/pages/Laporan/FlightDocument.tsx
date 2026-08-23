@@ -17,12 +17,10 @@ import {
     FileCheck, 
     FileText, 
     MessageSquare, 
-    RefreshCw, 
     Search, 
     Trash2, 
     AlertTriangle,
-    Plane,
-    Code
+    Plane
 } from 'lucide-react';
 
 interface PaginatedData<T> {
@@ -98,16 +96,10 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
     const [selectedBulan, setSelectedBulan] = useState(filters.bulan);
     const [selectedTahun, setSelectedTahun] = useState(filters.tahun);
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
-    const [isSyncing, setIsSyncing] = useState(false);
     const [isPasteOpen, setIsPasteOpen] = useState(false);
-    const [isJsonOpen, setIsJsonOpen] = useState(false);
 
     const pasteForm = useForm({
         raw_message: '',
-    });
-
-    const jsonForm = useForm({
-        raw_json: '',
     });
 
     const handleFilterChange = (newBulan = selectedBulan, newTahun = selectedTahun, newSearch = searchQuery) => {
@@ -118,57 +110,12 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
         }, { preserveState: true, replace: true });
     };
 
-    const handleSyncInasiam = async () => {
-        setIsSyncing(true);
-        try {
-            const url = `${inasiam_config.base_url}/rest/v1/fd_inquiries?select=id,type,callsign,airline_id,departure_at,issued_at,upt_id,template_id,origin_airports,destination_airports,alternate_airports,flight_level,sigwx_high_area,satellites,authorized_info,fd_url,download_count,status,created_by,created_at,updated_at,airlines(id,name,icao,iata,image)&upt_id=eq.${inasiam_config.upt_id}&order=created_at.desc&limit=200`;
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'accept': 'application/json',
-                    'accept-profile': 'public',
-                    'apikey': inasiam_config.apikey,
-                    'authorization': `Bearer ${inasiam_config.bearer_token}`,
-                    'prefer': 'count=exact',
-                },
-            });
-
-            if (response.ok) {
-                const items = await response.json();
-                if (Array.isArray(items) && items.length > 0) {
-                    router.post('/laporan/flight-document/sync-inasiam', { items }, {
-                        onFinish: () => setIsSyncing(false),
-                    });
-                    return;
-                }
-            }
-        } catch (err) {
-            console.warn('Browser fetch failed:', err);
-        }
-
-        // Fallback to server side sync
-        router.post('/laporan/flight-document/sync-inasiam', {}, {
-            onFinish: () => setIsSyncing(false),
-        });
-    };
-
     const handleQuickPasteSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         pasteForm.post('/laporan/flight-document/manual', {
             onSuccess: () => {
                 setIsPasteOpen(false);
                 pasteForm.reset();
-            },
-        });
-    };
-
-    const handleJsonSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        jsonForm.post('/laporan/flight-document/sync-inasiam', {
-            onSuccess: () => {
-                setIsJsonOpen(false);
-                jsonForm.reset();
             },
         });
     };
@@ -205,60 +152,6 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                            onClick={handleSyncInasiam}
-                            disabled={isSyncing}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-sm transition-all"
-                        >
-                            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                            {isSyncing ? 'Menyinkronkan...' : 'Sync dari INA-SIAM'}
-                        </Button>
-
-                        {/* Modal Paste JSON F12 */}
-                        <Dialog open={isJsonOpen} onOpenChange={setIsJsonOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" className="border-sky-200 text-sky-700 hover:bg-sky-50 dark:border-sky-800 dark:text-sky-300 dark:hover:bg-sky-950">
-                                    <Code className="h-4 w-4 mr-2" />
-                                    Import INA-SIAM JSON
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-xl">
-                                <form onSubmit={handleJsonSubmit}>
-                                    <DialogHeader>
-                                        <DialogTitle className="flex items-center gap-2 text-sky-600">
-                                            <Code className="h-5 w-5" />
-                                            Import Data JSON INA-SIAM (Inspect F12)
-                                        </DialogTitle>
-                                        <DialogDescription>
-                                            Jika Cloudflare memblokir cURL otomatis, Anda dapat meng-copy respon JSON dari F12 Network tab INA-SIAM (`fd_inquiries`) lalu tempelkan di bawah ini.
-                                        </DialogDescription>
-                                    </DialogHeader>
-
-                                    <div className="py-4 space-y-3">
-                                        <Label htmlFor="raw_json">Array JSON INA-SIAM:</Label>
-                                        <Textarea
-                                            id="raw_json"
-                                            rows={8}
-                                            placeholder='[{"id":"01KC...", "type":"Terjadwal", "callsign":"IW-1173", ...}]'
-                                            value={jsonForm.data.raw_json}
-                                            onChange={(e) => jsonForm.setData('raw_json', e.target.value)}
-                                            className="font-mono text-xs"
-                                            required
-                                        />
-                                    </div>
-
-                                    <DialogFooter>
-                                        <Button type="button" variant="ghost" onClick={() => setIsJsonOpen(false)}>
-                                            Batal
-                                        </Button>
-                                        <Button type="submit" disabled={jsonForm.processing} className="bg-sky-600 text-white hover:bg-sky-700">
-                                            {jsonForm.processing ? 'Menyimpan...' : 'Import & Simpan JSON'}
-                                        </Button>
-                                    </DialogFooter>
-                                </form>
-                            </DialogContent>
-                        </Dialog>
-
                         {/* Modal Quick Paste WA */}
                         <Dialog open={isPasteOpen} onOpenChange={setIsPasteOpen}>
                             <DialogTrigger asChild>
@@ -478,7 +371,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                             {records.data.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={8} className="text-center py-10 text-slate-500">
-                                        Tidak ada data Flight Document pada periode ini. Gunakan <strong>Import INA-SIAM JSON</strong> atau <strong>Sync dari INA-SIAM</strong> untuk memperbarui data.
+                                        Tidak ada data Flight Document pada periode ini.
                                     </TableCell>
                                 </TableRow>
                             ) : (

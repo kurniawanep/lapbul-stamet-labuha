@@ -62,7 +62,7 @@ export default function WhatsAppManagement({ status }: Props) {
         let interval: NodeJS.Timeout | null = null;
         if (autoRefresh && !status.connected) {
             interval = setInterval(() => {
-                router.reload({ preserveScroll: true, preserveState: true });
+                router.reload();
             }, 4000);
         }
         return () => {
@@ -98,7 +98,7 @@ export default function WhatsAppManagement({ status }: Props) {
     };
 
     const handleManualRefresh = () => {
-        router.reload({ preserveScroll: true });
+        router.reload();
     };
 
     const userPhoneDisplay = status.user?.id
@@ -106,7 +106,7 @@ export default function WhatsAppManagement({ status }: Props) {
         : '-';
 
     return (
-        <AppLayout title="WhatsApp Gateway Management">
+        <>
             <Head title="WhatsApp Gateway Management - Stasion Meteorologi Labuha" />
 
             <div className="p-4 md:p-6 space-y-6 pb-12">
@@ -404,6 +404,17 @@ export default function WhatsAppManagement({ status }: Props) {
                     </div>
                 </div>
             </div>
-        </AppLayout>
+        </>
     );
 }
+
+WhatsAppManagement.layout = (page: React.ReactNode) => (
+    <AppLayout
+        breadcrumbs={[
+            { title: 'Dashboard', href: '/dashboard' },
+            { title: 'WhatsApp Gateway', href: '/pengaturan/whatsapp' },
+        ]}
+    >
+        {page}
+    </AppLayout>
+);
