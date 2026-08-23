@@ -16,7 +16,7 @@ Route::get('/', function () {
 })->name('home');
 
 // Public Webhook for WhatsApp Gateway
-Route::post('/api/whatsapp/webhook', [MetReportController::class, 'webhook'])->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+Route::post('/api/whatsapp/webhook', [MetReportController::class, 'webhook']);
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');

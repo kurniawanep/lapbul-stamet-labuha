@@ -268,7 +268,7 @@ export default function WhatsAppManagement({ status }: Props) {
                                         <ol className="list-decimal list-inside space-y-1 font-medium pl-1">
                                             <li>Buka aplikasi <strong>WhatsApp</strong> di HP Pengamatan / Stasion.</li>
                                             <li>Ketuk menu <strong>Setelan / Titik Tiga (Pojok Kanan Atas)</strong>.</li>
-                                            <li>Pilih <strong>Perangkat Tertaut (Linked Devices)</strong> $\rightarrow$ <strong>Tautkan Perangkat</strong>.</li>
+                                            <li>Pilih <strong>Perangkat Tertaut (Linked Devices)</strong> &rarr; <strong>Tautkan Perangkat</strong>.</li>
                                             <li>Arahkan kamera HP ke <strong>QR Code</strong> di atas.</li>
                                         </ol>
                                     </div>
