@@ -134,6 +134,7 @@ class MetReportController extends Controller
 
     /**
      * Webhook endpoint for receiving incoming WhatsApp messages from WAHA / Baileys Gateway.
+     * Supports both MET REPORT (QAM) and Flight Document (FD) messages from group and personal chats.
      */
     public function webhook(Request $request): JsonResponse
     {
@@ -141,57 +142,129 @@ class MetReportController extends Controller
         $messageText = $body['payload']['body'] ?? ($body['text'] ?? ($body['message'] ?? null));
         $senderName = $body['payload']['_data']['notifyName'] ?? ($body['pushName'] ?? null);
 
-        if (!$messageText || !$this->parser->isMetReport($messageText)) {
-            return response()->json(['status' => 'ignored', 'reason' => 'Not a MET REPORT message']);
+        if (!$messageText) {
+            return response()->json(['status' => 'ignored', 'reason' => 'Empty message content']);
         }
 
-        $items = $this->parser->parseMultiple($messageText);
-        if (empty($items)) {
-            $single = $this->parser->parse($messageText);
-            if ($single['data_timestamp']) {
-                $items = [$single];
+        // 1. Process MET REPORT (QAM)
+        if ($this->parser->isMetReport($messageText)) {
+            $items = $this->parser->parseMultiple($messageText);
+            if (empty($items)) {
+                $single = $this->parser->parse($messageText);
+                if ($single['data_timestamp']) {
+                    $items = [$single];
+                }
             }
+
+            if (empty($items)) {
+                return response()->json(['status' => 'error', 'reason' => 'Timestamp parsing failed'], 422);
+            }
+
+            $savedIds = [];
+            foreach ($items as $parsed) {
+                $pegawai = $this->observerResolver->getObserverByTimestamp($parsed['data_timestamp']);
+
+                $record = DataMetReport::updateOrCreate(
+                    ['data_timestamp' => Carbon::parse($parsed['data_timestamp'])->format('Y-m-d H:i:s')],
+                    [
+                        'station_code' => $parsed['station_code'],
+                        'station_name' => $parsed['station_name'],
+                        'wind' => $parsed['wind'],
+                        'visibility' => $parsed['visibility'],
+                        'weather' => $parsed['weather'],
+                        'cloud' => $parsed['cloud'],
+                        'temp_drybulb' => $parsed['temp_drybulb'],
+                        'temp_dewpoint' => $parsed['temp_dewpoint'],
+                        'qnh_hpa' => $parsed['qnh_hpa'],
+                        'qnh_inhg' => $parsed['qnh_inhg'],
+                        'qfe_hpa' => $parsed['qfe_hpa'],
+                        'qfe_inhg' => $parsed['qfe_inhg'],
+                        'remarks' => $parsed['remarks'],
+                        'trend' => $parsed['trend'],
+                        'raw_message' => $parsed['raw_message'],
+                        'observer_name' => $pegawai ? $pegawai->nama : null,
+                        'pegawai_id' => $pegawai ? $pegawai->id : null,
+                    ]
+                );
+                $savedIds[] = $record->id;
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'category' => 'MET_REPORT',
+                'data_id' => $savedIds[0] ?? null,
+                'data_ids' => $savedIds,
+                'count' => count($savedIds),
+            ]);
         }
 
-        if (empty($items)) {
-            return response()->json(['status' => 'error', 'reason' => 'Timestamp parsing failed'], 422);
+        // 2. Process Flight Document (FD)
+        $fdParser = app(\App\Services\FlightDocumentParserService::class);
+        if ($fdParser->isFlightDocumentMsg($messageText)) {
+            $parsedItems = $fdParser->parseMultiple($messageText);
+            if (empty($parsedItems)) {
+                $fakeLine = $senderName ? "{$senderName}: {$messageText}" : $messageText;
+                $parsedItems = $fdParser->parseMultiple($fakeLine);
+            }
+
+            $savedIds = [];
+            foreach ($parsedItems as $item) {
+                $fn = $item['filename'];
+                $timestamp = $item['timestamp'];
+                $sender = $item['sender_name'] ?: $senderName;
+
+                $doc = null;
+                if ($fn && $fn !== 'FD_DOCUMENT.pdf') {
+                    $doc = \App\Models\DataFlightDocument::where('no_fd', 'like', "%{$fn}%")->first();
+                }
+
+                if (!$doc && $timestamp) {
+                    $dt = Carbon::parse($timestamp);
+                    $doc = \App\Models\DataFlightDocument::whereBetween('departure_at', [
+                        $dt->copy()->subHours(2)->toDateTimeString(),
+                        $dt->copy()->addHours(2)->toDateTimeString(),
+                    ])->where('is_wa_dispatched', false)->first();
+                }
+
+                $pegawai = $timestamp ? $this->observerResolver->resolvePegawai($timestamp, $sender) : null;
+
+                if ($doc) {
+                    $doc->update([
+                        'is_wa_dispatched' => true,
+                        'wa_dispatched_at' => $timestamp ? Carbon::parse($timestamp)->format('Y-m-d H:i:s') : Carbon::now(),
+                        'wa_sender_name' => $sender,
+                        'pegawai_id' => $pegawai ? $pegawai->id : $doc->pegawai_id,
+                        'observer_name' => $pegawai ? $pegawai->nama : ($sender ?: $doc->observer_name),
+                    ]);
+                    $savedIds[] = $doc->id;
+                } else {
+                    $newDoc = \App\Models\DataFlightDocument::create([
+                        'station_code' => 'WAEL',
+                        'no_fd' => $fn ?: 'BMKG-FD-' . date('Ymd-His'),
+                        'flight_number' => 'WA Dispatch',
+                        'route' => 'WAEL -> WAMM',
+                        'departure_at' => $timestamp ? Carbon::parse($timestamp)->format('Y-m-d H:i:s') : Carbon::now(),
+                        'type' => 'Terjadwal',
+                        'status' => 'Selesai',
+                        'is_wa_dispatched' => true,
+                        'wa_dispatched_at' => $timestamp ? Carbon::parse($timestamp)->format('Y-m-d H:i:s') : Carbon::now(),
+                        'wa_sender_name' => $sender,
+                        'observer_name' => $pegawai ? $pegawai->nama : $sender,
+                        'pegawai_id' => $pegawai ? $pegawai->id : null,
+                    ]);
+                    $savedIds[] = $newDoc->id;
+                }
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'category' => 'FLIGHT_DOCUMENT',
+                'data_ids' => $savedIds,
+                'count' => count($savedIds),
+            ]);
         }
 
-        $savedIds = [];
-        foreach ($items as $parsed) {
-            $pegawai = $this->observerResolver->getObserverByTimestamp($parsed['data_timestamp']);
-
-            $record = DataMetReport::updateOrCreate(
-                ['data_timestamp' => Carbon::parse($parsed['data_timestamp'])->format('Y-m-d H:i:s')],
-                [
-                    'station_code' => $parsed['station_code'],
-                    'station_name' => $parsed['station_name'],
-                    'wind' => $parsed['wind'],
-                    'visibility' => $parsed['visibility'],
-                    'weather' => $parsed['weather'],
-                    'cloud' => $parsed['cloud'],
-                    'temp_drybulb' => $parsed['temp_drybulb'],
-                    'temp_dewpoint' => $parsed['temp_dewpoint'],
-                    'qnh_hpa' => $parsed['qnh_hpa'],
-                    'qnh_inhg' => $parsed['qnh_inhg'],
-                    'qfe_hpa' => $parsed['qfe_hpa'],
-                    'qfe_inhg' => $parsed['qfe_inhg'],
-                    'remarks' => $parsed['remarks'],
-                    'trend' => $parsed['trend'],
-                    'raw_message' => $parsed['raw_message'],
-                    'observer_name' => $pegawai ? $pegawai->nama : null,
-                    'pegawai_id' => $pegawai ? $pegawai->id : null,
-                ]
-            );
-            $savedIds[] = $record->id;
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'data_id' => $savedIds[0] ?? null,
-            'data_ids' => $savedIds,
-            'count' => count($savedIds),
-        ]);
+        return response()->json(['status' => 'ignored', 'reason' => 'Not a MET REPORT or FLIGHT DOCUMENT message']);
     }
 
     /**
