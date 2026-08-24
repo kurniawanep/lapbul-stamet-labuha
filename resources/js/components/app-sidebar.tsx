@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Briefcase, Calendar, CloudRain, Eye, FileCheck, FileText, Gauge, LayoutGrid, MessageSquare, Radio, ShieldCheck, Sun, Thermometer, TrendingUp, Users, Wind, Wrench, Zap } from 'lucide-react';
+import { Briefcase, Calendar, CloudRain, CloudSun, Droplets, Eye, FileCheck, FileText, Gauge, LayoutGrid, MessageSquare, Radio, ShieldCheck, Sun, Thermometer, TrendingUp, Users, Wind, Wrench, Zap } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -82,6 +82,16 @@ const mainNavItems: NavItem[] = [
                 title: 'Data FKLIM',
                 href: '/laporan/fklim',
                 icon: Thermometer,
+            },
+            {
+                title: 'Data Perawanan',
+                href: '/laporan/perawanan',
+                icon: CloudSun,
+            },
+            {
+                title: 'Data Penguapan',
+                href: '/laporan/penguapan',
+                icon: Droplets,
             },
             {
                 title: 'Thunderstorm',

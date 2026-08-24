@@ -66,6 +66,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/laporan/fklim/sync', [\App\Http\Controllers\FklimController::class, 'sync'])->name('laporan.fklim.sync');
     Route::get('/laporan/fklim/export-excel', [\App\Http\Controllers\FklimController::class, 'exportExcel'])->name('laporan.fklim.export-excel');
 
+    // Laporan Bulanan - Data Perawanan Routes
+    Route::get('/laporan/perawanan', [\App\Http\Controllers\PerawananController::class, 'index'])->name('laporan.perawanan');
+    Route::post('/laporan/perawanan/sync', [\App\Http\Controllers\PerawananController::class, 'sync'])->name('laporan.perawanan.sync');
+    Route::get('/laporan/perawanan/export-excel', [\App\Http\Controllers\PerawananController::class, 'exportExcel'])->name('laporan.perawanan.export-excel');
+
+    // Laporan Bulanan - Data Penguapan Routes
+    Route::get('/laporan/penguapan', [\App\Http\Controllers\PenguapanController::class, 'index'])->name('laporan.penguapan');
+    Route::post('/laporan/penguapan/sync', [\App\Http\Controllers\PenguapanController::class, 'sync'])->name('laporan.penguapan.sync');
+    Route::get('/laporan/penguapan/export-excel', [\App\Http\Controllers\PenguapanController::class, 'exportExcel'])->name('laporan.penguapan.export-excel');
+
     // Laporan Bulanan - Data Thunderstorm Routes
     Route::get('/laporan/thunderstorm', [\App\Http\Controllers\ThunderstormController::class, 'index'])->name('laporan.thunderstorm');
     Route::get('/laporan/thunderstorm/export-docx', [\App\Http\Controllers\ThunderstormController::class, 'exportDocx'])->name('laporan.thunderstorm.export-docx');

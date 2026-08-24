@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\DataFklim;
 use App\Models\DataMetar;
+use App\Models\DataPenguapan;
+use App\Models\DataPerawanan;
 use App\Models\DataPibal;
 use App\Models\DataSinoptik;
 use App\Models\DataTafor;
@@ -1395,6 +1397,340 @@ class BmkgsoftService
             'total_fetched' => $totalFetched,
             'message' => "Berhasil menyinkronkan {$totalSynced} dari {$totalFetched} data FKLIM.",
             'error_reason' => $overallError,
+            'details' => $allDetails,
+        ];
+    }
+
+    /**
+     * Fetch Perawanan (cloudiness) data from BMKGSoft API.
+     */
+    public function fetchPerawananDataWithResult(string $startDate, string $endDate): array
+    {
+        $token = $this->getToken();
+        if (!$token) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error_reason' => 'Gagal mendapatkan token otentikasi BMKGSoft.',
+            ];
+        }
+
+        try {
+            $response = Http::withoutVerifying()
+                ->timeout(30)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => "Bearer {$token}",
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                ])
+                ->post("{$this->baseUrl}/api/v21/export/observation/by-station/preview", [
+                    'data_type' => 'perawanan',
+                    'date_from' => $startDate,
+                    'date_to' => $endDate,
+                    'order_timestamp_code' => 0,
+                    'parameter_names' => ['clear', 'partly_cloudy', 'cloudy', 'totally_cloudy', 'total_observation', 'notes'],
+                    'station_ids' => [138],
+                ]);
+
+            if ($response->successful()) {
+                $json = $response->json();
+                $rows = $json['data']['rows'] ?? [];
+                $headers = $json['data']['headers'] ?? [];
+
+                return [
+                    'success' => true,
+                    'data' => [
+                        'headers' => $headers,
+                        'rows' => $rows,
+                    ],
+                    'error_reason' => null,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'data' => [],
+                'error_reason' => "HTTP {$response->status()}: {$response->body()}",
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error_reason' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Synchronize Perawanan (cloudiness) data from BMKGSoft API into database.
+     */
+    public function syncPerawananData(string $startDate, string $endDate): array
+    {
+        $result = $this->fetchPerawananDataWithResult($startDate, $endDate);
+        if (!$result['success']) {
+            return [
+                'success' => false,
+                'synced_count' => 0,
+                'failed_count' => 0,
+                'total_fetched' => 0,
+                'message' => 'Gagal mengambil data perawanan dari BMKGSoft API.',
+                'error_reason' => $result['error_reason'],
+                'details' => [],
+            ];
+        }
+
+        $headers = $result['data']['headers'] ?? [];
+        $rows = $result['data']['rows'] ?? [];
+
+        $headerMap = array_flip($headers);
+
+        $totalSynced = 0;
+        $totalFailed = 0;
+        $allDetails = [];
+
+        foreach ($rows as $row) {
+            $stationName = $row[$headerMap['station_name'] ?? 0] ?? 'Stasiun Meteorologi Oesman Sadik';
+            $rawTs = $row[$headerMap['data_timestamp'] ?? 1] ?? null;
+
+            if (!$rawTs) continue;
+
+            $timestamp = Carbon::parse($rawTs, 'UTC')->toDateTimeString();
+            $clear = (int) ($row[$headerMap['clear'] ?? 2] ?? 0);
+            $partlyCloudy = (int) ($row[$headerMap['partly_cloudy'] ?? 3] ?? 0);
+            $cloudy = (int) ($row[$headerMap['cloudy'] ?? 4] ?? 0);
+            $totallyCloudy = (int) ($row[$headerMap['totally_cloudy'] ?? 5] ?? 0);
+            $totalObs = (int) ($row[$headerMap['total_observation'] ?? 6] ?? 24);
+            $notes = $row[$headerMap['notes'] ?? 7] ?? null;
+            $observerName = $row[$headerMap['observer_name'] ?? 10] ?? null;
+
+            $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName);
+
+            try {
+                DataPerawanan::updateOrCreate(
+                    [
+                        'station_id' => 138,
+                        'data_timestamp' => $timestamp,
+                    ],
+                    [
+                        'station_name' => $stationName,
+                        'clear' => $clear,
+                        'partly_cloudy' => $partlyCloudy,
+                        'cloudy' => $cloudy,
+                        'totally_cloudy' => $totallyCloudy,
+                        'total_observation' => $totalObs,
+                        'notes' => $notes,
+                        'observer_name' => $pegawai ? $pegawai->nama : $observerName,
+                        'pegawai_id' => $pegawai ? $pegawai->id : null,
+                    ]
+                );
+
+                $totalSynced++;
+                $allDetails[] = [
+                    'timestamp' => $timestamp,
+                    'observer' => $pegawai ? $pegawai->nama : ($observerName ?? 'Unassigned'),
+                    'status' => 'berhasil',
+                    'reason' => null,
+                ];
+            } catch (\Exception $e) {
+                $totalFailed++;
+                $allDetails[] = [
+                    'timestamp' => $timestamp,
+                    'observer' => $observerName,
+                    'status' => 'gagal',
+                    'reason' => $e->getMessage(),
+                ];
+            }
+        }
+
+        $totalFetched = count($rows);
+
+        return [
+            'success' => true,
+            'synced_count' => $totalSynced,
+            'failed_count' => $totalFailed,
+            'total_fetched' => $totalFetched,
+            'message' => "Berhasil menyinkronkan {$totalSynced} dari {$totalFetched} data Perawanan.",
+            'error_reason' => null,
+            'details' => $allDetails,
+        ];
+    }
+
+    /**
+     * Fetch Penguapan (Evaporation) observation data from BMKGSoft API.
+     */
+    public function fetchPenguapanDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
+    {
+        try {
+            $token = $this->getToken();
+            $url = "https://bmkgsatu.bmkg.go.id/db/bmkgsatu/@export_data";
+
+            $response = Http::withoutVerifying()
+                ->retry(2, 500)
+                ->timeout(30)
+                ->withHeaders([
+                    'accept' => 'application/json',
+                    'Authorization' => "Bearer {$token}",
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                ])
+                ->get($url, [
+                    'type_name' => 'Fdih',
+                    'station_id' => $stationId,
+                    'data_timestamp__gte' => Carbon::parse($dateFrom)->format('Y-m-d\TH:i'),
+                    'data_timestamp__lte' => Carbon::parse($dateTo)->format('Y-m-d\TH:i'),
+                    '_size' => 1000000,
+                    'fdih_type' => 'OpPenguapan',
+                    '_metadata' => 'station_id,station_name,data_timestamp,alias_station_id,source_data,m_0700ws[op_diff_baca_0700],m_0700ws[t_air_max_0700],m_0700ws[t_air_min_0700],m_0700ws[t_air_avg_0700],m_0700ws[rr_0700],m_0700ws[op_eva_0700],m_0700ws[ws_avg_0c5_0700],observer_name,qc_flag_op_penguapan,qc_histories_op_penguapan',
+                ]);
+
+            if ($response->status() === 401) {
+                $token = $this->getToken(true);
+                if ($token) {
+                    $response = Http::withoutVerifying()
+                        ->retry(2, 500)
+                        ->timeout(30)
+                        ->withHeaders([
+                            'accept' => 'application/json',
+                            'Authorization' => "Bearer {$token}",
+                            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        ])
+                        ->get($url, [
+                            'type_name' => 'Fdih',
+                            'station_id' => $stationId,
+                            'data_timestamp__gte' => Carbon::parse($dateFrom)->format('Y-m-d\TH:i'),
+                            'data_timestamp__lte' => Carbon::parse($dateTo)->format('Y-m-d\TH:i'),
+                            '_size' => 1000000,
+                            'fdih_type' => 'OpPenguapan',
+                            '_metadata' => 'station_id,station_name,data_timestamp,alias_station_id,source_data,m_0700ws[op_diff_baca_0700],m_0700ws[t_air_max_0700],m_0700ws[t_air_min_0700],m_0700ws[t_air_avg_0700],m_0700ws[rr_0700],m_0700ws[op_eva_0700],m_0700ws[ws_avg_0c5_0700],observer_name,qc_flag_op_penguapan,qc_histories_op_penguapan',
+                        ]);
+                }
+            }
+
+            if ($response->successful()) {
+                $json = $response->json();
+                $rows = $json['data'] ?? ($json['results'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
+                return [
+                    'success' => true,
+                    'data' => $rows,
+                    'error_reason' => null,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'data' => [],
+                'error_reason' => "HTTP {$response->status()}: " . $response->body(),
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error_reason' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Sync Penguapan observation data into data_penguapan table.
+     */
+    public function syncPenguapanData(string $startDate, string $endDate, int $stationId = 138): array
+    {
+        @set_time_limit(120);
+
+        $fetchResult = $this->fetchPenguapanDataWithResult($startDate, $endDate, $stationId);
+
+        if (!$fetchResult['success']) {
+            return [
+                'success' => false,
+                'synced_count' => 0,
+                'failed_count' => 0,
+                'total_fetched' => 0,
+                'message' => 'Gagal mengambil data Penguapan dari BMKGSoft API.',
+                'error_reason' => $fetchResult['error_reason'],
+                'details' => [],
+            ];
+        }
+
+        $rows = $fetchResult['data'];
+        $totalSynced = 0;
+        $totalFailed = 0;
+        $allDetails = [];
+
+        foreach ($rows as $row) {
+            $stationName = $row['station_name'] ?? 'Stasiun Meteorologi Oesman Sadik';
+            $rawTs = $row['data_timestamp'] ?? null;
+
+            if (!$rawTs) continue;
+
+            $timestamp = Carbon::parse($rawTs)->format('Y-m-d H:i:s');
+            $observerName = $row['observer_name'] ?? null;
+
+            $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName);
+
+            $m0700 = $row['m_0700ws'] ?? [];
+
+            $opDiffBaca = isset($m0700['op_diff_baca_0700']) ? (float) $m0700['op_diff_baca_0700'] : null;
+            $tAirMax = isset($m0700['t_air_max_0700']) && (float) $m0700['t_air_max_0700'] != 9999 ? (float) $m0700['t_air_max_0700'] : null;
+            $tAirMin = isset($m0700['t_air_min_0700']) && (float) $m0700['t_air_min_0700'] != 9999 ? (float) $m0700['t_air_min_0700'] : null;
+            $tAirAvg = isset($m0700['t_air_avg_0700']) && (float) $m0700['t_air_avg_0700'] != 9999 ? (float) $m0700['t_air_avg_0700'] : null;
+            $rr0700 = isset($m0700['rr_0700']) ? (float) $m0700['rr_0700'] : null;
+            $opEva = isset($m0700['op_eva_0700']) ? (float) $m0700['op_eva_0700'] : null;
+            $wsAvg0c5 = isset($m0700['ws_avg_0c5_0700']) ? (float) $m0700['ws_avg_0c5_0700'] : null;
+
+            $qcFlag = (int) ($row['qc_flag_op_penguapan'] ?? 0);
+            $qcHistories = is_array($row['qc_histories_op_penguapan'] ?? null) ? json_encode($row['qc_histories_op_penguapan']) : ($row['qc_histories_op_penguapan'] ?? null);
+
+            try {
+                DataPenguapan::updateOrCreate(
+                    [
+                        'station_id' => $stationId,
+                        'data_timestamp' => $timestamp,
+                    ],
+                    [
+                        'station_name' => $stationName,
+                        'alias_station_id' => $row['alias_station_id'] ?? null,
+                        'source_data' => $row['source_data'] ?? null,
+                        'op_diff_baca' => $opDiffBaca,
+                        't_air_max' => $tAirMax,
+                        't_air_min' => $tAirMin,
+                        't_air_avg' => $tAirAvg,
+                        'rr_0700' => $rr0700,
+                        'op_eva' => $opEva,
+                        'ws_avg_0c5' => $wsAvg0c5,
+                        'observer_name' => $pegawai ? $pegawai->nama : $observerName,
+                        'pegawai_id' => $pegawai ? $pegawai->id : null,
+                        'qc_flag' => $qcFlag,
+                        'qc_histories' => $qcHistories,
+                    ]
+                );
+
+                $totalSynced++;
+                $allDetails[] = [
+                    'timestamp' => $timestamp,
+                    'observer' => $pegawai ? $pegawai->nama : ($observerName ?? 'Unassigned'),
+                    'status' => 'berhasil',
+                    'reason' => null,
+                ];
+            } catch (\Exception $e) {
+                $totalFailed++;
+                $allDetails[] = [
+                    'timestamp' => $timestamp,
+                    'observer' => $observerName,
+                    'status' => 'gagal',
+                    'reason' => $e->getMessage(),
+                ];
+            }
+        }
+
+        $totalFetched = count($rows);
+
+        return [
+            'success' => true,
+            'synced_count' => $totalSynced,
+            'failed_count' => $totalFailed,
+            'total_fetched' => $totalFetched,
+            'message' => "Berhasil menyinkronkan {$totalSynced} dari {$totalFetched} data Penguapan.",
+            'error_reason' => null,
             'details' => $allDetails,
         ];
     }
