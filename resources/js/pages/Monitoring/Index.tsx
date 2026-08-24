@@ -108,16 +108,16 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                 {/* Title & Filter Bar */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <TrendingUp className="h-7 w-7 text-indigo-600 dark:text-indigo-400" />
+                        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                            <TrendingUp className="h-7 w-7 text-indigo-600" />
                             Monitoring Performa Pengamatan (Kepala Stasiun)
                         </h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        <p className="text-sm text-slate-500 mt-1">
                             Evaluasi ketepatan waktu pengiriman, durasi keterlambatan, dan missing data untuk Sinoptik, METAR Manual (06-18 WIT), dan PIBAL per pegawai.
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
                         <div className="flex items-center gap-2">
                             <Label className="text-xs text-slate-500 font-medium">Bulan:</Label>
                             <select
@@ -127,7 +127,7 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                                     setSelectedBulan(b);
                                     handleFilterChange(b, selectedTahun);
                                 }}
-                                className="h-9 px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm font-medium"
+                                className="h-9 px-3 py-1 bg-slate-50 border border-slate-300 rounded-md text-sm font-medium"
                             >
                                 {namaBulan.map((name, idx) => (
                                     <option key={idx + 1} value={idx + 1}>{name}</option>
@@ -144,7 +144,7 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                                     setSelectedTahun(y);
                                     handleFilterChange(selectedBulan, y);
                                 }}
-                                className="h-9 px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm font-medium"
+                                className="h-9 px-3 py-1 bg-slate-50 border border-slate-300 rounded-md text-sm font-medium"
                             >
                                 {[2024, 2025, 2026, 2027].map((year) => (
                                     <option key={year} value={year}>{year}</option>
@@ -156,44 +156,44 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
 
                 {/* Station KPI Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <Card className="border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-br from-indigo-50/50 to-white dark:from-indigo-950/20 dark:to-slate-900">
+                    <Card className="border-indigo-100 bg-gradient-to-br from-indigo-50/50 to-white">
                         <CardContent className="p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Total Slot Manual Staf</p>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{summary.total_slots}</h3>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Total Slot Manual Staf</p>
+                            <h3 className="text-2xl font-bold text-slate-900 mt-1">{summary.total_slots}</h3>
                             <p className="text-xs text-slate-500 mt-1">Sinop, METAR (06-18 WIT), Pibal</p>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-emerald-100 dark:border-emerald-900/50 bg-gradient-to-br from-emerald-50/50 to-white dark:from-emerald-950/20 dark:to-slate-900">
+                    <Card className="border-emerald-100 bg-gradient-to-br from-emerald-50/50 to-white">
                         <CardContent className="p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">% Ketepatan Waktu Staf</p>
-                            <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{summary.overall_compliance_pct}%</h3>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">% Ketepatan Waktu Staf</p>
+                            <h3 className="text-2xl font-bold text-emerald-600 mt-1">{summary.overall_compliance_pct}%</h3>
                             <p className="text-xs text-slate-500 mt-1">{summary.total_timely} slot tepat waktu</p>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-amber-100 dark:border-amber-900/50 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/20 dark:to-slate-900">
+                    <Card className="border-amber-100 bg-gradient-to-br from-amber-50/50 to-white">
                         <CardContent className="p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">Total Keterlambatan</p>
-                            <h3 className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{summary.total_late}</h3>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">Total Keterlambatan</p>
+                            <h3 className="text-2xl font-bold text-amber-600 mt-1">{summary.total_late}</h3>
                             <p className="text-xs text-slate-500 mt-1">Pengiriman melebihi batas</p>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-red-100 dark:border-red-900/50 bg-gradient-to-br from-red-50/50 to-white dark:from-red-950/20 dark:to-slate-900">
+                    <Card className="border-red-100 bg-gradient-to-br from-red-50/50 to-white">
                         <CardContent className="p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">Missing Data Staf</p>
-                            <h3 className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{summary.total_missing}</h3>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-red-600">Missing Data Staf</p>
+                            <h3 className="text-2xl font-bold text-red-600 mt-1">{summary.total_missing}</h3>
                             <p className="text-xs text-slate-500 mt-1">Slot data tidak diisi</p>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-sky-100 dark:border-sky-900/50 bg-gradient-to-br from-sky-50/50 to-white dark:from-sky-950/20 dark:to-slate-900">
+                    <Card className="border-sky-100 bg-gradient-to-br from-sky-50/50 to-white">
                         <CardContent className="p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400 flex items-center gap-1">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-sky-600 flex items-center gap-1">
                                 <Radio className="h-3.5 w-3.5" /> AWOS Auto Availability
                             </p>
-                            <h3 className="text-2xl font-bold text-sky-600 dark:text-sky-400 mt-1">
+                            <h3 className="text-2xl font-bold text-sky-600 mt-1">
                                 {awos_summary ? `${awos_summary.availability_pct}%` : '100%'}
                             </h3>
                             <p className="text-xs text-slate-500 mt-1">Status Sensor Otomatis (18:30-05:30 WIT)</p>
@@ -202,9 +202,9 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                 </div>
 
                 {/* Hourly Delay Heatmap */}
-                <Card className="p-4 border-slate-200 dark:border-slate-800">
+                <Card className="p-4 border-slate-200">
                     <div className="mb-3 flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
                             <Clock className="h-4 w-4 text-indigo-500" />
                             Analisis Jam Rawan Keterlambatan / Missing Data (24 Jam UTC)
                         </h4>
@@ -218,10 +218,10 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                                 title={`Jam ${hr.toString().padStart(2, '0')}:00 UTC - ${count} Keterlambatan/Missing`}
                                 className={`p-2 rounded text-center border transition-all ${
                                     count === 0
-                                        ? 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400'
+                                        ? 'bg-slate-50 border-slate-200 text-slate-400'
                                         : count <= 2
-                                        ? 'bg-amber-100 dark:bg-amber-950/60 border-amber-300 text-amber-800 dark:text-amber-300 font-bold'
-                                        : 'bg-red-100 dark:bg-red-950/60 border-red-300 text-red-800 dark:text-red-300 font-bold'
+                                        ? 'bg-amber-100 border-amber-300 text-amber-800 font-bold'
+                                        : 'bg-red-100 border-red-300 text-red-800 font-bold'
                                 }`}
                             >
                                 <div className="text-[11px] font-mono font-semibold">{hr.toString().padStart(2, '0')}</div>
@@ -232,10 +232,10 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                 </Card>
 
                 {/* Main Leaderboard Table */}
-                <Card className="border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-                    <CardHeader className="bg-slate-50/70 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800">
-                        <CardTitle className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                            <UserCheck className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                <Card className="border-slate-200 overflow-hidden shadow-sm">
+                    <CardHeader className="bg-slate-50/70 border-b border-slate-200">
+                        <CardTitle className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                            <UserCheck className="h-5 w-5 text-indigo-600" />
                             Performa Pengamatan per Pegawai - {namaBulan[selectedBulan - 1]} {selectedTahun}
                         </CardTitle>
                         <CardDescription>
@@ -244,7 +244,7 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                     </CardHeader>
 
                     <Table>
-                        <TableHeader className="bg-slate-100/70 dark:bg-slate-900/80">
+                        <TableHeader className="bg-slate-100/70">
                             <TableRow>
                                 <TableHead className="w-[50px]">Rank</TableHead>
                                 <TableHead>Nama Pegawai & NIP</TableHead>
@@ -267,13 +267,13 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                                 </TableRow>
                             ) : (
                                 staff_rankings.map((item, index) => (
-                                    <TableRow key={item.pegawai.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/40">
+                                    <TableRow key={item.pegawai.id} className="hover:bg-slate-50/50">
                                         <TableCell className="font-bold text-center text-slate-500">
                                             #{index + 1}
                                         </TableCell>
 
                                         <TableCell>
-                                            <div className="font-semibold text-slate-900 dark:text-white">{item.pegawai.nama}</div>
+                                            <div className="font-semibold text-slate-900">{item.pegawai.nama}</div>
                                             <div className="text-xs text-slate-500">{item.pegawai.nip || item.pegawai.jabatan || 'Staf Operasional'}</div>
                                         </TableCell>
 
@@ -284,12 +284,12 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                                         <TableCell>
                                             <div className="space-y-1">
                                                 <div className="flex items-center justify-between text-xs font-bold">
-                                                    <span className={item.timely_rate_pct >= 90 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}>
+                                                    <span className={item.timely_rate_pct >= 90 ? 'text-emerald-600' : 'text-amber-600'}>
                                                         {item.timely_rate_pct}%
                                                     </span>
                                                     <span className="text-slate-400 font-normal">({item.timely_count}/{item.total_assigned})</span>
                                                 </div>
-                                                <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                                                <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                                                     <div
                                                         className={`h-2 rounded-full transition-all ${
                                                             item.timely_rate_pct >= 90 ? 'bg-emerald-500' : item.timely_rate_pct >= 75 ? 'bg-amber-500' : 'bg-red-500'
@@ -302,19 +302,19 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
 
                                         <TableCell>
                                             <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                                <Badge variant="outline" className="text-[11px] bg-slate-50 dark:bg-slate-900">
+                                                <Badge variant="outline" className="text-[11px] bg-slate-50">
                                                     Sinop: {item.breakdown?.sinop?.timely_pct ?? 0}%
                                                 </Badge>
-                                                <Badge variant="outline" className="text-[11px] bg-slate-50 dark:bg-slate-900">
+                                                <Badge variant="outline" className="text-[11px] bg-slate-50">
                                                     METAR: {item.breakdown?.metar?.timely_pct ?? 0}%
                                                 </Badge>
-                                                <Badge variant="outline" className="text-[11px] bg-slate-50 dark:bg-slate-900">
+                                                <Badge variant="outline" className="text-[11px] bg-slate-50">
                                                     PPAA: {item.breakdown?.pibal_ppaa?.timely_pct ?? (item.breakdown as any)?.pibal?.timely_pct ?? 0}%
                                                 </Badge>
-                                                <Badge variant="outline" className="text-[11px] bg-slate-50 dark:bg-slate-900">
+                                                <Badge variant="outline" className="text-[11px] bg-slate-50">
                                                     PPBB: {item.breakdown?.pibal_ppbb?.timely_pct ?? (item.breakdown as any)?.pibal?.timely_pct ?? 0}%
                                                 </Badge>
-                                                <Badge variant="outline" className="text-[11px] bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                                                <Badge variant="outline" className="text-[11px] bg-blue-50 text-blue-700">
                                                     TAFOR: {item.breakdown?.tafor?.timely_pct ?? 0}%
                                                 </Badge>
                                             </div>
@@ -322,7 +322,7 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
 
                                         <TableCell className="text-center">
                                             {item.late_count > 0 ? (
-                                                <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                                <Badge className="bg-amber-100 text-amber-800">
                                                     {item.late_count}
                                                 </Badge>
                                             ) : (
@@ -336,7 +336,7 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
 
                                         <TableCell className="text-center">
                                             {item.missing_count > 0 ? (
-                                                <Badge className="bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300">
+                                                <Badge className="bg-red-100 text-red-800">
                                                     {item.missing_count}
                                                 </Badge>
                                             ) : (
@@ -349,7 +349,7 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => setSelectedStaff(item)}
-                                                className="h-8 text-xs border text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950"
+                                                className="h-8 text-xs border text-indigo-600 hover:bg-indigo-50"
                                             >
                                                 <Eye className="h-3.5 w-3.5 mr-1" />
                                                 Detail Riwayat
@@ -367,7 +367,7 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                     <Dialog open={!!selectedStaff} onOpenChange={() => setSelectedStaff(null)}>
                         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
                             <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                                <DialogTitle className="flex items-center gap-2 text-indigo-600">
                                     <UserCheck className="h-5 w-5" />
                                     Detail Riwayat Pengamatan - {selectedStaff.pegawai.nama}
                                 </DialogTitle>
@@ -377,10 +377,10 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                             </DialogHeader>
 
                             <div className="py-3 space-y-4">
-                                <div className="grid grid-cols-3 gap-3 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border text-xs">
+                                <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3 rounded-lg border text-xs">
                                     <div>
                                         <span className="text-slate-500">Total Slot Manual:</span>
-                                        <div className="font-bold text-sm text-slate-800 dark:text-slate-200">{selectedStaff.total_assigned}</div>
+                                        <div className="font-bold text-sm text-slate-800">{selectedStaff.total_assigned}</div>
                                     </div>
                                     <div>
                                         <span className="text-slate-500">Total Terlambat:</span>
@@ -393,7 +393,7 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                                 </div>
 
                                 <Table className="border rounded-md text-xs">
-                                    <TableHeader className="bg-slate-100 dark:bg-slate-800">
+                                    <TableHeader className="bg-slate-100">
                                         <TableRow>
                                             <TableHead>Jenis Data</TableHead>
                                             <TableHead>Waktu Slot (UTC)</TableHead>
@@ -418,16 +418,16 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                                                     <TableCell className="font-mono">{det.sent_at}</TableCell>
                                                     <TableCell>
                                                         {det.status === 'Terlambat' ? (
-                                                            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                                            <Badge className="bg-amber-100 text-amber-800">
                                                                 Terlambat
                                                             </Badge>
                                                         ) : (
-                                                            <Badge className="bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300">
+                                                            <Badge className="bg-red-100 text-red-800">
                                                                 Missing
                                                             </Badge>
                                                         )}
                                                     </TableCell>
-                                                    <TableCell className="font-semibold text-amber-700 dark:text-amber-400">
+                                                    <TableCell className="font-semibold text-amber-700">
                                                         {det.delay_minutes > 0 ? `+${det.delay_minutes} mnt` : '-'}
                                                     </TableCell>
                                                     <TableCell className="text-slate-500">{det.note}</TableCell>

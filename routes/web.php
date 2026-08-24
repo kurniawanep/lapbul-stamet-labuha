@@ -19,7 +19,7 @@ Route::get('/', function () {
 Route::post('/api/whatsapp/webhook', [MetReportController::class, 'webhook']);
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
     // Monitoring Performa untuk Kepala Stasiun
     Route::get('/monitoring', [MonitoringController::class, 'index'])->name('monitoring.index');

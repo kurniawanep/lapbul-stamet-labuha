@@ -142,11 +142,11 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                 {/* Header Title & Actions */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <FileCheck className="h-7 w-7 text-indigo-600 dark:text-indigo-400" />
+                        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                            <FileCheck className="h-7 w-7 text-indigo-600" />
                             Flight Document (FD) Dispatch Audit
                         </h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        <p className="text-sm text-slate-500 mt-1">
                             Sinkronisasi data dokumen penerbangan dari INA-SIAM dan pemantauan status pengiriman ke grup WhatsApp.
                         </p>
                     </div>
@@ -155,7 +155,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                         {/* Modal Quick Paste WA */}
                         <Dialog open={isPasteOpen} onOpenChange={setIsPasteOpen}>
                             <DialogTrigger asChild>
-                                <Button variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950">
+                                <Button variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
                                     <MessageSquare className="h-4 w-4 mr-2" />
                                     Quick Paste WA Chat
                                 </Button>
@@ -204,60 +204,60 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
 
                 {/* KPI Stat Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card className="border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-br from-indigo-50/50 to-white dark:from-indigo-950/20 dark:to-slate-900">
+                    <Card className="border-indigo-100 bg-gradient-to-br from-indigo-50/50 to-white">
                         <CardContent className="p-5">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Total FD INA-SIAM</p>
-                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{stats.total_inasiam}</h3>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Total FD INA-SIAM</p>
+                                    <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.total_inasiam}</h3>
                                     <p className="text-xs text-slate-500 mt-1">Dokumen resmi terbit</p>
                                 </div>
-                                <div className="p-3 bg-indigo-100 dark:bg-indigo-900/60 rounded-xl text-indigo-600 dark:text-indigo-300">
+                                <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600">
                                     <FileText className="h-6 w-6" />
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-emerald-100 dark:border-emerald-900/50 bg-gradient-to-br from-emerald-50/50 to-white dark:from-emerald-950/20 dark:to-slate-900">
+                    <Card className="border-emerald-100 bg-gradient-to-br from-emerald-50/50 to-white">
                         <CardContent className="p-5">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Terkirim Ke WA</p>
-                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{stats.total_dispatched}</h3>
-                                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">{stats.dispatch_rate_pct}% Kelengkapan</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Terkirim Ke WA</p>
+                                    <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.total_dispatched}</h3>
+                                    <p className="text-xs text-emerald-600 font-medium mt-1">{stats.dispatch_rate_pct}% Kelengkapan</p>
                                 </div>
-                                <div className="p-3 bg-emerald-100 dark:bg-emerald-900/60 rounded-xl text-emerald-600 dark:text-emerald-300">
+                                <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600">
                                     <CheckCircle2 className="h-6 w-6" />
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-amber-100 dark:border-amber-900/50 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/20 dark:to-slate-900">
+                    <Card className="border-amber-100 bg-gradient-to-br from-amber-50/50 to-white">
                         <CardContent className="p-5">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">Belum Terkirim WA</p>
-                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{stats.pending_dispatch}</h3>
-                                    <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">Perlu tindakan petugas</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">Belum Terkirim WA</p>
+                                    <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.pending_dispatch}</h3>
+                                    <p className="text-xs text-amber-600 font-medium mt-1">Perlu tindakan petugas</p>
                                 </div>
-                                <div className="p-3 bg-amber-100 dark:bg-amber-900/60 rounded-xl text-amber-600 dark:text-amber-300">
+                                <div className="p-3 bg-amber-100 rounded-xl text-amber-600">
                                     <AlertTriangle className="h-6 w-6" />
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-sky-100 dark:border-sky-900/50 bg-gradient-to-br from-sky-50/50 to-white dark:from-sky-950/20 dark:to-slate-900">
+                    <Card className="border-sky-100 bg-gradient-to-br from-sky-50/50 to-white">
                         <CardContent className="p-5">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">Status API INA-SIAM</p>
-                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-1">Sistem Aktif</h3>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-sky-600">Status API INA-SIAM</p>
+                                    <h3 className="text-lg font-bold text-slate-900 mt-1">Sistem Aktif</h3>
                                     <p className="text-xs text-slate-500 mt-1">Stamet Oesman Sadik (WAEL)</p>
                                 </div>
-                                <div className="p-3 bg-sky-100 dark:bg-sky-900/60 rounded-xl text-sky-600 dark:text-sky-300">
+                                <div className="p-3 bg-sky-100 rounded-xl text-sky-600">
                                     <Plane className="h-6 w-6" />
                                 </div>
                             </div>
@@ -266,7 +266,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                 </div>
 
                 {/* Filter Controls */}
-                <Card className="p-4 shadow-sm border-slate-200 dark:border-slate-800">
+                <Card className="p-4 shadow-sm border-slate-200">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex flex-wrap items-center gap-3">
                             <div className="flex items-center gap-2">
@@ -278,7 +278,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                         setSelectedBulan(b);
                                         handleFilterChange(b, selectedTahun, searchQuery);
                                     }}
-                                    className="h-9 px-3 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-sm font-medium"
+                                    className="h-9 px-3 py-1 bg-white border border-slate-300 rounded-md text-sm font-medium"
                                 >
                                     {namaBulan.map((name, idx) => (
                                         <option key={idx + 1} value={idx + 1}>{name}</option>
@@ -295,7 +295,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                         setSelectedTahun(y);
                                         handleFilterChange(selectedBulan, y, searchQuery);
                                     }}
-                                    className="h-9 px-3 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-sm font-medium"
+                                    className="h-9 px-3 py-1 bg-white border border-slate-300 rounded-md text-sm font-medium"
                                 >
                                     {[2024, 2025, 2026, 2027].map((year) => (
                                         <option key={year} value={year}>{year}</option>
@@ -320,9 +320,9 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                 </Card>
 
                 {/* Daily Compliance Matrix Grid */}
-                <Card className="p-4 border-slate-200 dark:border-slate-800">
+                <Card className="p-4 border-slate-200">
                     <div className="mb-3 flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
                             <Clock className="h-4 w-4 text-indigo-500" />
                             Matriks Kelengkapan Harian - {namaBulan[selectedBulan - 1]} {selectedTahun}
                         </h4>
@@ -336,10 +336,10 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                 title={`Tanggal ${item.day}: ${item.wa_sent} / ${item.total_fd} terkirim WA`}
                                 className={`p-2 rounded-lg text-center border transition-all ${
                                     item.total_fd === 0
-                                        ? 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400'
+                                        ? 'bg-slate-50 border-slate-200 text-slate-400'
                                         : item.is_complete
-                                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-bold'
-                                        : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-400 font-bold'
+                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-700 font-bold'
+                                        : 'bg-amber-50 border-amber-300 text-amber-700 font-bold'
                                 }`}
                             >
                                 <div className="text-xs font-semibold">{item.day}</div>
@@ -352,9 +352,9 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                 </Card>
 
                 {/* Main Data Table */}
-                <Card className="border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                <Card className="border-slate-200 overflow-hidden shadow-sm">
                     <Table>
-                        <TableHeader className="bg-slate-50 dark:bg-slate-900/60">
+                        <TableHeader className="bg-slate-50">
                             <TableRow>
                                 <TableHead className="w-[160px]">No. FD (INA-SIAM)</TableHead>
                                 <TableHead>Penerbangan & Maskapai</TableHead>
@@ -376,18 +376,18 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                 </TableRow>
                             ) : (
                                 records.data.map((item) => (
-                                    <TableRow key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/40">
-                                        <TableCell className="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                                    <TableRow key={item.id} className="hover:bg-slate-50/50">
+                                        <TableCell className="font-mono text-xs font-semibold text-indigo-600">
                                             {item.no_fd || 'FD-DOC'}
                                         </TableCell>
 
                                         <TableCell>
-                                            <div className="font-semibold text-slate-800 dark:text-slate-200">{item.flight_number || 'IW-FLIGHT'}</div>
+                                            <div className="font-semibold text-slate-800">{item.flight_number || 'IW-FLIGHT'}</div>
                                             <div className="text-xs text-slate-500">{item.airline_name || 'Wings Air'}</div>
                                         </TableCell>
 
                                         <TableCell>
-                                            <Badge variant="outline" className="font-mono text-xs bg-slate-100 dark:bg-slate-800">
+                                            <Badge variant="outline" className="font-mono text-xs bg-slate-100">
                                                 {item.route || 'WAEL -> WAMM'}
                                             </Badge>
                                         </TableCell>
@@ -397,7 +397,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                         </TableCell>
 
                                         <TableCell>
-                                            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-300">
+                                            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
                                                 {item.status || 'Selesai'}
                                             </Badge>
                                         </TableCell>
@@ -414,7 +414,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                                         Terkirim WA
                                                     </Badge>
                                                 ) : (
-                                                    <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300 gap-1 cursor-pointer">
+                                                    <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 gap-1 cursor-pointer">
                                                         <Clock className="h-3 w-3" />
                                                         Pending WA
                                                     </Badge>
@@ -422,7 +422,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                             </button>
                                         </TableCell>
 
-                                        <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                                        <TableCell className="text-xs text-slate-600">
                                             {item.observer_name || (item.pegawai ? item.pegawai.nama : '-')}
                                         </TableCell>
 
@@ -433,7 +433,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                                         href={item.fd_url}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="p-1.5 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                                        className="p-1.5 text-slate-500 hover:text-indigo-600"
                                                         title="Buka PDF di INA-SIAM"
                                                     >
                                                         <ExternalLink className="h-4 w-4" />

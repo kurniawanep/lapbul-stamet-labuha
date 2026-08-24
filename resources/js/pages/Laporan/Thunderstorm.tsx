@@ -227,12 +227,12 @@ export default function ThunderstormIndex({
 
                 {/* KPI Stat Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card className="border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white dark:from-slate-900 dark:to-slate-800 shadow-sm">
+                    <Card className="border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white shadow-sm">
                         <CardContent className="p-5 flex items-center justify-between">
                             <div className="space-y-1">
-                                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Total Hari TS ({tahun})</p>
+                                <p className="text-xs font-semibold text-slate-600">Total Hari TS ({tahun})</p>
                                 <div className="flex items-baseline gap-1.5">
-                                    <span className="text-3xl font-black text-amber-600 dark:text-amber-400">
+                                    <span className="text-3xl font-black text-amber-600">
                                         {dashboardStats.yearly_total_days}
                                     </span>
                                     <span className="text-xs font-medium text-slate-500">Hari</span>
@@ -245,12 +245,12 @@ export default function ThunderstormIndex({
                         </CardContent>
                     </Card>
 
-                    <Card className="border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white dark:from-slate-900 dark:to-slate-800 shadow-sm">
+                    <Card className="border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white shadow-sm">
                         <CardContent className="p-5 flex items-center justify-between">
                             <div className="space-y-1">
-                                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Slot TS ({NAMA_BULAN[bulan - 1]})</p>
+                                <p className="text-xs font-semibold text-slate-600">Slot TS ({NAMA_BULAN[bulan - 1]})</p>
                                 <div className="flex items-baseline gap-1.5">
-                                    <span className="text-3xl font-black text-amber-600 dark:text-amber-400">
+                                    <span className="text-3xl font-black text-amber-600">
                                         {dashboardStats.monthly_ts_slots}
                                     </span>
                                     <span className="text-xs font-medium text-slate-500">Slot Jam</span>
@@ -265,17 +265,17 @@ export default function ThunderstormIndex({
                         </CardContent>
                     </Card>
 
-                    <Card className="border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white dark:from-slate-900 dark:to-slate-800 shadow-sm">
+                    <Card className="border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white shadow-sm">
                         <CardContent className="p-5 flex items-center justify-between">
                             <div className="space-y-1">
-                                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Tipe TS ({NAMA_BULAN[bulan - 1]})</p>
+                                <p className="text-xs font-semibold text-slate-600">Tipe TS ({NAMA_BULAN[bulan - 1]})</p>
                                 <div className="flex items-baseline gap-2">
-                                    <span className="text-2xl font-black text-amber-700 dark:text-amber-400">
+                                    <span className="text-2xl font-black text-amber-700">
                                         {dashboardStats.active_ts_count}
                                     </span>
                                     <span className="text-xs text-slate-500">Aktif</span>
                                     <span className="text-xs text-slate-300">/</span>
-                                    <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                                    <span className="text-2xl font-black text-indigo-600">
                                         {dashboardStats.past_ts_count}
                                     </span>
                                     <span className="text-xs text-slate-500">ReTS</span>
@@ -288,16 +288,16 @@ export default function ThunderstormIndex({
                         </CardContent>
                     </Card>
 
-                    <Card className="border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white dark:from-slate-900 dark:to-slate-800 shadow-sm">
+                    <Card className="border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white shadow-sm">
                         <CardContent className="p-5 flex items-center justify-between">
                             <div className="space-y-1">
-                                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Bulan Paling Aktif ({tahun})</p>
+                                <p className="text-xs font-semibold text-slate-600">Bulan Paling Aktif ({tahun})</p>
                                 <div className="flex items-baseline gap-1.5">
-                                    <span className="text-2xl font-black text-amber-600 dark:text-amber-400">
+                                    <span className="text-2xl font-black text-amber-600">
                                         {dashboardStats.most_active_month}
                                     </span>
                                 </div>
-                                <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                                <p className="text-[11px] font-semibold text-amber-700">
                                     {dashboardStats.most_active_month_days} Hari Thunderstorm
                                 </p>
                             </div>
@@ -309,15 +309,15 @@ export default function ThunderstormIndex({
                 </div>
 
                 {/* Yearly Matrix Card (Format Sesuai Template docx) */}
-                <Card className="border-slate-200 dark:border-slate-800 shadow-md">
-                    <CardHeader className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 pb-4">
+                <Card className="border-slate-200 shadow-md">
+                    <CardHeader className="bg-slate-50 border-b border-slate-200 pb-4">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <div>
-                                <CardTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
                                     <FileText className="w-5 h-5 text-amber-600" />
                                     Matriks Frekuensi Thunderstorm Dalam Sandi WWW1W2 (Tahun {tahun})
                                 </CardTitle>
-                                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                                <p className="text-xs text-slate-600 mt-1">
                                     Format rekapitulasi standar BMKG (Bulan 1–12 vs Tanggal 1–31)
                                 </p>
                             </div>
@@ -329,16 +329,16 @@ export default function ThunderstormIndex({
                     <CardContent className="p-0 overflow-x-auto max-w-full">
                         <Table className="text-xs min-w-[960px] w-full border-collapse">
                             <TableHeader>
-                                <TableRow className="bg-slate-100/80 dark:bg-slate-800/80 text-center font-bold">
-                                    <TableHead className="w-[110px] text-center font-bold text-slate-900 dark:text-white sticky left-0 z-10 bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 shadow-sm">
+                                <TableRow className="bg-slate-100/80 text-center font-bold">
+                                    <TableHead className="w-[110px] text-center font-bold text-slate-900 sticky left-0 z-10 bg-slate-100 border-r border-slate-200 shadow-sm">
                                         BULAN / TGL
                                     </TableHead>
                                     {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                                        <TableHead key={d} className="w-[26px] min-w-[26px] p-0.5 text-center font-semibold text-slate-700 dark:text-slate-300 border-r border-slate-200/50 dark:border-slate-800/50 text-[11px]">
+                                        <TableHead key={d} className="w-[26px] min-w-[26px] p-0.5 text-center font-semibold text-slate-700 border-r border-slate-200/50 text-[11px]">
                                             {d}
                                         </TableHead>
                                     ))}
-                                    <TableHead className="w-[60px] text-center font-bold text-amber-900 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-900/20 text-[11px]">
+                                    <TableHead className="w-[60px] text-center font-bold text-amber-900 bg-amber-100/50 text-[11px]">
                                         TOTAL
                                     </TableHead>
                                 </TableRow>
@@ -351,11 +351,11 @@ export default function ThunderstormIndex({
                                             key={mRow.month_num}
                                             className={
                                                 isSelectedMonth
-                                                    ? 'bg-amber-50/70 dark:bg-amber-950/20 font-semibold'
-                                                    : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                                                    ? 'bg-amber-50/70 font-semibold'
+                                                    : 'hover:bg-slate-50'
                                             }
                                         >
-                                            <TableCell className="font-bold text-slate-900 dark:text-white sticky left-0 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 text-center py-1.5 text-xs shadow-sm">
+                                            <TableCell className="font-bold text-slate-900 sticky left-0 z-10 bg-white border-r border-slate-200 text-center py-1.5 text-xs shadow-sm">
                                                 {mRow.month_name}
                                             </TableCell>
                                             {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
@@ -364,7 +364,7 @@ export default function ThunderstormIndex({
                                                     return (
                                                         <TableCell
                                                             key={d}
-                                                            className="p-1 text-center bg-slate-100/40 dark:bg-slate-900/40 text-slate-300 border-r border-slate-200/40 dark:border-slate-800/40"
+                                                            className="p-1 text-center bg-slate-100/40 text-slate-300 border-r border-slate-200/40"
                                                         />
                                                     );
                                                 }
@@ -372,9 +372,9 @@ export default function ThunderstormIndex({
                                                 return (
                                                     <TableCell
                                                         key={d}
-                                                        className={`p-1 text-center font-mono border-r border-slate-200/50 dark:border-slate-800/50 ${
+                                                        className={`p-1 text-center font-mono border-r border-slate-200/50 ${
                                                             dayData.has_ts
-                                                                ? 'bg-amber-400/20 text-amber-950 dark:text-amber-300 font-extrabold'
+                                                                ? 'bg-amber-400/20 text-amber-950 font-extrabold'
                                                                 : 'text-slate-400'
                                                         }`}
                                                         title={
@@ -387,7 +387,7 @@ export default function ThunderstormIndex({
                                                     </TableCell>
                                                 );
                                             })}
-                                            <TableCell className="text-center font-black text-amber-700 dark:text-amber-400 bg-amber-50/40 dark:bg-amber-900/10 py-2">
+                                            <TableCell className="text-center font-black text-amber-700 bg-amber-50/40 py-2">
                                                 {mRow.total_ts_days}
                                             </TableCell>
                                         </TableRow>
@@ -397,17 +397,17 @@ export default function ThunderstormIndex({
                         </Table>
 
                         {/* Legend Footer */}
-                        <div className="p-4 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
+                        <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
                             <div className="flex flex-wrap items-center gap-4">
-                                <span className="font-semibold text-slate-800 dark:text-slate-200">Keterangan:</span>
+                                <span className="font-semibold text-slate-800">Keterangan:</span>
                                 <div className="flex items-center gap-1.5">
-                                    <span className="w-5 h-5 rounded bg-amber-400/30 border border-amber-400/60 text-amber-900 dark:text-amber-300 font-extrabold flex items-center justify-center text-xs">
+                                    <span className="w-5 h-5 rounded bg-amber-400/30 border border-amber-400/60 text-amber-900 font-extrabold flex items-center justify-center text-xs">
                                         x
                                     </span>
                                     <span>Ada 1 atau lebih kilat / thunderstorm dalam sandi WWW1W2</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
-                                    <span className="w-5 h-5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold flex items-center justify-center text-xs">
+                                    <span className="w-5 h-5 rounded bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-xs">
                                         -
                                     </span>
                                     <span>Tidak ada kilat / thunderstorm dalam sandi WWW1W2</span>
@@ -422,15 +422,15 @@ export default function ThunderstormIndex({
                 </Card>
 
                 {/* Detailed Table Card (Rincian Slot Pengamatan TS per Bulan) */}
-                <Card className="border-slate-200 dark:border-slate-800 shadow-md">
-                    <CardHeader className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 pb-4">
+                <Card className="border-slate-200 shadow-md">
+                    <CardHeader className="bg-slate-50 border-b border-slate-200 pb-4">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <div>
-                                <CardTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
                                     <Zap className="w-5 h-5 text-amber-600" />
                                     Rincian Slot Kejadian Thunderstorm ({NAMA_BULAN[bulan - 1]} {tahun})
                                 </CardTitle>
-                                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                                <p className="text-xs text-slate-600 mt-1">
                                     Daftar pengamatan Sinoptik yang memenuhi kriteria Thunderstorm (ww=17,29,91-96,98-99 atau w1/w2=9)
                                 </p>
                             </div>
@@ -442,10 +442,10 @@ export default function ThunderstormIndex({
                     <CardContent className="p-0">
                         {recordsList.length === 0 ? (
                             <div className="py-12 text-center space-y-3">
-                                <div className="p-4 bg-slate-100 dark:bg-slate-800 w-fit rounded-full mx-auto text-slate-400">
+                                <div className="p-4 bg-slate-100 w-fit rounded-full mx-auto text-slate-400">
                                     <Sun className="w-8 h-8" />
                                 </div>
-                                <p className="font-semibold text-slate-700 dark:text-slate-300 text-sm">
+                                <p className="font-semibold text-slate-700 text-sm">
                                     Tidak Ada Kejadian Thunderstorm
                                 </p>
                                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -456,7 +456,7 @@ export default function ThunderstormIndex({
                             <div className="overflow-x-auto">
                                 <Table className="text-xs">
                                     <TableHeader>
-                                        <TableRow className="bg-slate-100/70 dark:bg-slate-800/70">
+                                        <TableRow className="bg-slate-100/70">
                                             <TableHead className="w-[50px] text-center">No</TableHead>
                                             <TableHead className="w-[180px]">Waktu Pengamatan</TableHead>
                                             <TableHead className="w-[240px]">Kategori Thunderstorm</TableHead>
@@ -476,12 +476,12 @@ export default function ThunderstormIndex({
                                                 1;
 
                                             return (
-                                                <TableRow key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                                                <TableRow key={item.id} className="hover:bg-slate-50">
                                                     <TableCell className="text-center font-medium text-slate-500">
                                                         {recIndex}
                                                     </TableCell>
                                                     <TableCell>
-                                                        <div className="font-bold text-slate-900 dark:text-white">
+                                                        <div className="font-bold text-slate-900">
                                                             {item.slot_time_utc}
                                                         </div>
                                                         <div className="text-[11px] text-slate-500">
@@ -489,21 +489,21 @@ export default function ThunderstormIndex({
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                                        <span className="font-semibold text-slate-800">
                                                             {item.category_label}
                                                         </span>
                                                     </TableCell>
                                                     <TableCell className="text-center">
                                                         <div className="flex items-center justify-center gap-1 font-mono font-bold">
-                                                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300">
+                                                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
                                                                 {item.present_weather_ww ?? '-'}
                                                             </span>
                                                             <span className="text-slate-400">/</span>
-                                                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
                                                                 {item.past_weather_w1 ?? '-'}
                                                             </span>
                                                             <span className="text-slate-400">/</span>
-                                                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
                                                                 {item.past_weather_w2 ?? '-'}
                                                             </span>
                                                         </div>
@@ -521,7 +521,7 @@ export default function ThunderstormIndex({
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                                                        <span className="font-medium text-slate-700">
                                                             {item.pegawai?.nama || item.observer_name || '-'}
                                                         </span>
                                                     </TableCell>
@@ -546,7 +546,7 @@ export default function ThunderstormIndex({
 
                         {/* Pagination Footer */}
                         {thunderstormRecords.total > 0 && (
-                            <div className="p-4 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
                                 <span className="text-slate-500">
                                     Menampilkan {thunderstormRecords.from || 0}–{thunderstormRecords.to || 0} dari {thunderstormRecords.total} slot kejadian
                                 </span>
@@ -580,17 +580,17 @@ export default function ThunderstormIndex({
                     </DialogHeader>
                     {selectedItem && (
                         <div className="space-y-4 text-xs">
-                            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/50 space-y-1">
-                                <p className="font-bold text-amber-900 dark:text-amber-300 text-sm">
+                            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-1">
+                                <p className="font-bold text-amber-900 text-sm">
                                     {selectedItem.slot_time_utc}
                                 </p>
-                                <p className="text-slate-600 dark:text-slate-400">
-                                    Kategori: <strong className="text-slate-900 dark:text-white">{selectedItem.category_label}</strong>
+                                <p className="text-slate-600">
+                                    Kategori: <strong className="text-slate-900">{selectedItem.category_label}</strong>
                                 </p>
                             </div>
 
                             <div className="space-y-1.5">
-                                <p className="font-bold text-slate-700 dark:text-slate-300">Teks Sandi AAXX Sinoptik (GTS):</p>
+                                <p className="font-bold text-slate-700">Teks Sandi AAXX Sinoptik (GTS):</p>
                                 <pre className="p-3 bg-slate-900 text-amber-300 rounded-xl font-mono text-[11px] leading-relaxed whitespace-pre-wrap overflow-x-auto">
                                     {selectedItem.sandi || 'Sandi tidak tersedia'}
                                 </pre>
