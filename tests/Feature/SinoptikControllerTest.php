@@ -46,13 +46,15 @@ test('authenticated user can view sinoptik monthly report page with pagination',
 });
 
 test('sinoptik sync fetches and stores observation data into data_sinoptik table', function () {
-    $user = Pegawai::create([
-        'nama' => 'Dinar C. Nirwana',
-        'email' => 'dinar@bmkg.go.id',
-        'password' => Hash::make('password'),
-        'jenis_pegawai' => 'PNS',
-        'role' => 'Observer & Forecaster',
-    ]);
+    $user = Pegawai::firstOrCreate(
+        ['nama' => 'Dinar C. Nirwana'],
+        [
+            'email' => 'dinar@bmkg.go.id',
+            'password' => Hash::make('password'),
+            'jenis_pegawai' => 'PNS',
+            'role' => 'Observer & Forecaster',
+        ]
+    );
 
     Http::fake([
         '*/api/v21/user/session/login' => Http::response(['data' => ['token' => 'fake_jwt_token']], 200),
@@ -61,7 +63,7 @@ test('sinoptik sync fetches and stores observation data into data_sinoptik table
             'code' => 200,
             'data' => [
                 'total' => 1,
-                'headers' => ['station_name', 'data_timestamp', 'wind_dir_deg_dd', 'wind_speed_ff', 'visibility_vv', 'cloud_cover_oktas_m', 'temp_drybulb_c', 'temp_wetbulb_c', 'temp_dewpoint_c_tdtdtd', 'humidity_pc', 'pressure_qff_mb_derived', 'pressure_qfe_mb_derived', 'temp_max_c', 'temp_min_c', 'rainfall_last_mm', 'sandi_sinoptik', 'received_timestamp', 'sent_timestamp', 'observer_name'],
+                'headers' => ['station_name', 'data_timestamp', 'wind_dir_deg_dd', 'wind_speed_ff', 'visibility_vv', 'cloud_cover_oktas_m', 'temp_drybulb_c_tttttt', 'temp_wetbulb_c', 'temp_dewpoint_c_tdtdtd', 'humidity_pc', 'pressure_qff_mb_derived', 'pressure_qfe_mb_derived', 'temp_max_c_txtxtx', 'temp_min_c_tntntn', 'rainfall_last_mm', 'sandi_sinoptik', 'received_timestamp', 'sent_timestamp', 'observer_name'],
                 'rows' => [
                     [
                         'Stasiun Meteorologi Oesman Sadik',
@@ -78,14 +80,15 @@ test('sinoptik sync fetches and stores observation data into data_sinoptik table
         ], 200),
     ]);
 
-    $jadwalBulanan = \App\Models\JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
-    $shift = \App\Models\JadwalBulananShift::create([
-        'jadwal_bulanan_id' => $jadwalBulanan->id,
-        'kode_shift' => 'P',
-        'nama_shift' => 'PAGI',
-        'jam_masuk' => '00:00:00',
-        'jam_keluar' => '23:59:59',
-    ]);
+    $jadwalBulanan = \App\Models\JadwalBulanan::firstOrCreate(['bulan' => 8, 'tahun' => 2026], ['tipe' => 'operasional']);
+    $shift = \App\Models\JadwalBulananShift::firstOrCreate(
+        ['jadwal_bulanan_id' => $jadwalBulanan->id, 'kode_shift' => 'P'],
+        [
+            'nama_shift' => 'PAGI',
+            'jam_masuk' => '00:00:00',
+            'jam_keluar' => '23:59:59',
+        ]
+    );
     \App\Models\JadwalDetail::create([
         'jadwal_bulanan_id' => $jadwalBulanan->id,
         'pegawai_id' => $user->id,

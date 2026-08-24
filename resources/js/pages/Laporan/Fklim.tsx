@@ -934,18 +934,22 @@ export default function FklimIndex({
 
                     {selectedFklim && (
                         <div className="space-y-4 pt-2 text-xs">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
                                 <div>
                                     <span className="text-slate-500 block">Tanggal UTC</span>
                                     <span className="font-bold text-slate-900">{selectedFklim.data_timestamp}</span>
                                 </div>
                                 <div>
-                                    <span className="text-slate-500 block">Stasion ID</span>
-                                    <span className="font-bold text-slate-900">{selectedFklim.station_name} ({selectedFklim.station_id})</span>
+                                    <span className="text-slate-500 block">Observer Piket</span>
+                                    <span className="font-bold text-slate-900">{selectedFklim.pegawai?.nama || selectedFklim.observer_name || '-'}</span>
                                 </div>
                                 <div>
-                                    <span className="text-slate-500 block">Observer</span>
-                                    <span className="font-bold text-slate-900">{selectedFklim.pegawai?.nama || selectedFklim.observer_name || '-'}</span>
+                                    <span className="text-slate-500 block">Teknisi Piket</span>
+                                    <span className="font-bold text-slate-900">{selectedFklim.teknisi?.nama || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500 block">PPNPN Piket</span>
+                                    <span className="font-bold text-slate-900">{selectedFklim.ppnpn?.nama || '-'}</span>
                                 </div>
                                 <div>
                                     <span className="text-slate-500 block">QC Flag</span>

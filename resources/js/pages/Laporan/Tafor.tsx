@@ -911,7 +911,7 @@ export default function TaforIndex({
 
                     {selectedTafor && (
                         <div className="space-y-4 pt-2">
-                            <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
                                 <div>
                                     <span className="text-slate-500 block">Waktu Slot (UTC)</span>
                                     <span className="font-bold text-slate-900">{selectedTafor.data_timestamp}</span>
@@ -921,12 +921,16 @@ export default function TaforIndex({
                                     <span className="font-bold text-slate-900">{selectedTafor.sent_timestamp || selectedTafor.received_timestamp || '-'}</span>
                                 </div>
                                 <div>
-                                    <span className="text-slate-500 block">Stasion / Station ID</span>
-                                    <span className="font-bold text-slate-900">{selectedTafor.station_name} ({selectedTafor.station_id})</span>
+                                    <span className="text-slate-500 block">Observer Piket</span>
+                                    <span className="font-bold text-slate-900">{selectedTafor.pegawai?.nama || selectedTafor.observer_name || '-'}</span>
                                 </div>
                                 <div>
-                                    <span className="text-slate-500 block">Observer / Pengamat</span>
-                                    <span className="font-bold text-slate-900">{selectedTafor.pegawai?.nama || selectedTafor.observer_name || '-'}</span>
+                                    <span className="text-slate-500 block">Teknisi Piket</span>
+                                    <span className="font-bold text-slate-900">{selectedTafor.teknisi?.nama || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500 block">PPNPN Piket</span>
+                                    <span className="font-bold text-slate-900">{selectedTafor.ppnpn?.nama || '-'}</span>
                                 </div>
                             </div>
 

@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar, CheckSquare, Square } from 'lucide-react';
+import SyncingScheduleModal from '@/components/Jadwal/SyncingScheduleModal';
 
 export interface Pegawai {
     id: number;
@@ -231,6 +232,7 @@ export default function BulkUpdateModal({
                     </DialogFooter>
                 </form>
             </DialogContent>
+            <SyncingScheduleModal open={processing} bulan={bulan} tahun={tahun} />
         </Dialog>
     );
 }

@@ -13,17 +13,17 @@ class ObserverResolverService
      */
     public function resolvePegawai(?string $timestamp, ?string $observerName = null, ?string $fromTz = null): ?Pegawai
     {
-        // 1. Try matching by observer name if provided
-        if (!empty($observerName)) {
-            $matchedPegawai = $this->resolvePegawaiByName($observerName);
-            if ($matchedPegawai) {
-                return $matchedPegawai;
+        // 1. Try matching strictly by Jadwal Dinas Operasional (Observer piket) timestamp FIRST
+        if (!empty($timestamp)) {
+            $scheduledPegawai = $this->getObserverByTimestamp($timestamp, $fromTz);
+            if ($scheduledPegawai) {
+                return $scheduledPegawai;
             }
         }
 
-        // 2. Fall back to duty schedule by timestamp if available
-        if (!empty($timestamp)) {
-            return $this->getObserverByTimestamp($timestamp, $fromTz);
+        // 2. Fall back to matching by observer name string if schedule is missing
+        if (!empty($observerName)) {
+            return $this->resolvePegawaiByName($observerName);
         }
 
         return null;
@@ -226,5 +226,112 @@ class ObserverResolverService
         }
 
         return null;
+    }
+
+    /**
+     * Resolve duty Teknisi (Pegawai) for a given date-time string in WIT timezone.
+     */
+    public function getTeknisiByTimestamp(string $dateTimeString, ?string $fromTz = null): ?Pegawai
+    {
+        if ($fromTz) {
+            $dt = Carbon::parse($dateTimeString, $fromTz)->setTimezone('Asia/Jayapura');
+        } elseif (preg_match('/[Z\+\-]/i', $dateTimeString)) {
+            $dt = Carbon::parse($dateTimeString)->setTimezone('Asia/Jayapura');
+        } else {
+            $dt = Carbon::parse($dateTimeString, 'Asia/Jayapura');
+        }
+
+        $currentDateStr = $dt->toDateString();
+
+        $detail = JadwalDetail::with(['pegawai', 'shift'])
+            ->where('tanggal', $currentDateStr)
+            ->whereHas('shift', function ($q) {
+                $q->where('is_tidak_masuk_kerja', false);
+            })
+            ->whereHas('pegawai', function ($q) {
+                $q->where('role', 'LIKE', '%Teknisi%')
+                  ->orWhere('role', 'LIKE', '%Peralatan%')
+                  ->orWhere('role', 'LIKE', '%Komunikasi%');
+            })
+            ->first();
+
+        return $detail ? $detail->pegawai : null;
+    }
+
+    /**
+     * Resolve duty PPNPN (Pegawai) for a given date-time string in WIT timezone.
+     * Excludes shift 'A' (Pagi TU / Administrasi) and 'L' (Libur / Lepas).
+     */
+    public function getPpnpnByTimestamp(string $dateTimeString, ?string $fromTz = null): ?Pegawai
+    {
+        if ($fromTz) {
+            $dt = Carbon::parse($dateTimeString, $fromTz)->setTimezone('Asia/Jayapura');
+        } elseif (preg_match('/[Z\+\-]/i', $dateTimeString)) {
+            $dt = Carbon::parse($dateTimeString)->setTimezone('Asia/Jayapura');
+        } else {
+            $dt = Carbon::parse($dateTimeString, 'Asia/Jayapura');
+        }
+
+        $timeStr = $dt->format('H:i:s');
+        $currentDateStr = $dt->toDateString();
+        $previousDateStr = $dt->copy()->subDay()->toDateString();
+
+        // 1. Check details starting on current date (excluding shift A & L)
+        $details = JadwalDetail::with(['pegawai', 'shift'])
+            ->where('tanggal', $currentDateStr)
+            ->whereHas('shift', function ($q) {
+                $q->whereNotIn('kode_shift', ['L', 'A'])
+                  ->where('is_tidak_masuk_kerja', false);
+            })
+            ->whereHas('pegawai', function ($q) {
+                $q->where('jenis_pegawai', 'PPNPN')
+                  ->orWhere('role', 'LIKE', '%PPNPN%');
+            })
+            ->get();
+
+        foreach ($details as $detail) {
+            $shift = $detail->shift;
+            if (!$shift || !$shift->jam_masuk || !$shift->jam_keluar) {
+                continue;
+            }
+
+            if ($shift->jam_masuk <= $shift->jam_keluar) {
+                if ($timeStr >= $shift->jam_masuk && $timeStr <= $shift->jam_keluar) {
+                    return $detail->pegawai;
+                }
+            } else {
+                if ($timeStr >= $shift->jam_masuk) {
+                    return $detail->pegawai;
+                }
+            }
+        }
+
+        // 2. Check overnight details starting on previous date (e.g., 20:00 to 08:00 next day)
+        $previousDetails = JadwalDetail::with(['pegawai', 'shift'])
+            ->where('tanggal', $previousDateStr)
+            ->whereHas('shift', function ($q) {
+                $q->whereNotIn('kode_shift', ['L', 'A'])
+                  ->where('is_tidak_masuk_kerja', false);
+            })
+            ->whereHas('pegawai', function ($q) {
+                $q->where('jenis_pegawai', 'PPNPN')
+                  ->orWhere('role', 'LIKE', '%PPNPN%');
+            })
+            ->get();
+
+        foreach ($previousDetails as $detail) {
+            $shift = $detail->shift;
+            if (!$shift || !$shift->jam_masuk || !$shift->jam_keluar) {
+                continue;
+            }
+
+            if ($shift->jam_masuk > $shift->jam_keluar) {
+                if ($timeStr <= $shift->jam_keluar) {
+                    return $detail->pegawai;
+                }
+            }
+        }
+
+        return $details->first() ? $details->first()->pegawai : null;
     }
 }

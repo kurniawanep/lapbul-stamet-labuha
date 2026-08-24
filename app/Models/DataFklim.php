@@ -38,6 +38,8 @@ class DataFklim extends Model
         'wd_ff_max',
         'observer_name',
         'pegawai_id',
+        'teknisi_id',
+        'ppnpn_id',
         'qc_flag',
         'qc_histories',
     ];
@@ -68,5 +70,15 @@ class DataFklim extends Model
     public function pegawai(): BelongsTo
     {
         return $this->belongsTo(Pegawai::class, 'pegawai_id');
+    }
+
+    public function teknisi(): BelongsTo
+    {
+        return $this->belongsTo(Pegawai::class, 'teknisi_id');
+    }
+
+    public function ppnpn(): BelongsTo
+    {
+        return $this->belongsTo(Pegawai::class, 'ppnpn_id');
     }
 }

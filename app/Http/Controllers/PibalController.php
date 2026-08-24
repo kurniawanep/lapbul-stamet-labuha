@@ -57,7 +57,7 @@ class PibalController extends Controller
             ->orderBy('penghentian_pengamatan')
             ->pluck('penghentian_pengamatan');
 
-        $query = DataPibal::with('pegawai')
+        $query = DataPibal::with(['pegawai', 'teknisi', 'ppnpn'])
             ->whereBetween('data_timestamp', [$startDate, $endDate]);
 
         if ($request->filled('observer')) {

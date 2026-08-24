@@ -1294,13 +1294,21 @@ export default function PibalIndex({
                                     <p className="font-bold text-slate-900 mt-0.5">{selectedPibal.penghentian_pengamatan || '-'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-slate-500 font-medium">Elevasi Stasiun</p>
-                                    <p className="font-bold text-slate-900 mt-0.5">{selectedPibal.station_elevation || '14 m'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-500 font-medium">Observer / Pengamat</p>
+                                    <p className="text-slate-500 font-medium">Observer Piket</p>
                                     <p className="font-bold text-slate-900 mt-0.5">
                                         {selectedPibal.pegawai?.nama || selectedPibal.observer_name || '-'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-slate-500 font-medium">Teknisi Piket</p>
+                                    <p className="font-bold text-slate-900 mt-0.5">
+                                        {selectedPibal.teknisi?.nama || '-'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-slate-500 font-medium">PPNPN Piket</p>
+                                    <p className="font-bold text-slate-900 mt-0.5">
+                                        {selectedPibal.ppnpn?.nama || '-'}
                                     </p>
                                 </div>
                             </div>

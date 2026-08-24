@@ -569,10 +569,14 @@ export default function PerawananIndex() {
                         </DialogHeader>
 
                         <div className="space-y-4 pt-2 text-xs">
-                            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
                                 <div className="flex justify-between text-slate-600">
                                     <span>Stasiun:</span>
                                     <strong className="text-slate-900">{selectedRecord.station_name}</strong>
+                                </div>
+                                <div className="flex justify-between text-slate-600">
+                                    <span>Observer / Pengamat:</span>
+                                    <strong className="text-slate-900">{selectedRecord.observer_name || '-'}</strong>
                                 </div>
                             </div>
 

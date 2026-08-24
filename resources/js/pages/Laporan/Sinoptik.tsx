@@ -1358,9 +1358,21 @@ export default function SinoptikIndex({
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-slate-500 font-medium">Observer / Pengamat</p>
+                                    <p className="text-slate-500 font-medium">Observer Piket</p>
                                     <p className="font-bold text-slate-900 mt-0.5">
                                         {selectedSinoptik.pegawai?.nama || selectedSinoptik.observer_name || '-'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-slate-500 font-medium">Teknisi Piket</p>
+                                    <p className="font-bold text-slate-900 mt-0.5">
+                                        {selectedSinoptik.teknisi?.nama || '-'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-slate-500 font-medium">PPNPN Piket</p>
+                                    <p className="font-bold text-slate-900 mt-0.5">
+                                        {selectedSinoptik.ppnpn?.nama || '-'}
                                     </p>
                                 </div>
                             </div>

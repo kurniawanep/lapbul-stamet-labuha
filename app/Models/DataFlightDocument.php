@@ -30,6 +30,8 @@ class DataFlightDocument extends Model
         'wa_sender_name',
         'observer_name',
         'pegawai_id',
+        'teknisi_id',
+        'ppnpn_id',
     ];
 
     protected $casts = [
@@ -42,5 +44,15 @@ class DataFlightDocument extends Model
     public function pegawai(): BelongsTo
     {
         return $this->belongsTo(Pegawai::class, 'pegawai_id');
+    }
+
+    public function teknisi(): BelongsTo
+    {
+        return $this->belongsTo(Pegawai::class, 'teknisi_id');
+    }
+
+    public function ppnpn(): BelongsTo
+    {
+        return $this->belongsTo(Pegawai::class, 'ppnpn_id');
     }
 }

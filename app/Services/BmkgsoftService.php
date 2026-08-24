@@ -192,9 +192,8 @@ class BmkgsoftService
             }
 
             $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName, 'UTC');
-            if (!$pegawai) {
-                $pegawai = $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC');
-            }
+            $teknisi = $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC');
+            $ppnpn = $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC');
 
             try {
                 DataPibal::updateOrCreate(
@@ -215,6 +214,8 @@ class BmkgsoftService
                         'pembacaan_azimuth_elevasi' => $item['pembacaan_azimuth_elevasi'] ?? null,
                         'observer_name' => $pegawai ? $pegawai->nama : ($observerName ?? null),
                         'pegawai_id' => $pegawai ? $pegawai->id : null,
+                        'teknisi_id' => $teknisi ? $teknisi->id : null,
+                        'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
                     ]
                 );
 
@@ -472,6 +473,8 @@ class BmkgsoftService
                 }
 
                 $pegawai = $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC');
+                $teknisi = $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC');
+                $ppnpn = $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC');
 
                 try {
                     DataTafor::updateOrCreate(
@@ -494,6 +497,8 @@ class BmkgsoftService
                             'sender_username' => $item['sender_username'] ?? null,
                             'observer_name' => $pegawai ? $pegawai->nama : null,
                             'pegawai_id' => $pegawai ? $pegawai->id : null,
+                            'teknisi_id' => $teknisi ? $teknisi->id : null,
+                            'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
                         ]
                     );
 
@@ -674,6 +679,8 @@ class BmkgsoftService
                 }
 
                 $pegawai = $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC');
+                $teknisi = $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC');
+                $ppnpn = $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC');
 
                 try {
                     DataMetar::updateOrCreate(
@@ -696,6 +703,8 @@ class BmkgsoftService
                             'sender_username' => $item['sender_username'] ?? null,
                             'observer_name' => $pegawai ? $pegawai->nama : null,
                             'pegawai_id' => $pegawai ? $pegawai->id : null,
+                            'teknisi_id' => $teknisi ? $teknisi->id : null,
+                            'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
                         ]
                     );
 
@@ -960,6 +969,8 @@ class BmkgsoftService
                 }
 
                 $pegawai = $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC');
+                $teknisi = $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC');
+                $ppnpn = $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC');
 
                 try {
                     DataSinoptik::updateOrCreate(
@@ -1039,6 +1050,8 @@ class BmkgsoftService
 
                             // Encoded Synop
                             'encoded_synop' => $getValue($row, 'encoded_synop'),
+                            'teknisi_id' => $teknisi ? $teknisi->id : null,
+                            'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
                         ]
                     );
 
@@ -1312,6 +1325,8 @@ class BmkgsoftService
                 }
 
                 $pegawai = $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC');
+                $teknisi = $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC');
+                $ppnpn = $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC');
 
                 $m0700 = $row['m_0700ws'] ?? [];
                 $m1300 = $row['m_1300ws'] ?? [];
@@ -1352,6 +1367,8 @@ class BmkgsoftService
 
                             'observer_name' => $pegawai ? $pegawai->nama : ($observerName ?? null),
                             'pegawai_id' => $pegawai ? $pegawai->id : null,
+                            'teknisi_id' => $teknisi ? $teknisi->id : null,
+                            'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
                             'qc_flag' => $row['qc_flag_fklim'] ?? 0,
                             'qc_histories' => is_array($row['qc_histories_fklim'] ?? null) ? json_encode($row['qc_histories_fklim']) : ($row['qc_histories_fklim'] ?? null),
                         ]
@@ -1504,8 +1521,6 @@ class BmkgsoftService
             $notes = $row[$headerMap['notes'] ?? 7] ?? null;
             $observerName = $row[$headerMap['observer_name'] ?? 10] ?? null;
 
-            $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName);
-
             try {
                 DataPerawanan::updateOrCreate(
                     [
@@ -1520,15 +1535,14 @@ class BmkgsoftService
                         'totally_cloudy' => $totallyCloudy,
                         'total_observation' => $totalObs,
                         'notes' => $notes,
-                        'observer_name' => $pegawai ? $pegawai->nama : $observerName,
-                        'pegawai_id' => $pegawai ? $pegawai->id : null,
+                        'observer_name' => $observerName,
                     ]
                 );
 
                 $totalSynced++;
                 $allDetails[] = [
                     'timestamp' => $timestamp,
-                    'observer' => $pegawai ? $pegawai->nama : ($observerName ?? 'Unassigned'),
+                    'observer' => $observerName ?? 'Unassigned',
                     'status' => 'berhasil',
                     'reason' => null,
                 ];
@@ -1665,8 +1679,6 @@ class BmkgsoftService
             $timestamp = Carbon::parse($rawTs)->format('Y-m-d H:i:s');
             $observerName = $row['observer_name'] ?? null;
 
-            $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName);
-
             $m0700 = $row['m_0700ws'] ?? [];
 
             $opDiffBaca = isset($m0700['op_diff_baca_0700']) ? (float) $m0700['op_diff_baca_0700'] : null;
@@ -1697,8 +1709,7 @@ class BmkgsoftService
                         'rr_0700' => $rr0700,
                         'op_eva' => $opEva,
                         'ws_avg_0c5' => $wsAvg0c5,
-                        'observer_name' => $pegawai ? $pegawai->nama : $observerName,
-                        'pegawai_id' => $pegawai ? $pegawai->id : null,
+                        'observer_name' => $observerName,
                         'qc_flag' => $qcFlag,
                         'qc_histories' => $qcHistories,
                     ]
@@ -1707,7 +1718,7 @@ class BmkgsoftService
                 $totalSynced++;
                 $allDetails[] = [
                     'timestamp' => $timestamp,
-                    'observer' => $pegawai ? $pegawai->nama : ($observerName ?? 'Unassigned'),
+                    'observer' => $observerName ?? 'Unassigned',
                     'status' => 'berhasil',
                     'reason' => null,
                 ];

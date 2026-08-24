@@ -40,6 +40,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/jadwal/shifts/{shift}', [JadwalController::class, 'updateShift'])->name('jadwal.shifts.update');
     Route::delete('/jadwal/shifts/{shift}', [JadwalController::class, 'destroyShift'])->name('jadwal.shifts.destroy');
     Route::get('/jadwal/pdf', [JadwalController::class, 'exportPdf'])->name('jadwal.pdf');
+    Route::post('/jadwal/sync-observations', [JadwalController::class, 'syncObservations'])->name('jadwal.sync-observations');
 
     // Laporan Bulanan - Data PIBAL Routes
     Route::get('/laporan/pibal', [PibalController::class, 'index'])->name('laporan.pibal');

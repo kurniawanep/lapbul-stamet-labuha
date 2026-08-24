@@ -43,8 +43,7 @@ class PenguapanController extends Controller
         $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
 
-        $query = DataPenguapan::with('pegawai')
-            ->whereBetween('data_timestamp', [$startDate, $endDate]);
+        $query = DataPenguapan::whereBetween('data_timestamp', [$startDate, $endDate]);
 
         if ($request->filled('observer') && $request->input('observer') !== 'ALL') {
             $query->where('observer_name', $request->input('observer'));

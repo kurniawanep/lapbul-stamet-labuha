@@ -14,6 +14,7 @@ import {
     CheckCircle2, 
     Clock, 
     ExternalLink, 
+    Eye,
     FileCheck, 
     FileText, 
     MessageSquare, 
@@ -50,6 +51,8 @@ interface FlightDocumentItem {
     wa_sender_name: string | null;
     observer_name: string | null;
     pegawai?: { id: number; nama: string };
+    teknisi?: { id: number; nama: string };
+    ppnpn?: { id: number; nama: string };
 }
 
 interface DailyMatrixItem {
@@ -97,6 +100,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
     const [selectedTahun, setSelectedTahun] = useState(filters.tahun);
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [isPasteOpen, setIsPasteOpen] = useState(false);
+    const [selectedFd, setSelectedFd] = useState<FlightDocumentItem | null>(null);
 
     const pasteForm = useForm({
         raw_message: '',
@@ -428,6 +432,16 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
 
                                         <TableCell className="text-right">
                                             <div className="flex items-center justify-end gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setSelectedFd(item)}
+                                                    className="h-8 w-8 text-slate-500 hover:text-indigo-600"
+                                                    title="Lihat Detail Piket"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+
                                                 {item.fd_url && (
                                                     <a
                                                         href={item.fd_url}
@@ -477,6 +491,49 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                             ))}
                         </div>
                     </div>
+                {/* DETAIL MODAL DIALOG */}
+                {selectedFd && (
+                    <Dialog open={!!selectedFd} onOpenChange={() => setSelectedFd(null)}>
+                        <DialogContent className="max-w-md bg-white border border-slate-200 rounded-2xl">
+                            <DialogHeader>
+                                <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                                    <Plane className="h-5 w-5 text-indigo-600" />
+                                    Rincian Flight Document - {selectedFd.flight_number || selectedFd.no_fd || 'FD'}
+                                </DialogTitle>
+                            </DialogHeader>
+
+                            <div className="space-y-4 pt-2 text-xs">
+                                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                                    <div className="flex justify-between text-slate-600">
+                                        <span>Nomor FD / Flight:</span>
+                                        <strong className="text-slate-900">{selectedFd.no_fd} ({selectedFd.flight_number})</strong>
+                                    </div>
+                                    <div className="flex justify-between text-slate-600">
+                                        <span>Maskapai / Rute:</span>
+                                        <strong className="text-slate-900">{selectedFd.airline_name} - {selectedFd.route || '-'}</strong>
+                                    </div>
+                                    <div className="flex justify-between text-slate-600">
+                                        <span>Observer Piket:</span>
+                                        <strong className="text-slate-900">{selectedFd.pegawai?.nama || selectedFd.observer_name || 'Unassigned'}</strong>
+                                    </div>
+                                    <div className="flex justify-between text-slate-600">
+                                        <span>Teknisi Piket:</span>
+                                        <strong className="text-slate-900">{selectedFd.teknisi?.nama || '-'}</strong>
+                                    </div>
+                                    <div className="flex justify-between text-slate-600">
+                                        <span>PPNPN Piket:</span>
+                                        <strong className="text-slate-900">{selectedFd.ppnpn?.nama || '-'}</strong>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end pt-2">
+                                    <Button variant="outline" size="sm" onClick={() => setSelectedFd(null)}>
+                                        Tutup
+                                    </Button>
+                                </div>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
                 )}
             </div>
         </>

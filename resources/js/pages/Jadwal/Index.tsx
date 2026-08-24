@@ -3,6 +3,7 @@ import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import BulkUpdateModal from '@/components/Jadwal/BulkUpdateModal';
 import MasterShiftModal from '@/components/Jadwal/MasterShiftModal';
+import SyncingScheduleModal from '@/components/Jadwal/SyncingScheduleModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -643,6 +644,9 @@ export default function Index({
                 category={category}
                 shifts={shifts}
             />
+
+            {/* Syncing Progress Card Modal */}
+            <SyncingScheduleModal open={isSaving} bulan={bulan} tahun={tahun} />
         </>
     );
 }

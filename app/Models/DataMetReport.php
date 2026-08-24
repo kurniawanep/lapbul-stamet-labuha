@@ -31,6 +31,8 @@ class DataMetReport extends Model
         'raw_message',
         'observer_name',
         'pegawai_id',
+        'teknisi_id',
+        'ppnpn_id',
     ];
 
     protected $casts = [
@@ -49,5 +51,15 @@ class DataMetReport extends Model
     public function pegawai(): BelongsTo
     {
         return $this->belongsTo(Pegawai::class, 'pegawai_id');
+    }
+
+    public function teknisi(): BelongsTo
+    {
+        return $this->belongsTo(Pegawai::class, 'teknisi_id');
+    }
+
+    public function ppnpn(): BelongsTo
+    {
+        return $this->belongsTo(Pegawai::class, 'ppnpn_id');
     }
 }

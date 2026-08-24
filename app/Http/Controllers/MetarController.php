@@ -38,7 +38,7 @@ class MetarController extends Controller
         $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
 
-        $query = DataMetar::with('pegawai')
+        $query = DataMetar::with(['pegawai', 'teknisi', 'ppnpn'])
             ->whereBetween('data_timestamp', [$startDate, $endDate]);
 
         if ($request->filled('observer') && $request->input('observer') !== 'ALL') {

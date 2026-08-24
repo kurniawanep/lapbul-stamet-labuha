@@ -23,7 +23,6 @@ class DataPerawanan extends Model
         'total_observation',
         'notes',
         'observer_name',
-        'pegawai_id',
     ];
 
     protected $casts = [
@@ -34,9 +33,4 @@ class DataPerawanan extends Model
         'totally_cloudy' => 'integer',
         'total_observation' => 'integer',
     ];
-
-    public function pegawai(): BelongsTo
-    {
-        return $this->belongsTo(Pegawai::class, 'pegawai_id');
-    }
 }

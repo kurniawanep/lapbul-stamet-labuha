@@ -40,7 +40,7 @@ class TaforController extends Controller
         $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
 
-        $query = DataTafor::with('pegawai')
+        $query = DataTafor::with(['pegawai', 'teknisi', 'ppnpn'])
             ->whereBetween('data_timestamp', [$startDate, $endDate]);
 
         if ($request->filled('observer') && $request->input('observer') !== 'ALL') {

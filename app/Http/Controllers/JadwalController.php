@@ -7,6 +7,7 @@ use App\Models\JadwalBulananShift;
 use App\Models\JadwalDetail;
 use App\Models\MasterShift;
 use App\Models\Pegawai;
+use App\Services\DutySyncService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -20,6 +21,12 @@ use Inertia\Response;
 
 class JadwalController extends Controller
 {
+    protected DutySyncService $dutySyncService;
+
+    public function __construct(DutySyncService $dutySyncService)
+    {
+        $this->dutySyncService = $dutySyncService;
+    }
     /**
      * Fetch and cache Indonesian national holidays & cuti bersama from Kemendesa API.
      */
@@ -227,18 +234,25 @@ class JadwalController extends Controller
             'shift_id' => ['required', 'exists:jadwal_bulanan_shifts,id'],
         ]);
 
+        $jadwalBulananId = $request->input('jadwal_bulanan_id');
+
         JadwalDetail::updateOrCreate(
             [
                 'pegawai_id' => $request->input('pegawai_id'),
                 'tanggal' => $request->input('tanggal'),
             ],
             [
-                'jadwal_bulanan_id' => $request->input('jadwal_bulanan_id'),
+                'jadwal_bulanan_id' => $jadwalBulananId,
                 'shift_id' => $request->input('shift_id'),
             ]
         );
 
-        return redirect()->back()->with('success', 'Shift berhasil diperbarui.');
+        $jb = JadwalBulanan::find($jadwalBulananId);
+        if ($jb) {
+            $this->dutySyncService->syncObservationsForPeriod($jb->bulan, $jb->tahun);
+        }
+
+        return redirect()->back()->with('success', 'Shift berhasil diperbarui dan data pengamatan diselaraskan.');
     }
 
     /**
@@ -272,7 +286,12 @@ class JadwalController extends Controller
             }
         });
 
-        return redirect()->back()->with('success', count($changes) . ' perubahan shift berhasil disimpan.');
+        $jb = JadwalBulanan::find($jadwalBulananId);
+        if ($jb) {
+            $this->dutySyncService->syncObservationsForPeriod($jb->bulan, $jb->tahun);
+        }
+
+        return redirect()->back()->with('success', count($changes) . ' perubahan shift berhasil disimpan & diselaraskan.');
     }
 
     /**
@@ -311,7 +330,12 @@ class JadwalController extends Controller
             }
         }
 
-        return redirect()->back()->with('success', 'Pembaruan massal shift berhasil.');
+        $jb = JadwalBulanan::find($jadwalBulananId);
+        if ($jb) {
+            $this->dutySyncService->syncObservationsForPeriod($jb->bulan, $jb->tahun);
+        }
+
+        return redirect()->back()->with('success', 'Pembaruan massal shift berhasil & data pengamatan diselaraskan.');
     }
 
     /**
@@ -527,5 +551,18 @@ class JadwalController extends Controller
         ])->setPaper('a4', 'landscape');
 
         return $pdf->stream("Jadwal_Dinas_{$category}_{$bulan}_{$tahun}.pdf");
+    }
+
+    /**
+     * Manual JSON endpoint to resync duty personnel for a month's observation records.
+     */
+    public function syncObservations(Request $request)
+    {
+        $bulan = (int) $request->input('bulan', 8);
+        $tahun = (int) $request->input('tahun', 2026);
+
+        $result = $this->dutySyncService->syncObservationsForPeriod($bulan, $tahun);
+
+        return response()->json($result);
     }
 }

@@ -40,7 +40,7 @@ class FlightDocumentController extends Controller
         $endDate = $startDate->copy()->endOfMonth();
         $daysInMonth = $startDate->daysInMonth;
 
-        $query = DataFlightDocument::with('pegawai')
+        $query = DataFlightDocument::with(['pegawai', 'teknisi', 'ppnpn'])
             ->whereBetween('departure_at', [$startDate->toDateTimeString(), $endDate->toDateTimeString()]);
 
         if ($search) {

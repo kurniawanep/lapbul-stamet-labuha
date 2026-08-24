@@ -25,7 +25,6 @@ class DataPenguapan extends Model
         'op_eva',
         'ws_avg_0c5',
         'observer_name',
-        'pegawai_id',
         'qc_flag',
         'qc_histories',
     ];
@@ -41,9 +40,4 @@ class DataPenguapan extends Model
         'ws_avg_0c5' => 'float',
         'qc_flag' => 'integer',
     ];
-
-    public function pegawai()
-    {
-        return $this->belongsTo(Pegawai::class, 'pegawai_id');
-    }
 }

@@ -38,7 +38,7 @@ class SinoptikController extends Controller
         $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
 
-        $query = DataSinoptik::with('pegawai')
+        $query = DataSinoptik::with(['pegawai', 'teknisi', 'ppnpn'])
             ->whereBetween('data_timestamp', [$startDate, $endDate]);
 
         if ($request->filled('observer')) {
