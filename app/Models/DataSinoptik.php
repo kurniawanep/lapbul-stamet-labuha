@@ -37,6 +37,57 @@ class DataSinoptik extends Model
         'cloud_cover',
         'observer_name',
         'pegawai_id',
+
+        // Weather & Indicators
+        'present_weather_ww',
+        'past_weather_w1',
+        'past_weather_w2',
+        'wind_indicator_iw',
+        'weather_indicator_ix',
+        'rainfall_indicator_ir',
+
+        // Pressure details
+        'pressure_reading_mb',
+        'pressure_temp_c',
+        'pressure_3h_diff_ppp',
+        'pressure_24h_diff_p24',
+
+        // Cloud Types & Cover
+        'cloud_low_type_cl',
+        'cloud_med_type_cm',
+        'cloud_high_type_ch',
+        'cloud_low_cover_oktas',
+        'cloud_med_cover_oktas',
+        'cloud_high_cover_oktas',
+
+        // Cloud Layers
+        'cloud_layer_1_type',
+        'cloud_layer_1_height',
+        'cloud_layer_1_amt',
+        'cloud_layer_2_type',
+        'cloud_layer_2_height',
+        'cloud_layer_2_amt',
+        'cloud_layer_3_type',
+        'cloud_layer_3_height',
+        'cloud_layer_3_amt',
+        'cloud_layer_4_type',
+        'cloud_layer_4_height',
+        'cloud_layer_4_amt',
+
+        // Rainfall periods
+        'rainfall_6h_rrr',
+        'rainfall_24h_rrrr',
+
+        // Solar, Sunshine, Evaporation & Land
+        'solar_rad_24h',
+        'sunshine_hours',
+        'evaporation_24h',
+        'evaporation_indicator_ie',
+        'land_cond',
+        'land_note',
+
+        // Encoded Synop
+        'encoded_synop',
     ];
 
     protected $casts = [
@@ -53,6 +104,26 @@ class DataSinoptik extends Model
         'wind_speed' => 'float',
         'visibility' => 'float',
         'rainfall' => 'float',
+        'pressure_reading_mb' => 'float',
+        'pressure_temp_c' => 'float',
+        'pressure_3h_diff_ppp' => 'float',
+        'pressure_24h_diff_p24' => 'float',
+        'cloud_low_cover_oktas' => 'float',
+        'cloud_med_cover_oktas' => 'float',
+        'cloud_high_cover_oktas' => 'float',
+        'cloud_layer_1_height' => 'float',
+        'cloud_layer_1_amt' => 'float',
+        'cloud_layer_2_height' => 'float',
+        'cloud_layer_2_amt' => 'float',
+        'cloud_layer_3_height' => 'float',
+        'cloud_layer_3_amt' => 'float',
+        'cloud_layer_4_height' => 'float',
+        'cloud_layer_4_amt' => 'float',
+        'rainfall_6h_rrr' => 'float',
+        'rainfall_24h_rrrr' => 'float',
+        'solar_rad_24h' => 'float',
+        'sunshine_hours' => 'float',
+        'evaporation_24h' => 'float',
     ];
 
     /**

@@ -982,6 +982,60 @@ class BmkgsoftService
                             'cloud_cover' => $getValue($row, 'cloud_cover_oktas_m'),
                             'observer_name' => $pegawai ? $pegawai->nama : null,
                             'pegawai_id' => $pegawai ? $pegawai->id : null,
+
+                            // Weather & Indicators
+                            'present_weather_ww' => $getValue($row, 'present_weather_ww'),
+                            'past_weather_w1' => $getValue($row, 'past_weather_w1'),
+                            'past_weather_w2' => $getValue($row, 'past_weather_w2'),
+                            'wind_indicator_iw' => $getValue($row, 'wind_indicator_iw'),
+                            'weather_indicator_ix' => $getValue($row, 'weather_indicator_ix'),
+                            'rainfall_indicator_ir' => $getValue($row, 'rainfall_indicator_ir'),
+
+                            // Pressure details
+                            'pressure_reading_mb' => $getValue($row, 'pressure_reading_mb'),
+                            'pressure_temp_c' => $getValue($row, 'pressure_temp_c'),
+                            'pressure_3h_diff_ppp' => $getValue($row, 'pressure_3h_diff_mb_ppp'),
+                            'pressure_24h_diff_p24' => $getValue($row, 'pressure_24h_diff_mb_p24'),
+
+                            // Cloud Types & Cover
+                            'cloud_low_type_cl' => $getValue($row, 'cloud_low_type_cl'),
+                            'cloud_med_type_cm' => $getValue($row, 'cloud_med_type_cm'),
+                            'cloud_high_type_ch' => $getValue($row, 'cloud_high_type_ch'),
+                            'cloud_low_cover_oktas' => $getValue($row, 'cloud_low_cover_oktas'),
+                            'cloud_med_cover_oktas' => $getValue($row, 'cloud_med_cover_oktas'),
+                            'cloud_high_cover_oktas' => $getValue($row, 'cloud_high_cover_oktas'),
+
+                            // Cloud Layers
+                            'cloud_layer_1_type' => $getValue($row, 'cloud_layer_1_type_c'),
+                            'cloud_layer_1_height' => $getValue($row, 'cloud_layer_1_height_m_hshs'),
+                            'cloud_layer_1_amt' => $getValue($row, 'cloud_layer_1_amt_oktas_ns'),
+
+                            'cloud_layer_2_type' => $getValue($row, 'cloud_layer_2_type_c'),
+                            'cloud_layer_2_height' => $getValue($row, 'cloud_layer_2_height_m_hshs'),
+                            'cloud_layer_2_amt' => $getValue($row, 'cloud_layer_2_amt_oktas_ns'),
+
+                            'cloud_layer_3_type' => $getValue($row, 'cloud_layer_3_type_c'),
+                            'cloud_layer_3_height' => $getValue($row, 'cloud_layer_3_height_m_hshs'),
+                            'cloud_layer_3_amt' => $getValue($row, 'cloud_layer_3_amt_oktas_ns'),
+
+                            'cloud_layer_4_type' => $getValue($row, 'cloud_layer_4_type_c'),
+                            'cloud_layer_4_height' => $getValue($row, 'cloud_layer_4_height_m_hshs'),
+                            'cloud_layer_4_amt' => $getValue($row, 'cloud_layer_4_amt_oktas_ns'),
+
+                            // Rainfall periods
+                            'rainfall_6h_rrr' => $getValue($row, 'rainfall_6h_rrr'),
+                            'rainfall_24h_rrrr' => $getValue($row, 'rainfall_24h_rrrr'),
+
+                            // Solar, Sunshine, Evaporation & Land
+                            'solar_rad_24h' => $getValue($row, 'solar_rad_24h_jcm2_f24'),
+                            'sunshine_hours' => $getValue($row, 'sunshine_h_sss'),
+                            'evaporation_24h' => $getValue($row, 'evaporation_24hours_mm_eee'),
+                            'evaporation_indicator_ie' => $getValue($row, 'evaporation_eq_indicator_ie'),
+                            'land_cond' => $getValue($row, 'land_cond'),
+                            'land_note' => $getValue($row, 'land_note'),
+
+                            // Encoded Synop
+                            'encoded_synop' => $getValue($row, 'encoded_synop'),
                         ]
                     );
 
