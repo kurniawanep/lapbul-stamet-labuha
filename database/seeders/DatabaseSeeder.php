@@ -17,6 +17,8 @@ class DatabaseSeeder extends Seeder
         // $this->call(JadwalInitialSeeder::class);
         $this->call(PegawaiSeeder::class);
         $this->call(MasterShiftSeeder::class);
-        $this->call(JadwalDinasJuli2026Seeder::class);
+        $this->call(JadwalDinasOperasional2026Seeder::class);
+        $this->call(JadwalDinasPpnpn2026Seeder::class);
+        $this->call(JadwalDinasTeknisi2026Seeder::class);
     }
 }

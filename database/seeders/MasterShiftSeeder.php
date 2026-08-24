@@ -26,6 +26,7 @@ class MasterShiftSeeder extends Seeder
                 ['kode_shift' => 'CT', 'nama_shift' => 'CUTI', 'jam_masuk' => null, 'jam_keluar' => null, 'is_tidak_masuk_kerja' => true],
                 ['kode_shift' => 'WFH', 'nama_shift' => 'WORK FROM HOME', 'jam_masuk' => null, 'jam_keluar' => null, 'is_tidak_masuk_kerja' => false],
                 ['kode_shift' => 'LATSAR', 'nama_shift' => 'LATSAR', 'jam_masuk' => null, 'jam_keluar' => null, 'is_tidak_masuk_kerja' => false],
+                ['kode_shift' => 'SAKIT', 'nama_shift' => 'SAKIT', 'jam_masuk' => null, 'jam_keluar' => null, 'is_tidak_masuk_kerja' => true],
             ],
             'teknisi' => [
                 ['kode_shift' => 'PT', 'nama_shift' => 'PAGI TEKNISI', 'jam_masuk' => '07:30:00', 'jam_keluar' => '15:00:00', 'is_tidak_masuk_kerja' => false],
