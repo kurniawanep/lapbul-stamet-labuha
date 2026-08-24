@@ -61,6 +61,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/laporan/sinoptik', [SinoptikController::class, 'index'])->name('laporan.sinoptik');
     Route::post('/laporan/sinoptik/sync', [SinoptikController::class, 'sync'])->name('laporan.sinoptik.sync');
 
+    // Laporan Bulanan - Data FKLIM Routes
+    Route::get('/laporan/fklim', [\App\Http\Controllers\FklimController::class, 'index'])->name('laporan.fklim');
+    Route::post('/laporan/fklim/sync', [\App\Http\Controllers\FklimController::class, 'sync'])->name('laporan.fklim.sync');
+    Route::get('/laporan/fklim/export-excel', [\App\Http\Controllers\FklimController::class, 'exportExcel'])->name('laporan.fklim.export-excel');
+
+    // Laporan Bulanan - Data Thunderstorm Routes
+    Route::get('/laporan/thunderstorm', [\App\Http\Controllers\ThunderstormController::class, 'index'])->name('laporan.thunderstorm');
+    Route::get('/laporan/thunderstorm/export-docx', [\App\Http\Controllers\ThunderstormController::class, 'exportDocx'])->name('laporan.thunderstorm.export-docx');
+
     // Laporan Bulanan - Data MET REPORT (QAM) Routes
     Route::get('/laporan/met-report', [MetReportController::class, 'index'])->name('laporan.met-report');
     Route::post('/laporan/met-report/manual', [MetReportController::class, 'storeManual'])->name('laporan.met-report.manual');

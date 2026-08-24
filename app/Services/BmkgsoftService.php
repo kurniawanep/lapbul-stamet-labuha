@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\DataFklim;
 use App\Models\DataMetar;
 use App\Models\DataPibal;
 use App\Models\DataSinoptik;
@@ -1170,6 +1171,229 @@ class BmkgsoftService
             'failed_count' => $totalFailed,
             'total_fetched' => $totalFetched,
             'message' => "Berhasil menyinkronkan {$totalSynced} dari {$totalFetched} data Sinoptik.",
+            'error_reason' => $overallError,
+            'details' => $allDetails,
+        ];
+    }
+
+    /**
+     * Fetch FKLIM observation data from BMKGSatu API export_data endpoint.
+     */
+    public function fetchFklimDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
+    {
+        $token = $this->getToken();
+        if (!$token) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => 'Gagal mendapatkan token autentikasi BMKGSoft.',
+            ];
+        }
+
+        $url = "{$this->baseUrl}/db/bmkgsatu/@export_data";
+
+        try {
+            $response = Http::withoutVerifying()
+                ->retry(2, 500)
+                ->timeout(30)
+                ->withHeaders([
+                    'accept' => 'application/json',
+                    'Authorization' => "Bearer {$token}",
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                ])
+                ->get($url, [
+                    'type_name' => 'Fdih',
+                    'station_id' => $stationId,
+                    'data_timestamp__gte' => Carbon::parse($dateFrom)->format('Y-m-d\TH:i'),
+                    'data_timestamp__lte' => Carbon::parse($dateTo)->format('Y-m-d\TH:i'),
+                    '_size' => 100,
+                    'fdih_type' => 'Fklim',
+                    '_metadata' => 'station_id,station_name,data_timestamp,alias_station_id,source_data,m_0700ws[tbk_1c2m_0700],m_1300ws[tbk_1c2m_1300],m_1800ws[tbk_1c2m_1800],tbk_avg,m_1800ws[t_max_1c2m],m_1300ws[t_min_1c2m],m_0700ws[rr_0700],m_0700ws[ss_8],m_0700ws[cu_khusus],m_1800ws[pp_qfe_0000],m_0700ws[rh_1c2m_0700],m_1300ws[rh_1c2m_1300],m_1800ws[rh_1c2m_1800],rh_avg,ff_avg_km_jm,wd_cardinal,ff_max,wd_ff_max,observer_name,qc_flag_fklim,qc_histories_fklim',
+                ]);
+
+            if ($response->status() === 401) {
+                $token = $this->getToken(true);
+                if ($token) {
+                    $response = Http::withoutVerifying()
+                        ->retry(2, 500)
+                        ->timeout(30)
+                        ->withHeaders([
+                            'accept' => 'application/json',
+                            'Authorization' => "Bearer {$token}",
+                            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        ])
+                        ->get($url, [
+                            'type_name' => 'Fdih',
+                            'station_id' => $stationId,
+                            'data_timestamp__gte' => Carbon::parse($dateFrom)->format('Y-m-d\TH:i'),
+                            'data_timestamp__lte' => Carbon::parse($dateTo)->format('Y-m-d\TH:i'),
+                            '_size' => 100,
+                            'fdih_type' => 'Fklim',
+                            '_metadata' => 'station_id,station_name,data_timestamp,alias_station_id,source_data,m_0700ws[tbk_1c2m_0700],m_1300ws[tbk_1c2m_1300],m_1800ws[tbk_1c2m_1800],tbk_avg,m_1800ws[t_max_1c2m],m_1300ws[t_min_1c2m],m_0700ws[rr_0700],m_0700ws[ss_8],m_0700ws[cu_khusus],m_1800ws[pp_qfe_0000],m_0700ws[rh_1c2m_0700],m_1300ws[rh_1c2m_1300],m_1800ws[rh_1c2m_1800],rh_avg,ff_avg_km_jm,wd_cardinal,ff_max,wd_ff_max,observer_name,qc_flag_fklim,qc_histories_fklim',
+                        ]);
+                }
+            }
+
+            if ($response->successful()) {
+                $json = $response->json();
+                $rows = $json['data'] ?? ($json['results'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
+                return [
+                    'success' => true,
+                    'data' => $rows,
+                    'error' => null,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => "HTTP {$response->status()}: " . $response->body(),
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Sync FKLIM observation data into data_fklim table using chunked looping.
+     */
+    public function syncFklimData(string $startDate, string $endDate, int $stationId = 138): array
+    {
+        @set_time_limit(120);
+
+        $start = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
+
+        $totalSynced = 0;
+        $totalFailed = 0;
+        $totalFetched = 0;
+        $allDetails = [];
+        $overallError = null;
+
+        $chunkStart = $start->copy();
+        while ($chunkStart->lte($end)) {
+            $chunkEnd = $chunkStart->copy()->addDays(3)->endOfDay();
+            if ($chunkEnd->gt($end)) {
+                $chunkEnd = $end->copy();
+            }
+
+            $dateFromStr = $chunkStart->format('Y-m-d\TH:i:s\Z');
+            $dateToStr = $chunkEnd->format('Y-m-d\TH:i:s\Z');
+
+            $fetchResult = $this->fetchFklimDataWithResult($dateFromStr, $dateToStr, $stationId);
+
+            if (!$fetchResult['success']) {
+                $overallError = $fetchResult['error'];
+                break;
+            }
+
+            $rowsList = $fetchResult['data'];
+            $totalFetched += count($rowsList);
+
+            foreach ($rowsList as $row) {
+                $timestamp = $row['data_timestamp'] ?? null;
+                $observerName = $row['observer_name'] ?? null;
+
+                if (!$timestamp) {
+                    $totalFailed++;
+                    $allDetails[] = [
+                        'timestamp' => 'N/A',
+                        'observer' => $observerName,
+                        'status' => 'gagal',
+                        'reason' => 'Missing data_timestamp field',
+                    ];
+                    continue;
+                }
+
+                $pegawai = $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC');
+
+                $m0700 = $row['m_0700ws'] ?? [];
+                $m1300 = $row['m_1300ws'] ?? [];
+                $m1800 = $row['m_1800ws'] ?? [];
+
+                try {
+                    DataFklim::updateOrCreate(
+                        [
+                            'data_timestamp' => Carbon::parse($timestamp)->format('Y-m-d H:i:s'),
+                        ],
+                        [
+                            'station_id' => $stationId,
+                            'station_name' => $row['station_name'] ?? 'Stasiun Meteorologi Oesman Sadik',
+                            'alias_station_id' => $row['alias_station_id'] ?? null,
+                            'source_data' => $row['source_data'] ?? null,
+
+                            'tbk_0700' => $m0700['tbk_1c2m_0700'] ?? null,
+                            'tbk_1300' => $m1300['tbk_1c2m_1300'] ?? null,
+                            'tbk_1800' => $m1800['tbk_1c2m_1800'] ?? null,
+                            'tbk_avg' => $row['tbk_avg'] ?? null,
+                            't_max' => $m1800['t_max_1c2m'] ?? null,
+                            't_min' => $m1300['t_min_1c2m'] ?? null,
+
+                            'rr_0700' => $m0700['rr_0700'] ?? null,
+                            'ss_8' => $m0700['ss_8'] ?? null,
+                            'cu_khusus' => $m0700['cu_khusus'] ?? null,
+
+                            'pp_qfe' => $m1800['pp_qfe_0000'] ?? null,
+                            'rh_0700' => $m0700['rh_1c2m_0700'] ?? null,
+                            'rh_1300' => $m1300['rh_1c2m_1300'] ?? null,
+                            'rh_1800' => $m1800['rh_1c2m_1800'] ?? null,
+                            'rh_avg' => $row['rh_avg'] ?? null,
+
+                            'ff_avg' => $row['ff_avg_km_jm'] ?? null,
+                            'wd_cardinal' => $row['wd_cardinal'] ?? null,
+                            'ff_max' => $row['ff_max'] ?? null,
+                            'wd_ff_max' => $row['wd_ff_max'] ?? null,
+
+                            'observer_name' => $pegawai ? $pegawai->nama : ($observerName ?? null),
+                            'pegawai_id' => $pegawai ? $pegawai->id : null,
+                            'qc_flag' => $row['qc_flag_fklim'] ?? 0,
+                            'qc_histories' => is_array($row['qc_histories_fklim'] ?? null) ? json_encode($row['qc_histories_fklim']) : ($row['qc_histories_fklim'] ?? null),
+                        ]
+                    );
+
+                    $totalSynced++;
+                    $allDetails[] = [
+                        'timestamp' => $timestamp,
+                        'observer' => $pegawai ? $pegawai->nama : ($observerName ?? 'Unassigned'),
+                        'status' => 'berhasil',
+                        'reason' => null,
+                    ];
+                } catch (\Exception $e) {
+                    $totalFailed++;
+                    $allDetails[] = [
+                        'timestamp' => $timestamp,
+                        'observer' => $observerName,
+                        'status' => 'gagal',
+                        'reason' => $e->getMessage(),
+                    ];
+                }
+            }
+
+            $chunkStart->addDays(4);
+        }
+
+        if ($overallError && $totalSynced === 0) {
+            return [
+                'success' => false,
+                'synced_count' => 0,
+                'failed_count' => 0,
+                'total_fetched' => 0,
+                'message' => 'Gagal mengambil data FKLIM dari BMKGSoft API.',
+                'error_reason' => $overallError,
+                'details' => [],
+            ];
+        }
+
+        return [
+            'success' => true,
+            'synced_count' => $totalSynced,
+            'failed_count' => $totalFailed,
+            'total_fetched' => $totalFetched,
+            'message' => "Berhasil menyinkronkan {$totalSynced} dari {$totalFetched} data FKLIM.",
             'error_reason' => $overallError,
             'details' => $allDetails,
         ];

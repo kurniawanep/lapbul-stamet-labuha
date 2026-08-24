@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Briefcase, Calendar, CloudRain, Eye, FileCheck, FileText, Gauge, LayoutGrid, MessageSquare, Radio, ShieldCheck, Sun, TrendingUp, Users, Wind, Wrench } from 'lucide-react';
+import { Briefcase, Calendar, CloudRain, Eye, FileCheck, FileText, Gauge, LayoutGrid, MessageSquare, Radio, ShieldCheck, Sun, Thermometer, TrendingUp, Users, Wind, Wrench, Zap } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -37,12 +37,12 @@ const mainNavItems: NavItem[] = [
         icon: Calendar,
         items: [
             {
-                title: 'Jadwal Dinas Operasional',
+                title: 'Operasional & TU',
                 href: '/jadwal/operasional',
                 icon: Calendar,
             },
             {
-                title: 'Jadwal Dinas Teknisi',
+                title: 'Teknisi',
                 href: '/jadwal/teknisi',
                 icon: Wrench,
             },
@@ -77,6 +77,16 @@ const mainNavItems: NavItem[] = [
                 title: 'Data Sinoptik',
                 href: '/laporan/sinoptik',
                 icon: Sun,
+            },
+            {
+                title: 'Data FKLIM',
+                href: '/laporan/fklim',
+                icon: Thermometer,
+            },
+            {
+                title: 'Thunderstorm',
+                href: '/laporan/thunderstorm',
+                icon: Zap,
             },
             {
                 title: 'MET REPORT (QAM)',
