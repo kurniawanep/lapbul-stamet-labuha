@@ -20,5 +20,6 @@ class DatabaseSeeder extends Seeder
         $this->call(JadwalDinasOperasional2026Seeder::class);
         $this->call(JadwalDinasPpnpn2026Seeder::class);
         $this->call(JadwalDinasTeknisi2026Seeder::class);
+        $this->call(DataFlightDocumentSeeder::class);
     }
 }
