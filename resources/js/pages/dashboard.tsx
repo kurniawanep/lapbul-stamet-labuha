@@ -65,6 +65,7 @@ interface PageProps {
         station_id: number;
         timezone: string;
     };
+    [key: string]: unknown;
 }
 
 export default function Dashboard() {

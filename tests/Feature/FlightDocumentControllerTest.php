@@ -57,7 +57,7 @@ test('inasiam service can sync flight documents', function () {
 
     $this->assertDatabaseHas('data_flight_document', [
         'inasiam_fd_id' => '01KCKEEGZ6B9NHA5HW0J1XETHN',
-        'no_fd' => 'BMKG-FD-2608-T5AG80',
+        'no_fd' => '01KCKEEGZ6B9NHA5HW0J1XETHN',
         'flight_number' => 'IW-1173',
     ]);
 });

@@ -36,9 +36,10 @@ class InasiamService
         foreach ($items as $item) {
             $inasiamId = $item['id'] ?? null;
             $departureAt = $item['departure_at'] ?? ($item['created_at'] ?? null);
+            $status = $item['status'] ?? '';
 
-            if (!$inasiamId) {
-                $failedCount++;
+            // Ignore draft records as requested
+            if (!$inasiamId || strtolower($status) === 'draft') {
                 continue;
             }
 
@@ -47,10 +48,14 @@ class InasiamService
             $routeStr = "{$origin} -> {$dest}";
 
             $airlineName = $item['airlines']['name'] ?? ($item['callsign'] ?? 'Flight');
-            $callsign = $item['callsign'] ?? 'N/A';
-            $noFd = !empty($item['template_id']) ? $item['template_id'] : "FD-{$inasiamId}";
+            $callsign = trim($item['callsign'] ?? 'N/A');
+            $noFd = !empty($item['id']) ? $item['id'] : (!empty($item['template_id']) ? $item['template_id'] : "FD-{$inasiamId}");
 
-            $pegawai = $departureAt ? $this->observerResolver->resolvePegawai($departureAt, null) : null;
+            $forecasterName = $item['authorized_info']['forecaster_name'] ?? null;
+
+            $pegawai = $departureAt ? $this->observerResolver->resolvePegawai($departureAt, $forecasterName) : null;
+            $teknisi = $departureAt ? $this->observerResolver->getTeknisiByTimestamp($departureAt, 'UTC') : null;
+            $ppnpn = $departureAt ? $this->observerResolver->getPpnpnByTimestamp($departureAt, 'UTC') : null;
 
             try {
                 DataFlightDocument::updateOrCreate(
@@ -63,14 +68,16 @@ class InasiamService
                         'flight_number' => $callsign,
                         'airline_name' => $airlineName,
                         'route' => $routeStr,
-                        'departure_at' => $departureAt ? Carbon::parse($departureAt)->format('Y-m-d H:i:s') : null,
-                        'issued_at' => isset($item['issued_at']) ? Carbon::parse($item['issued_at'])->format('Y-m-d H:i:s') : null,
-                        'flight_level' => $item['flight_level'] ?? null,
+                        'departure_at' => $departureAt ? Carbon::parse($departureAt)->setTimezone('UTC')->format('Y-m-d H:i:s') : null,
+                        'issued_at' => isset($item['issued_at']) ? Carbon::parse($item['issued_at'])->setTimezone('UTC')->format('Y-m-d H:i:s') : null,
+                        'flight_level' => is_array($item['flight_level'] ?? null) ? implode('/', $item['flight_level']) : ($item['flight_level'] ?? null),
                         'type' => $item['type'] ?? 'Terjadwal',
-                        'status' => $item['status'] ?? 'Selesai',
+                        'status' => $status === 'completed' ? 'Selesai' : $status,
                         'fd_url' => $item['fd_url'] ?? null,
                         'pegawai_id' => $pegawai ? $pegawai->id : null,
-                        'observer_name' => $pegawai ? $pegawai->nama : null,
+                        'teknisi_id' => $teknisi ? $teknisi->id : null,
+                        'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
+                        'observer_name' => $pegawai ? $pegawai->nama : ($forecasterName ?: null),
                     ]
                 );
 
@@ -106,12 +113,28 @@ class InasiamService
     /**
      * Fetch Flight Documents from INA-SIAM PostgREST API.
      */
-    public function fetchFlightDocumentsWithResult(int $limit = 100, int $offset = 0): array
+    public function fetchFlightDocumentsWithResult(int $limit = 100, int $offset = 0, ?string $dateFrom = null, ?string $dateTo = null): array
     {
         try {
             $url = "{$this->baseUrl}/rest/v1/fd_inquiries";
+
+            $queryParams = [
+                'select' => 'id,type,callsign,airline_id,departure_at,issued_at,upt_id,template_id,origin_airports,destination_airports,alternate_airports,flight_level,sigwx_high_area,satellites,authorized_info,fd_url,download_count,status,created_by,created_at,updated_at,airlines(id,name,icao,iata,image)',
+                'upt_id' => "eq.{$this->uptId}",
+                'order' => 'created_at.desc',
+                'offset' => $offset,
+                'limit' => $limit,
+            ];
+
+            if ($dateFrom) {
+                $queryParams['created_at'] = 'gte.' . Carbon::parse($dateFrom)->toIso8601String();
+            }
+            if ($dateTo) {
+                $queryParams['created_at'] = 'lte.' . Carbon::parse($dateTo)->toIso8601String();
+            }
+
             $response = Http::withoutVerifying()
-                ->timeout(20)
+                ->timeout(25)
                 ->withHeaders([
                     'accept' => 'application/json',
                     'accept-profile' => 'public',
@@ -120,13 +143,7 @@ class InasiamService
                     'prefer' => 'count=exact',
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 ])
-                ->get($url, [
-                    'select' => 'id,type,callsign,airline_id,departure_at,issued_at,upt_id,template_id,origin_airports,destination_airports,alternate_airports,flight_level,sigwx_high_area,satellites,authorized_info,fd_url,download_count,status,created_by,created_at,updated_at,airlines(id,name,icao,iata,image)',
-                    'upt_id' => "eq.{$this->uptId}",
-                    'order' => 'created_at.desc',
-                    'offset' => $offset,
-                    'limit' => $limit,
-                ]);
+                ->get($url, $queryParams);
 
             if ($response->successful()) {
                 return [
@@ -153,9 +170,9 @@ class InasiamService
     /**
      * Sync Flight Documents from INA-SIAM API into data_flight_document database table.
      */
-    public function syncFlightDocuments(int $limit = 100): array
+    public function syncFlightDocuments(int $limit = 100, ?string $dateFrom = null, ?string $dateTo = null): array
     {
-        $fetchResult = $this->fetchFlightDocumentsWithResult($limit);
+        $fetchResult = $this->fetchFlightDocumentsWithResult($limit, 0, $dateFrom, $dateTo);
 
         if (!$fetchResult['success']) {
             return [

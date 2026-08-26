@@ -55,13 +55,11 @@ class FlightDocumentController extends Controller
 
         $records = $query->orderBy('departure_at', 'desc')->paginate(15)->withQueryString();
 
-        // Calculate KPI Statistics
-        $totalInasiam = DataFlightDocument::whereBetween('departure_at', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])->count();
-        $totalDispatched = DataFlightDocument::whereBetween('departure_at', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])
-            ->where('is_wa_dispatched', true)
-            ->count();
-        $pendingDispatch = max(0, $totalInasiam - $totalDispatched);
-        $dispatchPct = $totalInasiam > 0 ? round(($totalDispatched / $totalInasiam) * 100, 1) : 0;
+        // Calculate Statistics
+        $totalFd = DataFlightDocument::whereBetween('departure_at', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])->count();
+        $uniqueFlights = DataFlightDocument::whereBetween('departure_at', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])
+            ->distinct('flight_number')
+            ->count('flight_number');
 
         // Daily Matrix
         $allMonthRecords = DataFlightDocument::whereBetween('departure_at', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])->get();
@@ -71,14 +69,12 @@ class FlightDocumentController extends Controller
                 return Carbon::parse($item->departure_at)->day === $d;
             });
 
-            $countInasiam = $dayRecords->count();
-            $countWa = $dayRecords->where('is_wa_dispatched', true)->count();
+            $countFd = $dayRecords->count();
 
             $dailyMatrix[] = [
                 'day' => $d,
-                'total_fd' => $countInasiam,
-                'wa_sent' => $countWa,
-                'is_complete' => $countInasiam > 0 && $countWa >= $countInasiam,
+                'total_fd' => $countFd,
+                'is_complete' => $countFd > 0,
             ];
         }
 
@@ -90,17 +86,13 @@ class FlightDocumentController extends Controller
                 'search' => $search,
             ],
             'stats' => [
-                'total_inasiam' => $totalInasiam,
-                'total_dispatched' => $totalDispatched,
-                'pending_dispatch' => $pendingDispatch,
-                'dispatch_rate_pct' => $dispatchPct,
+                'total_fd' => $totalFd,
+                'unique_flights' => $uniqueFlights,
             ],
             'daily_matrix' => $dailyMatrix,
             'inasiam_config' => [
                 'base_url' => config('services.inasiam.base_url', 'https://inasiam.bmkg.go.id'),
                 'upt_id' => config('services.inasiam.upt_id', '01KFJ17MQTAFJGACA017T6HV9K'),
-                'apikey' => config('services.inasiam.apikey', ''),
-                'bearer_token' => config('services.inasiam.bearer_token', ''),
             ],
         ]);
     }
@@ -114,6 +106,27 @@ class FlightDocumentController extends Controller
             $items = json_decode($request->input('raw_json'), true);
             if (is_array($items)) {
                 $result = $this->inasiamService->saveInasiamItems($items);
+                
+                // Detect target month from items to automatically redirect filter
+                $targetBulan = null;
+                $targetTahun = null;
+                foreach ($items as $it) {
+                    $dep = $it['departure_at'] ?? ($it['created_at'] ?? null);
+                    if ($dep) {
+                        $dt = Carbon::parse($dep);
+                        $targetBulan = $dt->month;
+                        $targetTahun = $dt->year;
+                        break;
+                    }
+                }
+
+                if ($targetBulan && $targetTahun) {
+                    return redirect()->route('laporan.flight-document', [
+                        'bulan' => $targetBulan,
+                        'tahun' => $targetTahun,
+                    ])->with('success', $result['message']);
+                }
+
                 return redirect()->back()->with('success', $result['message']);
             }
         }
@@ -126,8 +139,20 @@ class FlightDocumentController extends Controller
             }
         }
 
-        $limit = (int) $request->input('limit', 100);
-        $result = $this->inasiamService->syncFlightDocuments($limit);
+        $limit = (int) $request->input('limit', 500);
+        $bulan = $request->input('bulan');
+        $tahun = $request->input('tahun');
+
+        $dateFrom = null;
+        $dateTo = null;
+        if ($bulan && $tahun) {
+            $startDate = Carbon::createFromDate((int) $tahun, (int) $bulan, 1)->startOfMonth();
+            $endDate = $startDate->copy()->endOfMonth();
+            $dateFrom = $startDate->toDateTimeString();
+            $dateTo = $endDate->toDateTimeString();
+        }
+
+        $result = $this->inasiamService->syncFlightDocuments($limit, $dateFrom, $dateTo);
 
         if ($result['success']) {
             return redirect()->back()->with('success', $result['message']);
@@ -168,6 +193,8 @@ class FlightDocumentController extends Controller
             }
 
             $pegawai = $timestamp ? $this->observerResolver->resolvePegawai($timestamp, $sender) : null;
+            $teknisi = $timestamp ? $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC') : null;
+            $ppnpn = $timestamp ? $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC') : null;
 
             if ($doc) {
                 $doc->update([
@@ -175,6 +202,8 @@ class FlightDocumentController extends Controller
                     'wa_dispatched_at' => $timestamp ? Carbon::parse($timestamp)->format('Y-m-d H:i:s') : Carbon::now(),
                     'wa_sender_name' => $sender,
                     'pegawai_id' => $pegawai ? $pegawai->id : $doc->pegawai_id,
+                    'teknisi_id' => $teknisi ? $teknisi->id : $doc->teknisi_id,
+                    'ppnpn_id' => $ppnpn ? $ppnpn->id : $doc->ppnpn_id,
                     'observer_name' => $pegawai ? $pegawai->nama : ($sender ?: $doc->observer_name),
                 ]);
                 $matchedCount++;
@@ -192,6 +221,8 @@ class FlightDocumentController extends Controller
                     'wa_sender_name' => $sender,
                     'observer_name' => $pegawai ? $pegawai->nama : $sender,
                     'pegawai_id' => $pegawai ? $pegawai->id : null,
+                    'teknisi_id' => $teknisi ? $teknisi->id : null,
+                    'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
                 ]);
                 $matchedCount++;
             }

@@ -16,12 +16,15 @@ import {
     ExternalLink, 
     Eye,
     FileCheck, 
+    FileCode,
     FileText, 
     MessageSquare, 
+    RefreshCw,
     Search, 
     Trash2, 
-    AlertTriangle,
-    Plane
+    Plane,
+    Users,
+    Calendar
 } from 'lucide-react';
 
 interface PaginatedData<T> {
@@ -58,7 +61,6 @@ interface FlightDocumentItem {
 interface DailyMatrixItem {
     day: number;
     total_fd: number;
-    wa_sent: number;
     is_complete: boolean;
 }
 
@@ -70,17 +72,13 @@ interface Props {
         search?: string;
     };
     stats: {
-        total_inasiam: number;
-        total_dispatched: number;
-        pending_dispatch: number;
-        dispatch_rate_pct: number;
+        total_fd: number;
+        unique_flights: number;
     };
     daily_matrix: DailyMatrixItem[];
     inasiam_config: {
         base_url: string;
         upt_id: string;
-        apikey: string;
-        bearer_token: string;
     };
 }
 
@@ -100,10 +98,15 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
     const [selectedTahun, setSelectedTahun] = useState(filters.tahun);
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [isPasteOpen, setIsPasteOpen] = useState(false);
+    const [isJsonModalOpen, setIsJsonModalOpen] = useState(false);
     const [selectedFd, setSelectedFd] = useState<FlightDocumentItem | null>(null);
 
     const pasteForm = useForm({
         raw_message: '',
+    });
+
+    const jsonForm = useForm({
+        raw_json: '',
     });
 
     const handleFilterChange = (newBulan = selectedBulan, newTahun = selectedTahun, newSearch = searchQuery) => {
@@ -124,14 +127,18 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
         });
     };
 
-    const handleToggleWa = (id: number) => {
-        router.post(`/laporan/flight-document/${id}/toggle-wa`, {}, {
-            preserveScroll: true,
+    const handleJsonSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        jsonForm.post('/laporan/flight-document/sync-inasiam', {
+            onSuccess: () => {
+                setIsJsonModalOpen(false);
+                jsonForm.reset();
+            },
         });
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('Apakah Anda yakin ingin menghapus data Flight Document ini?')) {
+        if (confirm('Apakah Anda yakin ingin menghapus log Flight Document ini?')) {
             router.delete(`/laporan/flight-document/${id}`, {
                 preserveScroll: true,
             });
@@ -139,8 +146,8 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
     };
 
     return (
-        <>
-            <Head title="Flight Document Audit - INA-SIAM & WA Dispatch" />
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Log Flight Document (Dokumen Penerbangan)" />
 
             <div className="space-y-6 p-6">
                 {/* Header Title & Actions */}
@@ -148,36 +155,99 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
                             <FileCheck className="h-7 w-7 text-indigo-600" />
-                            Flight Document (FD) Dispatch Audit
+                            Log Flight Document (Dokumen Penerbangan)
                         </h1>
                         <p className="text-sm text-slate-500 mt-1">
-                            Sinkronisasi data dokumen penerbangan dari INA-SIAM dan pemantauan status pengiriman ke grup WhatsApp.
+                            Pencatatan riwayat dokumen penerbangan (Flight Document) yang telah diterbitkan dan dikirimkan ke maskapai.
                         </p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        {/* Modal Quick Paste WA */}
+                        <Button
+                            variant="default"
+                            onClick={() => {
+                                router.post('/laporan/flight-document/sync-inasiam', {
+                                    bulan: selectedBulan,
+                                    tahun: selectedTahun,
+                                    limit: 500,
+                                });
+                            }}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                        >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Sinkronkan INA-SIAM ({namaBulan[selectedBulan - 1]} {selectedTahun})
+                        </Button>
+
+                        {/* Modal Paste Raw JSON INA-SIAM */}
+                        <Dialog open={isJsonModalOpen} onOpenChange={setIsJsonModalOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" className="border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100 font-bold">
+                                    <FileCode className="h-4 w-4 mr-2 text-amber-700" />
+                                    Paste Raw JSON INA-SIAM
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl bg-white border border-slate-200 rounded-2xl">
+                                <form onSubmit={handleJsonSubmit}>
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2 text-amber-700 font-bold">
+                                            <FileCode className="h-5 w-5 text-amber-600" />
+                                            Impor Data Raw JSON INA-SIAM
+                                        </DialogTitle>
+                                        <DialogDescription className="text-xs text-slate-500">
+                                            Tempelkan teks respons JSON dari API / Console / Network Tab INA-SIAM. Sistem akan otomatis memfilter item berstatus <strong>completed</strong> dan menghubungkan Observer, Teknisi, & PPNPN Piket secara otomatis.
+                                        </DialogDescription>
+                                    </DialogHeader>
+
+                                    <div className="py-4 space-y-3">
+                                        <Label htmlFor="raw_json" className="text-xs font-semibold text-slate-700">Teks Respons JSON INA-SIAM:</Label>
+                                        <Textarea
+                                            id="raw_json"
+                                            rows={10}
+                                            placeholder='[&#10;  {&#10;    "id": "BMKG-FD-2604-7CZRXC",&#10;    "callsign": "IW 2275",&#10;    "departure_at": "2026-04-01T04:00:00+00:00",&#10;    "status": "completed",&#10;    "authorized_info": { "forecaster_name": "IRSYAD" }&#10;  }&#10;]'
+                                            value={jsonForm.data.raw_json}
+                                            onChange={(e) => jsonForm.setData('raw_json', e.target.value)}
+                                            className="font-mono text-xs bg-slate-900 text-amber-300 border-slate-700 rounded-xl"
+                                            required
+                                        />
+                                        {jsonForm.errors.raw_json && (
+                                            <p className="text-xs text-red-500">{jsonForm.errors.raw_json}</p>
+                                        )}
+                                    </div>
+
+                                    <DialogFooter>
+                                        <Button type="button" variant="ghost" onClick={() => setIsJsonModalOpen(false)}>
+                                            Batal
+                                        </Button>
+                                        <Button type="submit" disabled={jsonForm.processing} className="bg-amber-600 hover:bg-amber-700 text-white font-bold">
+                                            {jsonForm.processing ? 'Memproses Impor...' : 'Proses & Impor JSON'}
+                                        </Button>
+                                    </DialogFooter>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+
+                        {/* Modal Quick Paste WA / Manual */}
                         <Dialog open={isPasteOpen} onOpenChange={setIsPasteOpen}>
                             <DialogTrigger asChild>
-                                <Button variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                                <Button variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold">
                                     <MessageSquare className="h-4 w-4 mr-2" />
-                                    Quick Paste WA Chat
+                                    Quick Paste Teks / WA
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-xl">
                                 <form onSubmit={handleQuickPasteSubmit}>
                                     <DialogHeader>
-                                        <DialogTitle className="flex items-center gap-2 text-indigo-600">
+                                        <DialogTitle className="flex items-center gap-2 text-indigo-600 font-bold">
                                             <MessageSquare className="h-5 w-5" />
-                                            Quick Paste Riwayat WhatsApp
+                                            Quick Paste Log Dokumen
                                         </DialogTitle>
-                                        <DialogDescription>
-                                            Tempelkan teks riwayat obrolan dari WA Web/Desktop atau Export Chat (.txt). Parser akan secara otomatis mencocokkan pengiriman FD dengan data INA-SIAM.
+                                        <DialogDescription className="text-xs text-slate-500">
+                                            Tempelkan teks riwayat obrolan atau daftar penerbangan (.txt). Parser akan secara otomatis mencocokkan pengiriman FD dengan data penerbangan.
                                         </DialogDescription>
                                     </DialogHeader>
 
                                     <div className="py-4 space-y-3">
-                                        <Label htmlFor="raw_message">Teks Pesan / Export Chat WA:</Label>
+                                        <Label htmlFor="raw_message" className="text-xs font-semibold text-slate-700">Teks Log / Chat FD:</Label>
                                         <Textarea
                                             id="raw_message"
                                             rows={8}
@@ -196,8 +266,8 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                         <Button type="button" variant="ghost" onClick={() => setIsPasteOpen(false)}>
                                             Batal
                                         </Button>
-                                        <Button type="submit" disabled={pasteForm.processing} className="bg-indigo-600 text-white hover:bg-indigo-700">
-                                            {pasteForm.processing ? 'Memproses...' : 'Proses & Cocokkan WA'}
+                                        <Button type="submit" disabled={pasteForm.processing} className="bg-indigo-600 text-white hover:bg-indigo-700 font-bold">
+                                            {pasteForm.processing ? 'Memproses...' : 'Proses & Simpan Log'}
                                         </Button>
                                     </DialogFooter>
                                 </form>
@@ -207,14 +277,14 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                 </div>
 
                 {/* KPI Stat Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <Card className="border-indigo-100 bg-gradient-to-br from-indigo-50/50 to-white">
                         <CardContent className="p-5">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Total FD INA-SIAM</p>
-                                    <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.total_inasiam}</h3>
-                                    <p className="text-xs text-slate-500 mt-1">Dokumen resmi terbit</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Total Flight Document</p>
+                                    <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.total_fd}</h3>
+                                    <p className="text-xs text-slate-500 mt-1">Dokumen penerbangan terbit</p>
                                 </div>
                                 <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600">
                                     <FileText className="h-6 w-6" />
@@ -227,27 +297,12 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                         <CardContent className="p-5">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Terkirim Ke WA</p>
-                                    <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.total_dispatched}</h3>
-                                    <p className="text-xs text-emerald-600 font-medium mt-1">{stats.dispatch_rate_pct}% Kelengkapan</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Nomor Penerbangan</p>
+                                    <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.unique_flights}</h3>
+                                    <p className="text-xs text-emerald-600 font-medium mt-1">Varian rute terlayani</p>
                                 </div>
                                 <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600">
-                                    <CheckCircle2 className="h-6 w-6" />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-amber-100 bg-gradient-to-br from-amber-50/50 to-white">
-                        <CardContent className="p-5">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">Belum Terkirim WA</p>
-                                    <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.pending_dispatch}</h3>
-                                    <p className="text-xs text-amber-600 font-medium mt-1">Perlu tindakan petugas</p>
-                                </div>
-                                <div className="p-3 bg-amber-100 rounded-xl text-amber-600">
-                                    <AlertTriangle className="h-6 w-6" />
+                                    <Plane className="h-6 w-6" />
                                 </div>
                             </div>
                         </CardContent>
@@ -257,12 +312,12 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                         <CardContent className="p-5">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-sky-600">Status API INA-SIAM</p>
-                                    <h3 className="text-lg font-bold text-slate-900 mt-1">Sistem Aktif</h3>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-sky-600">Integrasi Jadwal Dinas</p>
+                                    <h3 className="text-lg font-bold text-slate-900 mt-1">Otomatis Terhubung</h3>
                                     <p className="text-xs text-slate-500 mt-1">Stamet Oesman Sadik (WAEL)</p>
                                 </div>
                                 <div className="p-3 bg-sky-100 rounded-xl text-sky-600">
-                                    <Plane className="h-6 w-6" />
+                                    <Users className="h-6 w-6" />
                                 </div>
                             </div>
                         </CardContent>
@@ -327,28 +382,26 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                 <Card className="p-4 border-slate-200">
                     <div className="mb-3 flex items-center justify-between">
                         <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-indigo-500" />
-                            Matriks Kelengkapan Harian - {namaBulan[selectedBulan - 1]} {selectedTahun}
+                            <Calendar className="h-4 w-4 text-indigo-500" />
+                            Rekap Penerbitan Harian - {namaBulan[selectedBulan - 1]} {selectedTahun}
                         </h4>
-                        <span className="text-xs text-slate-500">Hijau = Terisi Lengkap | Kuning = Pending WA</span>
+                        <span className="text-xs text-slate-500">Angka = Jumlah FD Terbit Hari Tersebut</span>
                     </div>
 
                     <div className="grid grid-cols-7 sm:grid-cols-10 md:grid-cols-16 gap-2">
                         {daily_matrix.map((item) => (
                             <div
                                 key={item.day}
-                                title={`Tanggal ${item.day}: ${item.wa_sent} / ${item.total_fd} terkirim WA`}
+                                title={`Tanggal ${item.day}: ${item.total_fd} Flight Document`}
                                 className={`p-2 rounded-lg text-center border transition-all ${
                                     item.total_fd === 0
                                         ? 'bg-slate-50 border-slate-200 text-slate-400'
-                                        : item.is_complete
-                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-700 font-bold'
-                                        : 'bg-amber-50 border-amber-300 text-amber-700 font-bold'
+                                        : 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold'
                                 }`}
                             >
                                 <div className="text-xs font-semibold">{item.day}</div>
                                 <div className="text-[10px] mt-0.5 opacity-80">
-                                    {item.total_fd > 0 ? `${item.wa_sent}/${item.total_fd}` : '-'}
+                                    {item.total_fd > 0 ? `${item.total_fd} FD` : '-'}
                                 </div>
                             </div>
                         ))}
@@ -360,13 +413,12 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                     <Table>
                         <TableHeader className="bg-slate-50">
                             <TableRow>
-                                <TableHead className="w-[160px]">No. FD (INA-SIAM)</TableHead>
+                                <TableHead className="w-[180px]">No. FD</TableHead>
                                 <TableHead>Penerbangan & Maskapai</TableHead>
                                 <TableHead>Rute</TableHead>
                                 <TableHead>Waktu Keberangkatan (UTC)</TableHead>
-                                <TableHead>Status INA-SIAM</TableHead>
-                                <TableHead>Status WA Dispatch</TableHead>
-                                <TableHead>Petugas / Pengirim</TableHead>
+                                <TableHead>Status Dokumen</TableHead>
+                                <TableHead>Petugas Observer</TableHead>
                                 <TableHead className="text-right">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -374,7 +426,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                         <TableBody>
                             {records.data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="text-center py-10 text-slate-500">
+                                    <TableCell colSpan={7} className="text-center py-10 text-slate-500">
                                         Tidak ada data Flight Document pada periode ini.
                                     </TableCell>
                                 </TableRow>
@@ -382,7 +434,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                 records.data.map((item) => (
                                     <TableRow key={item.id} className="hover:bg-slate-50/50">
                                         <TableCell className="font-mono text-xs font-semibold text-indigo-600">
-                                            {item.no_fd || 'FD-DOC'}
+                                            {item.no_fd || item.inasiam_fd_id || 'FD-DOC'}
                                         </TableCell>
 
                                         <TableCell>
@@ -401,32 +453,12 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                         </TableCell>
 
                                         <TableCell>
-                                            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
+                                            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-semibold">
                                                 {item.status || 'Selesai'}
                                             </Badge>
                                         </TableCell>
 
-                                        <TableCell>
-                                            <button
-                                                onClick={() => handleToggleWa(item.id)}
-                                                className="focus:outline-none"
-                                                title="Klik untuk mengubah status pengiriman WA"
-                                            >
-                                                {item.is_wa_dispatched ? (
-                                                    <Badge className="bg-emerald-600 text-white hover:bg-emerald-700 gap-1 cursor-pointer">
-                                                        <CheckCircle2 className="h-3 w-3" />
-                                                        Terkirim WA
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 gap-1 cursor-pointer">
-                                                        <Clock className="h-3 w-3" />
-                                                        Pending WA
-                                                    </Badge>
-                                                )}
-                                            </button>
-                                        </TableCell>
-
-                                        <TableCell className="text-xs text-slate-600">
+                                        <TableCell className="text-xs text-slate-700 font-medium">
                                             {item.observer_name || (item.pegawai ? item.pegawai.nama : '-')}
                                         </TableCell>
 
@@ -437,7 +469,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                                     size="icon"
                                                     onClick={() => setSelectedFd(item)}
                                                     className="h-8 w-8 text-slate-500 hover:text-indigo-600"
-                                                    title="Lihat Detail Piket"
+                                                    title="Lihat Detail Piket & Flight Doc"
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
@@ -448,7 +480,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="p-1.5 text-slate-500 hover:text-indigo-600"
-                                                        title="Buka PDF di INA-SIAM"
+                                                        title="Buka Dokumen PDF"
                                                     >
                                                         <ExternalLink className="h-4 w-4" />
                                                     </a>
@@ -459,7 +491,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                                     size="icon"
                                                     onClick={() => handleDelete(item.id)}
                                                     className="h-8 w-8 text-slate-400 hover:text-red-600"
-                                                    title="Hapus Record"
+                                                    title="Hapus Log"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
@@ -491,64 +523,81 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                             ))}
                         </div>
                     </div>
-                {/* DETAIL MODAL DIALOG */}
-                {selectedFd && (
-                    <Dialog open={!!selectedFd} onOpenChange={() => setSelectedFd(null)}>
-                        <DialogContent className="max-w-md bg-white border border-slate-200 rounded-2xl">
-                            <DialogHeader>
-                                <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-                                    <Plane className="h-5 w-5 text-indigo-600" />
-                                    Rincian Flight Document - {selectedFd.flight_number || selectedFd.no_fd || 'FD'}
-                                </DialogTitle>
-                            </DialogHeader>
-
-                            <div className="space-y-4 pt-2 text-xs">
-                                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
-                                    <div className="flex justify-between text-slate-600">
-                                        <span>Nomor FD / Flight:</span>
-                                        <strong className="text-slate-900">{selectedFd.no_fd} ({selectedFd.flight_number})</strong>
-                                    </div>
-                                    <div className="flex justify-between text-slate-600">
-                                        <span>Maskapai / Rute:</span>
-                                        <strong className="text-slate-900">{selectedFd.airline_name} - {selectedFd.route || '-'}</strong>
-                                    </div>
-                                    <div className="flex justify-between text-slate-600">
-                                        <span>Observer Piket:</span>
-                                        <strong className="text-slate-900">{selectedFd.pegawai?.nama || selectedFd.observer_name || 'Unassigned'}</strong>
-                                    </div>
-                                    <div className="flex justify-between text-slate-600">
-                                        <span>Teknisi Piket:</span>
-                                        <strong className="text-slate-900">{selectedFd.teknisi?.nama || '-'}</strong>
-                                    </div>
-                                    <div className="flex justify-between text-slate-600">
-                                        <span>PPNPN Piket:</span>
-                                        <strong className="text-slate-900">{selectedFd.ppnpn?.nama || '-'}</strong>
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-end pt-2">
-                                    <Button variant="outline" size="sm" onClick={() => setSelectedFd(null)}>
-                                        Tutup
-                                    </Button>
-                                </div>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
                 )}
             </div>
-        </>
+
+            {/* Modal Detail Flight Document */}
+            {selectedFd && (
+                <Dialog open={!!selectedFd} onOpenChange={() => setSelectedFd(null)}>
+                    <DialogContent className="max-w-md bg-white border border-slate-200 rounded-2xl">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-indigo-600 font-bold">
+                                <FileText className="h-5 w-5" />
+                                Detail Log Flight Document
+                            </DialogTitle>
+                            <DialogDescription className="text-xs text-slate-500">
+                                Rincian informasi dokumen penerbangan dan penugasan piket.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="py-3 space-y-3 text-xs">
+                            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-1">
+                                <div className="text-slate-500">No. Flight Document:</div>
+                                <div className="font-mono font-bold text-slate-800 text-sm">{selectedFd.no_fd || selectedFd.inasiam_fd_id || '-'}</div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                                    <div className="text-slate-500">Penerbangan:</div>
+                                    <div className="font-bold text-slate-800">{selectedFd.flight_number || '-'}</div>
+                                </div>
+                                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                                    <div className="text-slate-500">Maskapai:</div>
+                                    <div className="font-bold text-slate-800">{selectedFd.airline_name || '-'}</div>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                                <div className="text-slate-500">Waktu Keberangkatan (UTC):</div>
+                                <div className="font-medium text-slate-800">
+                                    {selectedFd.departure_at ? new Date(selectedFd.departure_at).toUTCString() : '-'}
+                                </div>
+                            </div>
+
+                            <div className="border-t border-slate-100 pt-3">
+                                <p className="font-bold text-slate-700 mb-2">Petugas Piket Operasional:</p>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center bg-indigo-50/50 p-2 rounded-lg border border-indigo-100">
+                                        <span className="text-slate-600">Observer (Prakirawan):</span>
+                                        <span className="font-bold text-indigo-700">{selectedFd.observer_name || selectedFd.pegawai?.nama || '-'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                        <span className="text-slate-600">Teknisi Piket:</span>
+                                        <span className="font-bold text-slate-700">{selectedFd.teknisi?.nama || '-'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                        <span className="text-slate-600">PPNPN Piket:</span>
+                                        <span className="font-bold text-slate-700">{selectedFd.ppnpn?.nama || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setSelectedFd(null)}>
+                                Tutup
+                            </Button>
+                            {selectedFd.fd_url && (
+                                <a href={selectedFd.fd_url} target="_blank" rel="noopener noreferrer">
+                                    <Button className="bg-indigo-600 text-white hover:bg-indigo-700 font-bold">
+                                        <ExternalLink className="h-4 w-4 mr-2" /> Buka Dokumen PDF
+                                    </Button>
+                                </a>
+                            )}
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
+        </AppLayout>
     );
 }
-
-FlightDocument.layout = (page: React.ReactNode) => (
-    <AppLayout
-        breadcrumbs={[
-            { title: 'Dashboard', href: '/dashboard' },
-            { title: 'Laporan Bulanan', href: '/laporan/flight-document' },
-            { title: 'Flight Document', href: '/laporan/flight-document' },
-        ]}
-    >
-        {page}
-    </AppLayout>
-);
-

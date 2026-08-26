@@ -80,6 +80,7 @@ interface PageProps {
     sortOrder: string;
     dashboardStats: DashboardStats;
     flash?: { success?: string; error?: string; sync_result?: any };
+    [key: string]: unknown;
 }
 
 export default function PerawananIndex() {

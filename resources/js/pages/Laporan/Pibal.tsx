@@ -66,6 +66,10 @@ interface DataPibalItem {
     observer_name: string | null;
     pegawai_id: number | null;
     pegawai?: Pegawai | null;
+    teknisi_id?: number | null;
+    teknisi?: Pegawai | null;
+    ppnpn_id?: number | null;
+    ppnpn?: Pegawai | null;
     wind_dir_surface: number | null;
     wind_speed_surface: number | null;
     station_elevation: string | null;

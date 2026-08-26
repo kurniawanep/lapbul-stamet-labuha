@@ -71,6 +71,10 @@ interface DataTaforItem {
     observer_name: string | null;
     pegawai_id: number | null;
     pegawai?: Pegawai | null;
+    teknisi_id?: number | null;
+    teknisi?: Pegawai | null;
+    ppnpn_id?: number | null;
+    ppnpn?: Pegawai | null;
 }
 
 interface PaginationLink {

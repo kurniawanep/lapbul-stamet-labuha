@@ -78,6 +78,10 @@ interface DataSinoptikItem {
     observer_name: string | null;
     pegawai_id: number | null;
     pegawai?: Pegawai | null;
+    teknisi_id?: number | null;
+    teknisi?: Pegawai | null;
+    ppnpn_id?: number | null;
+    ppnpn?: Pegawai | null;
     monitoring_status?: 'tepat_waktu' | 'terlambat' | 'lebih_awal' | 'missing';
     delay_minutes?: number;
     sent_timestamp_display?: string;
