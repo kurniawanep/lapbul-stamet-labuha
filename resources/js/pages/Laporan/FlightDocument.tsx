@@ -19,7 +19,6 @@ import {
     FileCode,
     FileText, 
     MessageSquare, 
-    RefreshCw,
     Search, 
     Trash2, 
     Plane,
@@ -146,7 +145,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <>
             <Head title="Log Flight Document (Dokumen Penerbangan)" />
 
             <div className="space-y-6 p-4 md:p-6 max-w-7xl mx-auto w-full overflow-hidden">
@@ -163,21 +162,6 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                            variant="default"
-                            onClick={() => {
-                                router.post('/laporan/flight-document/sync-inasiam', {
-                                    bulan: selectedBulan,
-                                    tahun: selectedTahun,
-                                    limit: 500,
-                                });
-                            }}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
-                        >
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Sinkronkan INA-SIAM ({namaBulan[selectedBulan - 1]} {selectedTahun})
-                        </Button>
-
                         {/* Modal Paste Raw JSON INA-SIAM */}
                         <Dialog open={isJsonModalOpen} onOpenChange={setIsJsonModalOpen}>
                             <DialogTrigger asChild>
@@ -600,6 +584,6 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                     </DialogContent>
                 </Dialog>
             )}
-        </AppLayout>
+        </>
     );
 }
