@@ -149,7 +149,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Log Flight Document (Dokumen Penerbangan)" />
 
-            <div className="space-y-6 p-6">
+            <div className="space-y-6 p-4 md:p-6 max-w-7xl mx-auto w-full overflow-hidden">
                 {/* Header Title & Actions */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
@@ -388,7 +388,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                         <span className="text-xs text-slate-500">Angka = Jumlah FD Terbit Hari Tersebut</span>
                     </div>
 
-                    <div className="grid grid-cols-7 sm:grid-cols-10 md:grid-cols-16 gap-2">
+                    <div className="grid grid-cols-7 sm:grid-cols-10 md:grid-cols-12 lg:grid-cols-16 gap-1.5">
                         {daily_matrix.map((item) => (
                             <div
                                 key={item.day}
@@ -410,98 +410,100 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
 
                 {/* Main Data Table */}
                 <Card className="border-slate-200 overflow-hidden shadow-sm">
-                    <Table>
-                        <TableHeader className="bg-slate-50">
-                            <TableRow>
-                                <TableHead className="w-[180px]">No. FD</TableHead>
-                                <TableHead>Penerbangan & Maskapai</TableHead>
-                                <TableHead>Rute</TableHead>
-                                <TableHead>Waktu Keberangkatan (UTC)</TableHead>
-                                <TableHead>Status Dokumen</TableHead>
-                                <TableHead>Petugas Observer</TableHead>
-                                <TableHead className="text-right">Aksi</TableHead>
-                            </TableRow>
-                        </TableHeader>
-
-                        <TableBody>
-                            {records.data.length === 0 ? (
+                    <div className="overflow-x-auto">
+                        <Table className="w-full min-w-[700px]">
+                            <TableHeader className="bg-slate-50">
                                 <TableRow>
-                                    <TableCell colSpan={7} className="text-center py-10 text-slate-500">
-                                        Tidak ada data Flight Document pada periode ini.
-                                    </TableCell>
+                                    <TableHead className="w-[180px]">No. FD</TableHead>
+                                    <TableHead>Penerbangan & Maskapai</TableHead>
+                                    <TableHead>Rute</TableHead>
+                                    <TableHead>Waktu Keberangkatan (UTC)</TableHead>
+                                    <TableHead>Status Dokumen</TableHead>
+                                    <TableHead>Petugas Observer</TableHead>
+                                    <TableHead className="text-right">Aksi</TableHead>
                                 </TableRow>
-                            ) : (
-                                records.data.map((item) => (
-                                    <TableRow key={item.id} className="hover:bg-slate-50/50">
-                                        <TableCell className="font-mono text-xs font-semibold text-indigo-600">
-                                            {item.no_fd || item.inasiam_fd_id || 'FD-DOC'}
-                                        </TableCell>
+                            </TableHeader>
 
-                                        <TableCell>
-                                            <div className="font-semibold text-slate-800">{item.flight_number || 'IW-FLIGHT'}</div>
-                                            <div className="text-xs text-slate-500">{item.airline_name || 'Wings Air'}</div>
-                                        </TableCell>
-
-                                        <TableCell>
-                                            <Badge variant="outline" className="font-mono text-xs bg-slate-100">
-                                                {item.route || 'WAEL -> WAMM'}
-                                            </Badge>
-                                        </TableCell>
-
-                                        <TableCell className="text-xs font-medium">
-                                            {item.departure_at ? new Date(item.departure_at).toUTCString().replace('GMT', 'UTC') : '-'}
-                                        </TableCell>
-
-                                        <TableCell>
-                                            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-semibold">
-                                                {item.status || 'Selesai'}
-                                            </Badge>
-                                        </TableCell>
-
-                                        <TableCell className="text-xs text-slate-700 font-medium">
-                                            {item.observer_name || (item.pegawai ? item.pegawai.nama : '-')}
-                                        </TableCell>
-
-                                        <TableCell className="text-right">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => setSelectedFd(item)}
-                                                    className="h-8 w-8 text-slate-500 hover:text-indigo-600"
-                                                    title="Lihat Detail Piket & Flight Doc"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-
-                                                {item.fd_url && (
-                                                    <a
-                                                        href={item.fd_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="p-1.5 text-slate-500 hover:text-indigo-600"
-                                                        title="Buka Dokumen PDF"
-                                                    >
-                                                        <ExternalLink className="h-4 w-4" />
-                                                    </a>
-                                                )}
-
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleDelete(item.id)}
-                                                    className="h-8 w-8 text-slate-400 hover:text-red-600"
-                                                    title="Hapus Log"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
+                            <TableBody>
+                                {records.data.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="text-center py-10 text-slate-500">
+                                            Tidak ada data Flight Document pada periode ini.
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                ) : (
+                                    records.data.map((item) => (
+                                        <TableRow key={item.id} className="hover:bg-slate-50/50">
+                                            <TableCell className="font-mono text-xs font-semibold text-indigo-600">
+                                                {item.no_fd || item.inasiam_fd_id || 'FD-DOC'}
+                                            </TableCell>
+
+                                            <TableCell>
+                                                <div className="font-semibold text-slate-800">{item.flight_number || 'IW-FLIGHT'}</div>
+                                                <div className="text-xs text-slate-500">{item.airline_name || 'Wings Air'}</div>
+                                            </TableCell>
+
+                                            <TableCell>
+                                                <Badge variant="outline" className="font-mono text-xs bg-slate-100">
+                                                    {item.route || 'WAEL -> WAMM'}
+                                                </Badge>
+                                            </TableCell>
+
+                                            <TableCell className="text-xs font-mono text-slate-700">
+                                                {item.departure_at ? `${item.departure_at} UTC` : '-'}
+                                            </TableCell>
+
+                                            <TableCell>
+                                                <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
+                                                    {item.status || 'Selesai'}
+                                                </Badge>
+                                            </TableCell>
+
+                                            <TableCell className="text-xs text-slate-700">
+                                                {item.observer_name || 'WA Group Member'}
+                                            </TableCell>
+
+                                            <TableCell className="text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => setSelectedFd(item)}
+                                                        className="h-8 w-8 text-slate-500 hover:text-indigo-600"
+                                                        title="Lihat Detail"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+
+                                                    {item.fd_url && (
+                                                        <a
+                                                            href={item.fd_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="p-1.5 text-slate-500 hover:text-indigo-600"
+                                                            title="Buka Dokumen PDF"
+                                                        >
+                                                            <ExternalLink className="h-4 w-4" />
+                                                        </a>
+                                                    )}
+
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleDelete(item.id)}
+                                                        className="h-8 w-8 text-slate-400 hover:text-red-600"
+                                                        title="Hapus Log"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </Card>
 
                 {/* Pagination */}

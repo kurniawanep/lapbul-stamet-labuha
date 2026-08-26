@@ -330,33 +330,43 @@ export default function PenguapanIndex() {
                         <CardContent className="p-6 space-y-6">
                             {/* Bar Chart */}
                             <div className="h-64 flex items-end justify-between gap-2 pt-8 pb-4 px-2 border-b border-slate-200">
-                                {dashboardStats.monthly_trend.map((item) => {
-                                    const maxVal = 250; // max expected mm
-                                    const evaH = Math.max(4, (item.total_evaporation / maxVal) * 100);
-                                    const rainH = Math.max(4, (item.total_rainfall / maxVal) * 100);
-
-                                    return (
-                                        <div key={item.month_num} className="flex-1 flex flex-col items-center gap-2 group">
-                                            <div className="w-full flex items-end justify-center gap-1 h-48">
-                                                {/* Evaporation Bar */}
-                                                <div
-                                                    style={{ height: `${evaH}%` }}
-                                                    className="w-2.5 bg-teal-500 rounded-t-sm transition-all group-hover:brightness-110"
-                                                    title={`${item.month_name}: Penguapan ${item.total_evaporation} mm`}
-                                                />
-                                                {/* Rainfall Bar */}
-                                                <div
-                                                    style={{ height: `${rainH}%` }}
-                                                    className="w-2.5 bg-sky-400 rounded-t-sm transition-all group-hover:brightness-110"
-                                                    title={`${item.month_name}: Curah Hujan ${item.total_rainfall} mm`}
-                                                />
-                                            </div>
-                                            <span className="text-[11px] font-bold text-slate-600 group-hover:text-teal-600">
-                                                {item.month_name}
-                                            </span>
-                                        </div>
+                                {(() => {
+                                    const maxVal = Math.max(
+                                        50,
+                                        ...dashboardStats.monthly_trend.map((item) =>
+                                            Math.max(Number(item.total_evaporation) || 0, Number(item.total_rainfall) || 0)
+                                        )
                                     );
-                                })}
+
+                                    return dashboardStats.monthly_trend.map((item) => {
+                                        const evaVal = Number(item.total_evaporation) || 0;
+                                        const rainVal = Number(item.total_rainfall) || 0;
+                                        const evaH = Math.min(100, Math.max(evaVal > 0 ? 3 : 0, (evaVal / maxVal) * 100));
+                                        const rainH = Math.min(100, Math.max(rainVal > 0 ? 3 : 0, (rainVal / maxVal) * 100));
+
+                                        return (
+                                            <div key={item.month_num} className="flex-1 flex flex-col items-center gap-2 group">
+                                                <div className="w-full flex items-end justify-center gap-1.5 h-48 relative overflow-hidden rounded-b-md">
+                                                    {/* Evaporation Bar */}
+                                                    <div
+                                                        style={{ height: `${evaH}%` }}
+                                                        className="w-3 bg-teal-500 rounded-t-sm transition-all group-hover:brightness-110 shadow-sm"
+                                                        title={`${item.month_name}: Penguapan ${evaVal} mm`}
+                                                    />
+                                                    {/* Rainfall Bar */}
+                                                    <div
+                                                        style={{ height: `${rainH}%` }}
+                                                        className="w-3 bg-sky-400 rounded-t-sm transition-all group-hover:brightness-110 shadow-sm"
+                                                        title={`${item.month_name}: Curah Hujan ${rainVal} mm`}
+                                                    />
+                                                </div>
+                                                <span className="text-[11px] font-bold text-slate-600 group-hover:text-teal-600">
+                                                    {item.month_name}
+                                                </span>
+                                            </div>
+                                        );
+                                    });
+                                })()}
                             </div>
 
                             {/* Chart Legend */}
