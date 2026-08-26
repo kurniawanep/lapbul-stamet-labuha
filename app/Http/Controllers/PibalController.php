@@ -80,7 +80,7 @@ class PibalController extends Controller
             $rawSentStr = is_string($sentTs) ? $sentTs : $sentTs->format('Y-m-d H:i:s');
             $sentCarbon = Carbon::parse($rawSentStr, 'UTC');
 
-            $windowStart = $slotTime->copy();
+            $windowStart = $slotTime->copy()->subMinutes(10);
             $windowEnd = $slotTime->copy()->addMinutes(45)->endOfMinute();
 
             $status = 'tepat_waktu';

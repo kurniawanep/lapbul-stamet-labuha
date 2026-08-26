@@ -346,6 +346,7 @@ class PerformanceMonitoringService
         for ($d = 1; $d <= $daysInMonth; $d++) {
             foreach ($pibalHours as $h) {
                 $slotTime = Carbon::create($tahun, $bulan, $d, $h, 0, 0, 'UTC');
+                $windowStart = $slotTime->copy()->subMinutes(10);
                 $windowEnd = $slotTime->copy()->addMinutes(45)->endOfMinute();
 
                 $slotKey = "{$d}_{$h}";
@@ -367,7 +368,7 @@ class PerformanceMonitoringService
                     $hasPpbb = $foundPibal && str_contains(strtoupper($sandi), 'PPBB');
 
                     $actualSent = $foundPibal ? $this->getActualSentTimestamp($foundPibal, $slotTime) : null;
-                    $isTimely = $actualSent ? $actualSent->lte($windowEnd) : false;
+                    $isTimely = $actualSent ? ($actualSent->between($windowStart, $windowEnd) || $actualSent->lt($windowStart)) : false;
 
                     // Evaluate PPAA
                     $staffMetrics[$pId]['total_assigned']++;

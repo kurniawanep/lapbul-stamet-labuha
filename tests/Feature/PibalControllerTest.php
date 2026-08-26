@@ -74,3 +74,62 @@ test('pibal sync fetches and stores data into data_pibal table', function () {
         'pegawai_id' => $user->id,
     ]);
 });
+
+test('pibal timeliness logic evaluates minute 50 to 45 correctly', function () {
+    $user = Pegawai::create([
+        'nama' => 'Test Observer',
+        'email' => 'observer@bmkg.go.id',
+        'password' => Hash::make('password'),
+        'jenis_pegawai' => 'PNS',
+    ]);
+
+    // 1. Sent at 23:50 UTC (Window Start) -> Tepat Waktu
+    DataPibal::create([
+        'station_id' => 138,
+        'data_timestamp' => '2026-08-10 00:00:00',
+        'sent_timestamp' => '2026-08-09 23:50:00',
+        'raw_pibal' => 'PPAA 60001 97460',
+    ]);
+
+    // 2. Sent at 00:45 UTC (Window End) -> Tepat Waktu
+    DataPibal::create([
+        'station_id' => 138,
+        'data_timestamp' => '2026-08-11 00:00:00',
+        'sent_timestamp' => '2026-08-11 00:45:00',
+        'raw_pibal' => 'PPAA 61001 97460',
+    ]);
+
+    // 3. Sent at 23:49 UTC -> Lebih Awal
+    DataPibal::create([
+        'station_id' => 138,
+        'data_timestamp' => '2026-08-12 00:00:00',
+        'sent_timestamp' => '2026-08-11 23:49:00',
+        'raw_pibal' => 'PPAA 62001 97460',
+    ]);
+
+    // 4. Sent at 00:46 UTC -> Terlambat
+    DataPibal::create([
+        'station_id' => 138,
+        'data_timestamp' => '2026-08-13 00:00:00',
+        'sent_timestamp' => '2026-08-13 00:46:00',
+        'raw_pibal' => 'PPAA 63001 97460',
+    ]);
+
+    $response = $this->actingAs($user)->get('/laporan/pibal?bulan=8&tahun=2026');
+
+    $response->assertStatus(200);
+    $response->assertInertia(function ($page) {
+        $page->component('Laporan/Pibal');
+        $records = $page->toArray()['props']['pibalRecords']['data'];
+
+        $item2350 = collect($records)->firstWhere('data_timestamp', '2026-08-10 00:00:00');
+        $item0045 = collect($records)->firstWhere('data_timestamp', '2026-08-11 00:00:00');
+        $item2349 = collect($records)->firstWhere('data_timestamp', '2026-08-12 00:00:00');
+        $item0046 = collect($records)->firstWhere('data_timestamp', '2026-08-13 00:00:00');
+
+        expect($item2350['monitoring_status'])->toBe('tepat_waktu')
+            ->and($item0045['monitoring_status'])->toBe('tepat_waktu')
+            ->and($item2349['monitoring_status'])->toBe('lebih_awal')
+            ->and($item0046['monitoring_status'])->toBe('terlambat');
+    });
+});
