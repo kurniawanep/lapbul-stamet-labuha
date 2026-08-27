@@ -62,7 +62,7 @@ export default function AuthSplitLayout({
                     <h2 className="text-3xl xl:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
                         Stasiun Meteorologi Kelas III{' '}
                         <span className="bg-gradient-to-r from-blue-700 via-indigo-700 to-sky-700 bg-clip-text text-transparent">
-                            Oesman Sadik Labuha
+                            Oesman Sadik Halmahera Selatan
                         </span>
                     </h2>
 
@@ -135,7 +135,7 @@ export default function AuthSplitLayout({
 
                     {/* Mobile Footer Quote */}
                     <div className="lg:hidden text-center text-xs text-slate-500 pt-4">
-                        Stasiun Meteorologi Kelas III Oesman Sadik Labuha
+                        Stasiun Meteorologi Kelas III Oesman Sadik Halmahera Selatan
                     </div>
                 </div>
             </div>

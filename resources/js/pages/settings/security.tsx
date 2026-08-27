@@ -1,4 +1,5 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, usePage } from '@inertiajs/react';
+import { KeyRound, ShieldCheck } from 'lucide-react';
 import { useRef } from 'react';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import Heading from '@/components/heading';
@@ -23,16 +24,21 @@ export default function Security(props: Props) {
 
     return (
         <>
-            <Head title="Security settings" />
+            <Head title="Ganti Password" />
 
-            <h1 className="sr-only">Security settings</h1>
+            <h1 className="sr-only">Pengaturan Keamanan</h1>
 
             <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Update password"
-                    description="Ensure your account is using a long, random password to stay secure"
-                />
+                <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                        <KeyRound className="h-5 w-5 text-primary" />
+                    </div>
+                    <Heading
+                        variant="small"
+                        title="Ganti Password"
+                        description="Pastikan akun Anda menggunakan password yang panjang dan acak agar tetap aman"
+                    />
+                </div>
 
                 <Form
                     {...SecurityController.update.form()}
@@ -60,7 +66,7 @@ export default function Security(props: Props) {
                         <>
                             <div className="grid gap-2">
                                 <Label htmlFor="current_password">
-                                    Current password
+                                    Password Saat Ini
                                 </Label>
 
                                 <PasswordInput
@@ -69,14 +75,14 @@ export default function Security(props: Props) {
                                     name="current_password"
                                     className="mt-1 block w-full"
                                     autoComplete="current-password"
-                                    placeholder="Current password"
+                                    placeholder="Masukkan password saat ini"
                                 />
 
                                 <InputError message={errors.current_password} />
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="password">New password</Label>
+                                <Label htmlFor="password">Password Baru</Label>
 
                                 <PasswordInput
                                     id="password"
@@ -84,7 +90,7 @@ export default function Security(props: Props) {
                                     name="password"
                                     className="mt-1 block w-full"
                                     autoComplete="new-password"
-                                    placeholder="New password"
+                                    placeholder="Masukkan password baru"
                                     passwordrules={props.passwordRules}
                                 />
 
@@ -93,7 +99,7 @@ export default function Security(props: Props) {
 
                             <div className="grid gap-2">
                                 <Label htmlFor="password_confirmation">
-                                    Confirm password
+                                    Konfirmasi Password Baru
                                 </Label>
 
                                 <PasswordInput
@@ -101,7 +107,7 @@ export default function Security(props: Props) {
                                     name="password_confirmation"
                                     className="mt-1 block w-full"
                                     autoComplete="new-password"
-                                    placeholder="Confirm password"
+                                    placeholder="Ulangi password baru"
                                     passwordrules={props.passwordRules}
                                 />
 
@@ -114,8 +120,10 @@ export default function Security(props: Props) {
                                 <Button
                                     disabled={processing}
                                     data-test="update-password-button"
+                                    className="gap-2"
                                 >
-                                    Save
+                                    <ShieldCheck className="h-4 w-4" />
+                                    {processing ? 'Menyimpan...' : 'Simpan Password'}
                                 </Button>
                             </div>
                         </>
@@ -140,7 +148,7 @@ export default function Security(props: Props) {
 Security.layout = {
     breadcrumbs: [
         {
-            title: 'Security settings',
+            title: 'Ganti Password',
             href: edit(),
         },
     ],

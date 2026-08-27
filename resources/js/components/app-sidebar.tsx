@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Briefcase, Calendar, CloudRain, CloudSun, Droplets, Eye, FileCheck, FileText, Gauge, LayoutGrid, MessageSquare, Radio, ShieldCheck, Sun, Thermometer, TrendingUp, Users, Wind, Wrench, Zap } from 'lucide-react';
+import { Briefcase, Calendar, CloudRain, CloudSun, Droplets, Eye, FileCheck, FileText, Gauge, KeyRound, LayoutGrid, MessageSquare, Radio, Settings, ShieldCheck, Sun, Thermometer, TrendingUp, User, Users, Wind, Wrench, Zap } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -13,6 +13,8 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { edit as editProfile } from '@/routes/profile';
+import { edit as editSecurity } from '@/routes/security';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -114,6 +116,23 @@ const mainNavItems: NavItem[] = [
         title: 'WhatsApp Gateway',
         href: '/pengaturan/whatsapp',
         icon: Radio,
+    },
+    {
+        title: 'Setting',
+        href: editProfile(),
+        icon: Settings,
+        items: [
+            {
+                title: 'Profil',
+                href: editProfile(),
+                icon: User,
+            },
+            {
+                title: 'Ganti Password',
+                href: editSecurity(),
+                icon: KeyRound,
+            },
+        ],
     },
 ];
 

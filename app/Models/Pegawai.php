@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Passkeys\Passkeys;
 
 class Pegawai extends Authenticatable implements PasskeyUser
 {
@@ -86,5 +87,14 @@ class Pegawai extends Authenticatable implements PasskeyUser
     public function jadwalDetails(): HasMany
     {
         return $this->hasMany(JadwalDetail::class, 'pegawai_id');
+    }
+
+    /**
+     * Override passkeys() relation to use correct foreign key 'user_id'
+     * instead of the default 'pegawai_id' inferred from the table name.
+     */
+    public function passkeys(): HasMany
+    {
+        return $this->hasMany(Passkeys::passkeyModel(), 'user_id');
     }
 }
