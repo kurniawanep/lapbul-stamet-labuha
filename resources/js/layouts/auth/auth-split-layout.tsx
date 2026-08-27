@@ -56,7 +56,7 @@ export default function AuthSplitLayout({
                 <div className="relative z-10 my-auto max-w-lg space-y-6 py-8">
                     <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-600/10 border border-blue-200 text-blue-800 text-xs font-semibold backdrop-blur-xs shadow-2xs">
                         <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Sistem Otomasi Pelaporan LAPBUL & TAFOR</span>
+                        <span>Sistem Otomasi Laporan Bulanan & Monitoring Performa Pegawai</span>
                     </div>
 
                     <h2 className="text-3xl xl:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
@@ -67,11 +67,11 @@ export default function AuthSplitLayout({
                     </h2>
 
                     <p className="text-slate-600 text-sm xl:text-base leading-relaxed font-normal">
-                        Aplikasi resmi pengelolaan matriks jadwal dinas operasional observer 24 jam, rekapitulasi data meteorologi penerbangan, dan administrasi kepegawaian BMKG Halmahera Selatan.
+                        Aplikasi  pengelolaan  jadwal dinas pegawai, rekapitulasi data meteorologi penerbangan dan iklim, serta administrasi kepegawaian BMKG Halmahera Selatan.
                     </p>
 
                     {/* Quick Badge Chips */}
-                    <div className="grid grid-cols-2 gap-4 pt-2">
+                    {/* <div className="grid grid-cols-2 gap-4 pt-2">
                         <div className="p-3.5 rounded-xl bg-white/80 border border-slate-200/80 shadow-xs backdrop-blur-xs flex items-center gap-3">
                             <div className="p-2 rounded-lg bg-blue-50 text-blue-600 shrink-0 border border-blue-100">
                                 <Activity className="w-4 h-4" />
@@ -91,7 +91,7 @@ export default function AuthSplitLayout({
                                 <div className="text-[11px] text-slate-500">Passkey & Biometrik Ready</div>
                             </div>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
 
                 {/* Bottom Footer Quote */}

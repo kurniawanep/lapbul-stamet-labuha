@@ -108,5 +108,5 @@ export default function Login({ status }: Props) {
 
 Login.layout = {
     title: 'Masuk ke Akun Pegawai',
-    description: 'Silakan masukkan email dan kata sandi Anda untuk mengakses sistem LAPBUL BMKG',
+    description: 'Silakan masukkan email dan kata sandi Anda untuk mengakses sistem.',
 };

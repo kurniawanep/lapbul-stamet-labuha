@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Mockup - Sistem Lapbul Stasiun Meteorologi Oesman Sadik</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-cyan: #38bdf8;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --accent-indigo: #6366f1;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Navbar */
+        .navbar {
+            background-color: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 14px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: #fff;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+        }
+
+        .brand-title h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .brand-title p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            background-color: rgba(15, 23, 42, 0.6);
+            padding: 4px;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            background-color: var(--accent-cyan);
+            color: #0f172a;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #0f172a;
+        }
+
+        .user-info {
+            text-align: right;
+        }
+
+        .user-info .name {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .user-info .role {
+            font-size: 0.7rem;
+            color: var(--accent-cyan);
+        }
+
+        /* Main Container */
+        .container {
+            padding: 24px 28px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            flex: 1;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Dashboard View */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-info .label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .stat-info .value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-info .subtext {
+            font-size: 0.75rem;
+            color: var(--accent-emerald);
+            margin-top: 4px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        .icon-cyan {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-cyan);
+        }
+
+        .icon-emerald {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-emerald);
+        }
+
+        .icon-amber {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent-amber);
+        }
+
+        .icon-indigo {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent-indigo);
+        }
+
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-header h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-emerald);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--accent-amber);
+        }
+
+        .badge-info {
+            background: rgba(56, 189, 248, 0.2);
+            color: var(--accent-cyan);
+        }
+
+        /* Custom Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+            color: var(--text-primary);
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Duty Staff Widget */
+        .staff-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .staff-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            border-radius: 10px;
+            background-color: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--card-border);
+        }
+
+        .staff-role-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .role-observer {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-cyan);
+        }
+
+        .role-teknisi {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent-indigo);
+        }
+
+        .role-ppnpn {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-emerald);
+        }
+
+        /* Form Inputs */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-control {
+            background-color: #0f172a;
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+
+        .code-box {
+            background-color: #090d16;
+            border: 1px solid #334155;
+            border-left: 4px solid var(--accent-cyan);
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            color: #38bdf8;
+            margin-top: 14px;
+            word-break: break-all;
+        }
+
+        /* Action Buttons */
+        .btn-primary {
+            background-color: var(--accent-cyan);
+            color: #0f172a;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #7dd3fc;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+        }
+
+        /* Shift Matrix Grid */
+        .schedule-table-container {
+            overflow-x: auto;
+        }
+
+        .shift-pill {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .shift-pagi {
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+        }
+
+        .shift-siang {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .shift-malam {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+        }
+
+        .shift-off {
+            background: rgba(148, 163, 184, 0.1);
+            color: #94a3b8;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <div class="brand">
+            <div class="brand-logo">BMKG</div>
+            <div class="brand-title">
+                <h2>Stamet Oesman Sadik</h2>
+                <p>Sistem Laporan Bulanan (Lapbul) & Operational Dashboard</p>
+            </div>
+        </div>
+
+        <nav class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('dashboard')">📊 Dashboard Utama</button>
+            <button class="tab-btn" onclick="switchTab('jadwal')">📅 Penjadwalan Shift</button>
+            <button class="tab-btn" onclick="switchTab('sinoptik')">📝 Input Sinoptik</button>
+            <button class="tab-btn" onclick="switchTab('aviasi')">✈️ Flight Document</button>
+        </nav>
+
+        <div class="user-profile">
+            <div class="user-info">
+                <div class="name">Ben Arther Molle</div>
+                <div class="role">Kepala Stasiun</div>
+            </div>
+            <div class="avatar">BM</div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="container">
+
+        <!-- TAB 1: DASHBOARD UTAMA -->
+        <section id="tab-dashboard" class="tab-content active">
+            <!-- Stats Row -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="label">Pengamatan Sinoptik (Hari ini)</div>
+                        <div class="value">24 / 24</div>
+                        <div class="subtext">✓ 100% On-time Submission</div>
+                    </div>
+                    <div class="stat-icon icon-cyan">🌧️</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="label">METAR / SPECI Terikirim</div>
+                        <div class="value">48 Berkas</div>
+                        <div class="subtext">✓ Sync dengan BMKGSoft</div>
+                    </div>
+                    <div class="stat-icon icon-emerald">✈️</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="label">Flight Document (WAEL)</div>
+                        <div class="value">12 Penerbangan</div>
+                        <div class="subtext">✓ All Dispatched via WA</div>
+                    </div>
+                    <div class="stat-icon icon-indigo">📄</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="label">Status Jadwal Dinas</div>
+                        <div class="value">Agustus 2026</div>
+                        <div class="subtext">Status: Disetujui (Approved)</div>
+                    </div>
+                    <div class="stat-icon icon-amber">🗓️</div>
+                </div>
+            </div>
+
+            <!-- Dashboard Main Grid -->
+            <div class="dashboard-grid">
+                <!-- Recent Weather Observations Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Tabel Data Observasi Terakhir (Live Monitoring)</h3>
+                        <span class="badge badge-info">Live Stream</span>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp (UTC)</th>
+                                <th>Jenis Data</th>
+                                <th>Suhu (°C)</th>
+                                <th>Angin (kt)</th>
+                                <th>Observer Piket</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>2026-08-27 00:00</td>
+                                <td>Sinoptik (SYNOP)</td>
+                                <td>28.4°C</td>
+                                <td>160° / 08 kt</td>
+                                <td>Ahmad Rizky (PMG Muda)</td>
+                                <td><span class="badge badge-success">Terikirim</span></td>
+                            </tr>
+                            <tr>
+                                <td>2026-08-26 23:30</td>
+                                <td>METAR (WAEL)</td>
+                                <td>27.8°C</td>
+                                <td>150° / 06 kt</td>
+                                <td>Ahmad Rizky (PMG Muda)</td>
+                                <td><span class="badge badge-success">Terikirim</span></td>
+                            </tr>
+                            <tr>
+                                <td>2026-08-26 23:00</td>
+                                <td>METAR (WAEL)</td>
+                                <td>27.5°C</td>
+                                <td>140° / 05 kt</td>
+                                <td>Fajri Pratama (PMG Pertama)</td>
+                                <td><span class="badge badge-success">Terikirim</span></td>
+                            </tr>
+                            <tr>
+                                <td>2026-08-26 21:00</td>
+                                <td>PIBAL (Angin Atas)</td>
+                                <td>-</td>
+                                <td>180° / 14 kt (1000ft)</td>
+                                <td>Fajri Pratama (PMG Pertama)</td>
+                                <td><span class="badge badge-success">Terikirim</span></td>
+                            </tr>
+                            <tr>
+                                <td>2026-08-26 18:00</td>
+                                <td>Sinoptik (SYNOP)</td>
+                                <td>25.2°C</td>
+                                <td>CALM</td>
+                                <td>Dewi Sartika (PNS)</td>
+                                <td><span class="badge badge-success">Terikirim</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Right Side Widget: Duty Staff -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Petugas Dinas Piket Hari Ini</h3>
+                        <span class="badge badge-success">Shift Pagi</span>
+                    </div>
+                    <div class="staff-list">
+                        <div class="staff-item">
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.9rem;">Ahmad Rizky, S.Tr.Met</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">NIP. 19940812 201702 1
+                                    001</div>
+                            </div>
+                            <span class="staff-role-badge role-observer">Observer</span>
+                        </div>
+
+                        <div class="staff-item">
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.9rem;">Budi Santoso, A.Md</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">Teknisi Peralatan
+                                    Meteorologi</div>
+                            </div>
+                            <span class="staff-role-badge role-teknisi">Teknisi</span>
+                        </div>
+
+                        <div class="staff-item">
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.9rem;">Mahmud Said</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">Petugas Pembantu
+                                    Observasi</div>
+                            </div>
+                            <span class="staff-role-badge role-ppnpn">PPNPN</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--card-border);">
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">Aksi Cepat
+                            Report:</div>
+                        <button class="btn-primary" style="width: 100%; text-align: center;">📥 Ekspor Lapbul
+                            (Excel/PDF)</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: PENJADWALAN SHIFT BULANAN -->
+        <section id="tab-jadwal" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h3>Matriks Penjadwalan Dinas Shift Operasional</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">Periode: Agustus
+                            2026 | Stasiun Meteorologi Oesman Sadik Halmahera Selatan</p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-primary" style="background-color: var(--card-border); color: #fff;">⚙️ Atur
+                            Master Shift</button>
+                        <button class="btn-primary">+ Buat Jadwal Bulan Baru</button>
+                    </div>
+                </div>
+
+                <div class="schedule-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nama Pegawai</th>
+                                <th>Role / Jabatan</th>
+                                <th>Tgl 1</th>
+                                <th>Tgl 2</th>
+                                <th>Tgl 3</th>
+                                <th>Tgl 4</th>
+                                <th>Tgl 5</th>
+                                <th>Tgl 6</th>
+                                <th>Tgl 7</th>
+                                <th>Tgl 8</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="font-weight: 600;">Ahmad Rizky, S.Tr.Met</td>
+                                <td>PMG Muda (Observer)</td>
+                                <td><span class="shift-pill shift-pagi">PAGI</span></td>
+                                <td><span class="shift-pill shift-pagi">PAGI</span></td>
+                                <td><span class="shift-pill shift-siang">SIANG</span></td>
+                                <td><span class="shift-pill shift-malam">MLM</span></td>
+                                <td><span class="shift-pill shift-off">OFF</span></td>
+                                <td><span class="shift-pill shift-off">OFF</span></td>
+                                <td><span class="shift-pill shift-pagi">PAGI</span></td>
+                                <td><span class="shift-pill shift-siang">SIANG</span></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 600;">Fajri Pratama, S.Tr</td>
+                                <td>PMG Pertama (Observer)</td>
+                                <td><span class="shift-pill shift-siang">SIANG</span></td>
+                                <td><span class="shift-pill shift-malam">MLM</span></td>
+                                <td><span class="shift-pill shift-off">OFF</span></td>
+                                <td><span class="shift-pill shift-pagi">PAGI</span></td>
+                                <td><span class="shift-pill shift-pagi">PAGI</span></td>
+                                <td><span class="shift-pill shift-siang">SIANG</span></td>
+                                <td><span class="shift-pill shift-malam">MLM</span></td>
+                                <td><span class="shift-pill shift-off">OFF</span></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 600;">Dewi Sartika, A.Md</td>
+                                <td>PMG Pelaksana (Teknisi)</td>
+                                <td><span class="shift-pill shift-malam">MLM</span></td>
+                                <td><span class="shift-pill shift-off">OFF</span></td>
+                                <td><span class="shift-pill shift-pagi">PAGI</span></td>
+                                <td><span class="shift-pill shift-siang">SIANG</span></td>
+                                <td><span class="shift-pill shift-malam">MLM</span></td>
+                                <td><span class="shift-pill shift-off">OFF</span></td>
+                                <td><span class="shift-pill shift-off">OFF</span></td>
+                                <td><span class="shift-pill shift-pagi">PAGI</span></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 600;">Mahmud Said</td>
+                                <td>PPNPN (Pramubakti)</td>
+                                <td><span class="shift-pill shift-pagi">PAGI</span></td>
+                                <td><span class="shift-pill shift-pagi">PAGI</span></td>
+                                <td><span class="shift-pill shift-pagi">PAGI</span></td>
+                                <td><span class="shift-pill shift-pagi">PAGI</span></td>
+                                <td><span class="shift-pill shift-pagi">PAGI</span></td>
+                                <td><span class="shift-pill shift-off">OFF</span></td>
+                                <td><span class="shift-pill shift-off">OFF</span></td>
+                                <td><span class="shift-pill shift-pagi">PAGI</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: INPUT DATA SINOPTIK -->
+        <section id="tab-sinoptik" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Formulir Entri Data Observasi Sinoptik (SYNOP)</h3>
+                    <span class="badge badge-info">Stasiun ID: 97460 (WAEL)</span>
+                </div>
+
+                <form onsubmit="event.preventDefault(); generateSynopCode();">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Waktu Pengamatan (UTC)</label>
+                            <input type="datetime-local" class="form-control" value="2026-08-27T00:00">
+                        </div>
+                        <div class="form-group">
+                            <label>Suhu Bola Kering (TT) °C</label>
+                            <input type="number" step="0.1" class="form-control" id="tt" value="28.4">
+                        </div>
+                        <div class="form-group">
+                            <label>Suhu Bola Basah (TdTd) °C</label>
+                            <input type="number" step="0.1" class="form-control" id="td" value="24.5">
+                        </div>
+                        <div class="form-group">
+                            <label>Tekanan QFF (mb/hPa)</label>
+                            <input type="number" step="0.1" class="form-control" value="1012.3">
+                        </div>
+                        <div class="form-group">
+                            <label>Tekanan QFE (mb/hPa)</label>
+                            <input type="number" step="0.1" class="form-control" value="1008.1">
+                        </div>
+                        <div class="form-group">
+                            <label>Arah Angin (Degree °)</label>
+                            <input type="number" class="form-control" id="wd" value="160">
+                        </div>
+                        <div class="form-group">
+                            <label>Kecepatan Angin (Knot)</label>
+                            <input type="number" class="form-control" id="ws" value="8">
+                        </div>
+                        <div class="form-group">
+                            <label>Jarak Pandang / Visibility (m)</label>
+                            <input type="number" class="form-control" value="9000">
+                        </div>
+                        <div class="form-group">
+                            <label>Jumlah Tutupan Awan (Oktas)</label>
+                            <input type="number" min="0" max="8" class="form-control" value="5">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; margin-top: 10px;">
+                        <button type="submit" class="btn-primary">⚡ Generate & Enkode Sandi SYNOP</button>
+                        <button type="button" class="btn-primary"
+                            style="background-color: var(--accent-emerald); color: #0f172a;">Simpan Data
+                            Pengamatan</button>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <label style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">Hasil
+                            Terenkode (Encoded Synop String):</label>
+                        <div class="code-box" id="synop-output">
+                            AAXX 27004 97460 11580 51608 10284 20245 31012 41008 52003 70200 85300=
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- TAB 4: FLIGHT DOCUMENT -->
+        <section id="tab-aviasi" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Penerbitan Flight Document (InaSiam FD Integration)</h3>
+                    <button class="btn-primary">+ Penerbitan FD Baru</button>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No. Flight Document</th>
+                            <th>No. Penerbangan</th>
+                            <th>Maskapai</th>
+                            <th>Rute</th>
+                            <th>Waktu Keberangkatan</th>
+                            <th>Status WA Dispatch</th>
+                            <th>Berkas PDF</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="font-weight: 600;">FD-WAEL-20260827-001</td>
+                            <td>IW-1172</td>
+                            <td>Wings Air</td>
+                            <td>WAEL (Labuha) ➔ WAAA (Makassar)</td>
+                            <td>2026-08-27 08:30 WIT</td>
+                            <td><span class="badge badge-success">✓ Dispatched (07:45 WIT)</span></td>
+                            <td><a href="#" style="color: var(--accent-cyan);">📄 Unduh FD.pdf</a></td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600;">FD-WAEL-20260827-002</td>
+                            <td>IL-2210</td>
+                            <td>Trigana Air</td>
+                            <td>WAEL (Labuha) ➔ WAMR (Ternate)</td>
+                            <td>2026-08-27 11:15 WIT</td>
+                            <td><span class="badge badge-warning">⏳ Pending Dispatch</span></td>
+                            <td><a href="#" style="color: var(--accent-cyan);">📄 Unduh FD.pdf</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabName).classList.add('active');
+        }
+
+        function generateSynopCode() {
+            const tt = parseFloat(document.getElementById('tt').value || 0).toFixed(1).replace('.', '');
+            const td = parseFloat(document.getElementById('td').value || 0).toFixed(1).replace('.', '');
+            const wd = String(document.getElementById('wd').value || 0).padStart(3, '0').substring(0, 2);
+            const ws = String(document.getElementById('ws').value || 0).padStart(2, '0');
+
+            const synopStr = `AAXX 27004 97460 11580 5${wd}${ws} 10${tt} 20${td} 31012 41008 52003 70200 85300=`;
+            document.getElementById('synop-output').innerText = synopStr;
+        }
+    </script>
+</body>
+
+</html>
