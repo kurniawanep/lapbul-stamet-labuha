@@ -1205,10 +1205,13 @@ class BmkgsoftService
             ];
         }
 
-        $url = "{$this->baseUrl}/db/bmkgsatu/@export_data";
+        $itemsByDate = [];
+        $overallError = null;
 
+        // 1. Primary Endpoint: /db/bmkgsatu/@export_data
         try {
-            $response = Http::withoutVerifying()
+            $urlExport = "{$this->baseUrl}/db/bmkgsatu/@export_data";
+            $responseExport = Http::withoutVerifying()
                 ->retry(2, 500)
                 ->timeout(30)
                 ->withHeaders([
@@ -1216,7 +1219,7 @@ class BmkgsoftService
                     'Authorization' => "Bearer {$token}",
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 ])
-                ->get($url, [
+                ->get($urlExport, [
                     'type_name' => 'Fdih',
                     'station_id' => $stationId,
                     'data_timestamp__gte' => Carbon::parse($dateFrom)->format('Y-m-d\TH:i'),
@@ -1226,10 +1229,10 @@ class BmkgsoftService
                     '_metadata' => 'station_id,station_name,data_timestamp,alias_station_id,source_data,m_0700ws[tbk_1c2m_0700],m_1300ws[tbk_1c2m_1300],m_1800ws[tbk_1c2m_1800],tbk_avg,m_1800ws[t_max_1c2m],m_1300ws[t_min_1c2m],m_0700ws[rr_0700],m_0700ws[ss_8],m_0700ws[cu_khusus],m_1800ws[pp_qfe_0000],m_0700ws[rh_1c2m_0700],m_1300ws[rh_1c2m_1300],m_1800ws[rh_1c2m_1800],rh_avg,ff_avg_km_jm,wd_cardinal,ff_max,wd_ff_max,observer_name,qc_flag_fklim,qc_histories_fklim',
                 ]);
 
-            if ($response->status() === 401) {
+            if ($responseExport->status() === 401) {
                 $token = $this->getToken(true);
                 if ($token) {
-                    $response = Http::withoutVerifying()
+                    $responseExport = Http::withoutVerifying()
                         ->retry(2, 500)
                         ->timeout(30)
                         ->withHeaders([
@@ -1237,7 +1240,7 @@ class BmkgsoftService
                             'Authorization' => "Bearer {$token}",
                             'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                         ])
-                        ->get($url, [
+                        ->get($urlExport, [
                             'type_name' => 'Fdih',
                             'station_id' => $stationId,
                             'data_timestamp__gte' => Carbon::parse($dateFrom)->format('Y-m-d\TH:i'),
@@ -1249,28 +1252,116 @@ class BmkgsoftService
                 }
             }
 
-            if ($response->successful()) {
-                $json = $response->json();
-                $rows = $json['data'] ?? ($json['results'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
-                return [
-                    'success' => true,
-                    'data' => $rows,
-                    'error' => null,
-                ];
+            if ($responseExport->successful()) {
+                $jsonExport = $responseExport->json();
+                $rowsExport = $jsonExport['data'] ?? ($jsonExport['results'] ?? ($jsonExport['items'] ?? (is_array($jsonExport) ? $jsonExport : [])));
+                foreach ($rowsExport as $row) {
+                    if (isset($row['data_timestamp'])) {
+                        $dateKey = Carbon::parse($row['data_timestamp'])->format('Y-m-d');
+                        $itemsByDate[$dateKey] = $row;
+                    }
+                }
+            } else {
+                $overallError = "HTTP {$responseExport->status()}: " . $responseExport->body();
             }
-
-            return [
-                'success' => false,
-                'data' => [],
-                'error' => "HTTP {$response->status()}: " . $response->body(),
-            ];
         } catch (\Exception $e) {
+            $overallError = $e->getMessage();
+        }
+
+        // 2. Secondary Endpoint: /api/v21/export/observation/by-station/preview
+        try {
+            if ($token) {
+                $urlPreview = "{$this->baseUrl}/api/v21/export/observation/by-station/preview";
+                $responsePreview = Http::withoutVerifying()
+                    ->retry(2, 500)
+                    ->timeout(30)
+                    ->withHeaders([
+                        'accept' => 'application/json',
+                        'content-type' => 'application/json',
+                        'Authorization' => "Bearer {$token}",
+                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    ])
+                    ->post($urlPreview, [
+                        'station_id' => [$stationId],
+                        'data_type' => 'fklim',
+                        'date_from' => Carbon::parse($dateFrom)->format('Y-m-d\TH:i:s\Z'),
+                        'date_to' => Carbon::parse($dateTo)->format('Y-m-d\TH:i:s\Z'),
+                    ]);
+
+                if ($responsePreview->successful()) {
+                    $jsonPreview = $responsePreview->json();
+                    $headersPreview = $jsonPreview['data']['headers'] ?? [];
+                    $rowsPreview = $jsonPreview['data']['rows'] ?? [];
+                    $headerMapPreview = array_flip($headersPreview);
+
+                    foreach ($rowsPreview as $row) {
+                        $getValue = function ($key) use ($row, $headerMapPreview) {
+                            return isset($headerMapPreview[$key]) ? ($row[$headerMapPreview[$key]] ?? null) : null;
+                        };
+
+                        $ts = $getValue('data_timestamp');
+                        if (!$ts) continue;
+
+                        $dateKey = Carbon::parse($ts)->format('Y-m-d');
+
+                        if (!isset($itemsByDate[$dateKey])) {
+                            $cuKhusus = $getValue('cuaca_khusus');
+                            if ($cuKhusus === 'N/A') $cuKhusus = null;
+
+                            $itemsByDate[$dateKey] = [
+                                'station_id' => $stationId,
+                                'station_name' => $getValue('station_name') ?? 'Stasiun Meteorologi Oesman Sadik',
+                                'data_timestamp' => $ts,
+                                'm_0700ws' => [
+                                    'tbk_1c2m_0700' => $getValue('tbk_1_2m_0700'),
+                                    'rh_1c2m_0700' => $getValue('rh_1_2m_0700'),
+                                    'rr_0700' => $getValue('rr_0700'),
+                                    'ss_8' => $getValue('ss_8'),
+                                    'cu_khusus' => $cuKhusus,
+                                ],
+                                'm_1300ws' => [
+                                    'tbk_1c2m_1300' => $getValue('tbk_1_2m_1300'),
+                                    'rh_1c2m_1300' => $getValue('rh_1_2m_1300'),
+                                    't_min_1c2m' => $getValue('t_min_1_2m_1300'),
+                                ],
+                                'm_1800ws' => [
+                                    'tbk_1c2m_1800' => $getValue('tbk_1_2m_1800'),
+                                    'rh_1c2m_1800' => $getValue('rh_1_2m_1800'),
+                                    't_max_1c2m' => $getValue('t_max_1_2m_1800'),
+                                    'pp_qfe_0000' => $getValue('pp_qfe_0000'),
+                                ],
+                                'tbk_avg' => $getValue('tbk_avg'),
+                                'rh_avg' => $getValue('rh_avg'),
+                                'ff_avg_km_jm' => $getValue('ff_avg_km_h') ?? $getValue('ff_avg_km_jm'),
+                                'wd_cardinal' => $getValue('wd_cardinal'),
+                                'ff_max' => $getValue('ff_max'),
+                                'wd_ff_max' => $getValue('wd_ff_max'),
+                                'observer_name' => $getValue('observer_name'),
+                            ];
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            if (empty($itemsByDate)) {
+                $overallError = $e->getMessage();
+            }
+        }
+
+        if (!empty($itemsByDate)) {
+            ksort($itemsByDate);
             return [
-                'success' => false,
-                'data' => [],
-                'error' => $e->getMessage(),
+                'success' => true,
+                'data' => array_values($itemsByDate),
+                'error' => null,
             ];
         }
+
+        return [
+            'success' => false,
+            'data' => [],
+            'error' => $overallError ?? 'Gagal mengambil data dari kedua endpoint BMKGSoft.',
+        ];
     }
 
     /**
@@ -1575,11 +1666,22 @@ class BmkgsoftService
      */
     public function fetchPenguapanDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
     {
-        try {
-            $token = $this->getToken();
-            $url = "https://bmkgsatu.bmkg.go.id/db/bmkgsatu/@export_data";
+        $token = $this->getToken();
+        if (!$token) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error_reason' => 'Gagal mendapatkan token autentikasi BMKGSoft.',
+            ];
+        }
 
-            $response = Http::withoutVerifying()
+        $itemsByDate = [];
+        $overallError = null;
+
+        // 1. Primary Endpoint: /db/bmkgsatu/@export_data
+        try {
+            $urlExport = "{$this->baseUrl}/db/bmkgsatu/@export_data";
+            $responseExport = Http::withoutVerifying()
                 ->retry(2, 500)
                 ->timeout(30)
                 ->withHeaders([
@@ -1587,7 +1689,7 @@ class BmkgsoftService
                     'Authorization' => "Bearer {$token}",
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 ])
-                ->get($url, [
+                ->get($urlExport, [
                     'type_name' => 'Fdih',
                     'station_id' => $stationId,
                     'data_timestamp__gte' => Carbon::parse($dateFrom)->format('Y-m-d\TH:i'),
@@ -1597,10 +1699,10 @@ class BmkgsoftService
                     '_metadata' => 'station_id,station_name,data_timestamp,alias_station_id,source_data,m_0700ws[op_diff_baca_0700],m_0700ws[t_air_max_0700],m_0700ws[t_air_min_0700],m_0700ws[t_air_avg_0700],m_0700ws[rr_0700],m_0700ws[op_eva_0700],m_0700ws[ws_avg_0c5_0700],observer_name,qc_flag_op_penguapan,qc_histories_op_penguapan',
                 ]);
 
-            if ($response->status() === 401) {
+            if ($responseExport->status() === 401) {
                 $token = $this->getToken(true);
                 if ($token) {
-                    $response = Http::withoutVerifying()
+                    $responseExport = Http::withoutVerifying()
                         ->retry(2, 500)
                         ->timeout(30)
                         ->withHeaders([
@@ -1608,7 +1710,7 @@ class BmkgsoftService
                             'Authorization' => "Bearer {$token}",
                             'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                         ])
-                        ->get($url, [
+                        ->get($urlExport, [
                             'type_name' => 'Fdih',
                             'station_id' => $stationId,
                             'data_timestamp__gte' => Carbon::parse($dateFrom)->format('Y-m-d\TH:i'),
@@ -1620,28 +1722,98 @@ class BmkgsoftService
                 }
             }
 
-            if ($response->successful()) {
-                $json = $response->json();
-                $rows = $json['data'] ?? ($json['results'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
-                return [
-                    'success' => true,
-                    'data' => $rows,
-                    'error_reason' => null,
-                ];
+            if ($responseExport->successful()) {
+                $jsonExport = $responseExport->json();
+                $rowsExport = $jsonExport['data'] ?? ($jsonExport['results'] ?? ($jsonExport['items'] ?? (is_array($jsonExport) ? $jsonExport : [])));
+                foreach ($rowsExport as $row) {
+                    if (isset($row['data_timestamp'])) {
+                        $dateKey = Carbon::parse($row['data_timestamp'])->format('Y-m-d');
+                        $itemsByDate[$dateKey] = $row;
+                    }
+                }
+            } else {
+                $overallError = "HTTP {$responseExport->status()}: " . $responseExport->body();
             }
-
-            return [
-                'success' => false,
-                'data' => [],
-                'error_reason' => "HTTP {$response->status()}: " . $response->body(),
-            ];
         } catch (\Exception $e) {
+            $overallError = $e->getMessage();
+        }
+
+        // 2. Secondary Endpoint: /api/v21/export/observation/by-station/preview
+        try {
+            if ($token) {
+                $urlPreview = "{$this->baseUrl}/api/v21/export/observation/by-station/preview";
+                $responsePreview = Http::withoutVerifying()
+                    ->retry(2, 500)
+                    ->timeout(30)
+                    ->withHeaders([
+                        'accept' => 'application/json',
+                        'content-type' => 'application/json',
+                        'Authorization' => "Bearer {$token}",
+                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    ])
+                    ->post($urlPreview, [
+                        'station_id' => [$stationId],
+                        'data_type' => 'op_penguapan',
+                        'date_from' => Carbon::parse($dateFrom)->format('Y-m-d\TH:i:s\Z'),
+                        'date_to' => Carbon::parse($dateTo)->format('Y-m-d\TH:i:s\Z'),
+                    ]);
+
+                if ($responsePreview->successful()) {
+                    $jsonPreview = $responsePreview->json();
+                    $headersPreview = $jsonPreview['data']['headers'] ?? [];
+                    $rowsPreview = $jsonPreview['data']['rows'] ?? [];
+                    $headerMapPreview = array_flip($headersPreview);
+
+                    foreach ($rowsPreview as $row) {
+                        $getValue = function ($key) use ($row, $headerMapPreview) {
+                            return isset($headerMapPreview[$key]) ? ($row[$headerMapPreview[$key]] ?? null) : null;
+                        };
+
+                        $ts = $getValue('data_timestamp');
+                        if (!$ts) continue;
+
+                        $dateKey = Carbon::parse($ts)->format('Y-m-d');
+
+                        if (!isset($itemsByDate[$dateKey])) {
+                            $itemsByDate[$dateKey] = [
+                                'station_id' => $stationId,
+                                'station_name' => $getValue('station_name') ?? 'Stasiun Meteorologi Oesman Sadik',
+                                'data_timestamp' => $ts,
+                                'm_0700ws' => [
+                                    'op_diff_baca_0700' => $getValue('h_air_diff_0700'),
+                                    'op_eva_0700' => $getValue('op_eva_0700'),
+                                    't_air_max_0700' => $getValue('t_air_max_0700'),
+                                    't_air_min_0700' => $getValue('t_air_min_0700'),
+                                    't_air_avg_0700' => $getValue('t_air_avg_0700'),
+                                    'rr_0700' => $getValue('rr_0700'),
+                                    'ws_avg_0c5_0700' => $getValue('ws_avg_0_5m_0700'),
+                                ],
+                                'observer_name' => $getValue('observer_name'),
+                            ];
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            if (empty($itemsByDate)) {
+                $overallError = $e->getMessage();
+            }
+        }
+
+        if (!empty($itemsByDate)) {
+            ksort($itemsByDate);
             return [
-                'success' => false,
-                'data' => [],
-                'error_reason' => $e->getMessage(),
+                'success' => true,
+                'data' => array_values($itemsByDate),
+                'error_reason' => null,
             ];
         }
+
+        return [
+            'success' => false,
+            'data' => [],
+            'error_reason' => $overallError ?? 'Gagal mengambil data dari kedua endpoint BMKGSoft.',
+        ];
     }
 
     /**
