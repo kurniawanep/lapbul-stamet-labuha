@@ -584,7 +584,7 @@ export default function FklimIndex({
                         </Card>
 
                         {/* MONTHLY TREND CHART & MISS DATA LIST */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                             {/* CHART & TREND TABLE */}
                             <Card className="lg:col-span-8 border border-slate-200 shadow-md bg-white overflow-hidden">
                                 <CardHeader className="bg-slate-900 text-white p-4">
@@ -593,29 +593,25 @@ export default function FklimIndex({
                                         <Badge className="bg-amber-400 text-slate-950 font-bold">Trend Bulanan</Badge>
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="p-6 space-y-6">
+                                <CardContent className="p-6 space-y-4">
                                     {/* Grouped Bar Chart */}
-                                    <div className="h-64 flex items-end justify-between gap-3 pt-8 pb-4 px-2 border-b border-slate-200">
+                                    <div className="flex items-end justify-between gap-3 pb-4 px-2 border-b border-slate-200">
                                         {dashboardStats.monthlyTrendReport.map((item, idx) => {
-                                            const maxVal = 35;
-                                            const targetHeight = Math.max(10, Math.min(100, (item.target / maxVal) * 100));
-                                            const sentHeight = Math.max(10, Math.min(100, (item.sent / maxVal) * 100));
+                                            const maxVal = Math.max(35, ...dashboardStats.monthlyTrendReport.map(i => i.target));
+                                            const maxPx = 80;
+                                            const targetPx = Math.max(4, Math.round((item.target / maxVal) * maxPx));
+                                            const sentPx = item.sent > 0 ? Math.max(4, Math.round((item.sent / maxVal) * maxPx)) : 0;
 
                                             return (
-                                                <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group">
+                                                <div key={idx} className="flex-1 flex flex-col items-center justify-end group">
                                                     <span className="text-[10px] font-black text-slate-800 mb-1">
                                                         {item.pct.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%
                                                     </span>
 
                                                     <div className="flex items-end gap-1 w-full justify-center">
                                                         <div
-                                                            style={{ height: `${targetHeight}%` }}
-                                                            className="w-1/2 max-w-[16px] bg-amber-200 rounded-t-sm shadow transition-all relative"
-                                                            title={`Seharusnya: ${item.target}`}
-                                                        />
-                                                        <div
-                                                            style={{ height: `${sentHeight}%` }}
-                                                            className="w-1/2 max-w-[16px] bg-amber-600 rounded-t-sm shadow hover:bg-amber-700 transition-all relative"
+                                                            style={{ height: `${sentPx}px` }}
+                                                            className="w-full max-w-[20px] bg-amber-600 rounded-t-sm shadow hover:bg-amber-700 transition-all"
                                                             title={`Terkirim: ${item.sent}`}
                                                         />
                                                     </div>
@@ -678,29 +674,31 @@ export default function FklimIndex({
                                         <Badge className="bg-rose-600 text-white font-bold">Missing Count</Badge>
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="p-6 space-y-3 font-mono text-xs">
-                                    {dashboardStats.monthlyTrendReport.map((item, idx) => {
-                                        const fullMonthName = [
-                                            'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
-                                            'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'
-                                        ][idx] || item.label.toUpperCase();
+                                <CardContent className="p-4 font-mono text-xs">
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                        {dashboardStats.monthlyTrendReport.map((item, idx) => {
+                                            const fullMonthName = [
+                                                'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
+                                                'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'
+                                            ][idx] || item.label.toUpperCase();
 
-                                        return (
-                                            <div
-                                                key={idx}
-                                                className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                                                    item.missing > 0
-                                                        ? 'bg-rose-50/80 border-rose-200 text-rose-950 font-extrabold'
-                                                        : 'bg-emerald-50/50 border-emerald-100 text-emerald-900 font-bold'
-                                                }`}
-                                            >
-                                                <span className="tracking-tight">MISS DATA FKLIM {fullMonthName}</span>
-                                                <span className="text-sm font-black tracking-wider">
-                                                    = {item.missing} DATA
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    className={`flex items-center justify-between p-2 rounded-lg border transition-all ${
+                                                        item.missing > 0
+                                                            ? 'bg-rose-50/80 border-rose-200 text-rose-950 font-extrabold'
+                                                            : 'bg-emerald-50/50 border-emerald-100 text-emerald-900 font-bold'
+                                                    }`}
+                                                >
+                                                    <span className="tracking-tight truncate mr-1">{fullMonthName.slice(0, 3)}</span>
+                                                    <span className="text-xs font-black tracking-wider whitespace-nowrap">
+                                                        {item.missing} <span className="font-normal opacity-70">miss</span>
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>

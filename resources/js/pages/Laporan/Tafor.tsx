@@ -580,7 +580,7 @@ export default function TaforIndex({
                                 </CardHeader>
                                 <CardContent className="p-6 space-y-6 overflow-visible">
                                     {/* Single Bar Chart: Terkirim & Persentase */}
-                                    <div className="h-72 flex items-end justify-between gap-2 pt-16 pb-4 px-2 border-b border-slate-200 overflow-visible relative">
+                                    <div className="h-72 flex items-end justify-between gap-2 pt-8 pb-4 px-2 border-b border-slate-200 overflow-visible relative">
                                         {(() => {
                                             const validPcts = dashboardStats.monthlyTrendReport.filter(i => i.pct > 0).map(i => i.pct);
                                             const minValPct = validPcts.length > 0 ? Math.max(0, Math.floor(Math.min(...validPcts) - 5)) : 0;
@@ -682,26 +682,28 @@ export default function TaforIndex({
                                         <Badge className="bg-rose-600 text-white font-bold">Missing Count</Badge>
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="p-6 space-y-3 font-mono text-xs">
-                                    {dashboardStats.monthlyTrendReport.map((item, idx) => {
-                                        const fullMonthName = ((item as any).full_label || item.label).toUpperCase();
+                                <CardContent className="p-4 font-mono text-xs">
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                        {dashboardStats.monthlyTrendReport.map((item, idx) => {
+                                            const fullMonthName = ((item as any).full_label || item.label).toUpperCase();
 
-                                        return (
-                                            <div
-                                                key={idx}
-                                                className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                                                    item.missing > 0
-                                                        ? 'bg-rose-50/80 border-rose-200 text-rose-950 font-extrabold'
-                                                        : 'bg-emerald-50/50 border-emerald-100 text-emerald-900 font-bold'
-                                                }`}
-                                            >
-                                                <span className="tracking-tight">MISS DATA TAFOR {fullMonthName}</span>
-                                                <span className="text-sm font-black tracking-wider">
-                                                    = {item.missing} DATA
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    className={`flex items-center justify-between p-2 rounded-lg border transition-all ${
+                                                        item.missing > 0
+                                                            ? 'bg-rose-50/80 border-rose-200 text-rose-950 font-extrabold'
+                                                            : 'bg-emerald-50/50 border-emerald-100 text-emerald-900 font-bold'
+                                                    }`}
+                                                >
+                                                    <span className="tracking-tight truncate mr-1">{fullMonthName.slice(0, 3)}</span>
+                                                    <span className="text-xs font-black tracking-wider whitespace-nowrap">
+                                                        {item.missing} <span className="font-normal opacity-70">miss</span>
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>

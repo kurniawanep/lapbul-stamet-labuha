@@ -68,29 +68,48 @@ test('authenticated user can store new PPNPN pegawai without NIP or PNS role', f
     ]);
 });
 
-test('authenticated user can update pegawai', function () {
+test('authenticated user can update pegawai and update password when provided', function () {
     $user = User::factory()->create();
     $pegawai = Pegawai::create([
         'jenis_pegawai' => 'PNS',
         'nama' => 'PEMUDA LAMA',
         'nip' => '199101012016011001',
+        'password' => 'oldpassword123',
     ]);
 
     $response = $this->actingAs($user)->patch("/pegawai/{$pegawai->id}", [
         'jenis_pegawai' => 'PNS',
         'nama' => 'PEMUDA BARU',
         'nip' => '199101012016011001',
+        'password' => 'newpassword123',
         'role' => 'Teknisi',
         'jabatan' => 'Kepala Pokjung',
     ]);
 
     $response->assertRedirect();
-    $this->assertDatabaseHas('pegawai', [
-        'id' => $pegawai->id,
-        'nama' => 'PEMUDA BARU',
-        'role' => 'Teknisi',
-        'jabatan' => 'Kepala Pokjung',
+    $pegawai->refresh();
+    expect(Illuminate\Support\Facades\Hash::check('newpassword123', $pegawai->password))->toBeTrue();
+});
+
+test('updating pegawai without password preserves existing password', function () {
+    $user = User::factory()->create();
+    $pegawai = Pegawai::create([
+        'jenis_pegawai' => 'PNS',
+        'nama' => 'PEMUDA LAMA',
+        'nip' => '199101012016011001',
+        'password' => 'keepthispassword123',
     ]);
+
+    $response = $this->actingAs($user)->patch("/pegawai/{$pegawai->id}", [
+        'jenis_pegawai' => 'PNS',
+        'nama' => 'PEMUDA BARU',
+        'nip' => '199101012016011001',
+        'password' => '',
+    ]);
+
+    $response->assertRedirect();
+    $pegawai->refresh();
+    expect(Illuminate\Support\Facades\Hash::check('keepthispassword123', $pegawai->password))->toBeTrue();
 });
 
 test('authenticated user can delete pegawai', function () {
@@ -104,3 +123,4 @@ test('authenticated user can delete pegawai', function () {
         'id' => $pegawai->id,
     ]);
 });
+
