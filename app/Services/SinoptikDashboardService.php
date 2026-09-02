@@ -196,79 +196,89 @@ class SinoptikDashboardService
             'missing_pct' => $totalTarget > 0 ? round(($totalMissing / $totalTarget) * 100, 2) : 0,
         ];
 
-        // Benchmark monthly trend calculation for 12 months (up to target month)
+        // Dynamic 12 months trend looking back from selected month/year ($bulan, $tahun) based on real DataSinoptik records
+        $selectedEnd = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->endOfMonth();
+        $trendStart = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->subMonths(11)->startOfMonth();
+
+        $allTrendRecords = DataSinoptik::whereBetween('data_timestamp', [$trendStart->toDateTimeString(), $selectedEnd->toDateTimeString()])->get();
+
         $monthlyTrendUtama = [];
         $monthlyTrendSela = [];
-        
-        $monthsList = [
-            ['year' => 2025, 'month' => 7, 'label' => 'JUL_2025', 'utama_bm' => 96.37, 'sela_bm' => 95.50],
-            ['year' => 2025, 'month' => 8, 'label' => 'AGS_2025', 'utama_bm' => 98.39, 'sela_bm' => 97.20],
-            ['year' => 2025, 'month' => 9, 'label' => 'SEP_2025', 'utama_bm' => 98.75, 'sela_bm' => 98.10],
-            ['year' => 2025, 'month' => 10, 'label' => 'OKT_2025', 'utama_bm' => 96.37, 'sela_bm' => 96.00],
-            ['year' => 2025, 'month' => 11, 'label' => 'NOV_2025', 'utama_bm' => 98.75, 'sela_bm' => 95.63],
-            ['year' => 2025, 'month' => 12, 'label' => 'DES_2025', 'utama_bm' => 97.58, 'sela_bm' => 98.79],
-            ['year' => 2026, 'month' => 1, 'label' => 'JAN_2026', 'utama_bm' => 98.39, 'sela_bm' => 98.19],
-            ['year' => 2026, 'month' => 2, 'label' => 'FEB_2026', 'utama_bm' => 96.88, 'sela_bm' => 96.21],
-            ['year' => 2026, 'month' => 3, 'label' => 'MAR_2026', 'utama_bm' => 99.19, 'sela_bm' => 96.57],
-            ['year' => 2026, 'month' => 4, 'label' => 'APR_2026', 'utama_bm' => 96.67, 'sela_bm' => 97.29],
-            ['year' => 2026, 'month' => 5, 'label' => 'MEI_2026', 'utama_bm' => 95.97, 'sela_bm' => 95.97],
-            ['year' => 2026, 'month' => 6, 'label' => 'JUNI_2026', 'utama_bm' => 97.92, 'sela_bm' => 97.50],
-            ['year' => 2026, 'month' => 7, 'label' => 'JULI_2026', 'utama_bm' => 98.39, 'sela_bm' => 98.59],
-        ];
+        $namaBulanShort = [1 => 'JAN', 2 => 'FEB', 3 => 'MAR', 4 => 'APR', 5 => 'MEI', 6 => 'JUNI', 7 => 'JULI', 8 => 'AGS', 9 => 'SEP', 10 => 'OKT', 11 => 'NOV', 12 => 'DES'];
 
-        foreach ($monthsList as $mItem) {
-            $mYear = $mItem['year'];
-            $mMonth = $mItem['month'];
-            
-            // If month is current selected month, use actual calculated DB pct
-            if ($mYear === $tahun && $mMonth === $bulan) {
-                $monthlyTrendUtama[] = [
-                    'label' => $mItem['label'],
-                    'percentage' => $utamaSummary['timely_pct'],
-                ];
-                $monthlyTrendSela[] = [
-                    'label' => $mItem['label'],
-                    'percentage' => $selaSummary['timely_pct'],
-                ];
-            } else {
-                // Check if DB has data for that month
-                $mDays = Carbon::createFromDate($mYear, $mMonth, 1)->daysInMonth;
-                $mStart = Carbon::createFromDate($mYear, $mMonth, 1)->startOfMonth();
-                $mEnd = Carbon::createFromDate($mYear, $mMonth, $mDays)->endOfMonth();
-                $mCount = DataSinoptik::whereBetween('data_timestamp', [$mStart, $mEnd])->count();
+        for ($i = 11; $i >= 0; $i--) {
+            $dtMonth = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->subMonths($i);
+            $m = (int) $dtMonth->month;
+            $y = (int) $dtMonth->year;
+            $mDays = $dtMonth->daysInMonth;
 
-                if ($mCount > 100) {
-                    // Compute actual DB percentage for this month
-                    $mRecords = DataSinoptik::whereBetween('data_timestamp', [$mStart, $mEnd])->get();
-                    $mMap = [];
-                    foreach ($mRecords as $mr) {
-                        $dt = Carbon::parse($mr->data_timestamp)->setTimezone('UTC');
-                        $mMap[$dt->format('Y-m-d H')] = $mr;
-                    }
-                    $uCount = 0; $sCount = 0;
-                    for ($d = 1; $d <= $mDays; $d++) {
-                        for ($h = 0; $h < 24; $h++) {
-                            $slotTime = Carbon::create($mYear, $mMonth, $d, $h, 0, 0, 'UTC');
-                            $rec = $mMap[$slotTime->format('Y-m-d H')] ?? null;
-                            if ($rec) {
-                                $sentTs = $rec->sent_timestamp ?? $rec->received_timestamp ?? $rec->data_timestamp;
-                                $sentCarbon = Carbon::parse($sentTs)->setTimezone('UTC');
-                                if ($sentCarbon->between($slotTime->copy()->subMinutes(10), $slotTime->copy()->addMinutes(15)->endOfMinute())) {
-                                    if (in_array($h, $utamaHours)) $uCount++; else $sCount++;
-                                }
+            $mStart = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->startOfMonth();
+            $mEnd = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->endOfMonth();
+
+            $mRecs = $allTrendRecords->filter(function ($r) use ($mStart, $mEnd) {
+                $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
+                $dt = Carbon::parse($rawStr, 'UTC');
+                return $dt->gte($mStart) && $dt->lte($mEnd);
+            });
+
+            $label = $namaBulanShort[$m] . '_' . $y;
+            $fullLabel = $namaBulanShort[$m] . ' ' . $y;
+
+            $mMap = [];
+            foreach ($mRecs as $mr) {
+                $rawStr = is_string($mr->data_timestamp) ? $mr->data_timestamp : $mr->data_timestamp->format('Y-m-d H:i:s');
+                $dt = Carbon::parse($rawStr, 'UTC');
+                $mMap[$dt->format('Y-m-d H')] = $mr;
+            }
+
+            $uCount = 0;
+            $sCount = 0;
+            $uTarget = $mDays * 8;
+            $sTarget = $mDays * 16;
+
+            for ($d = 1; $d <= $mDays; $d++) {
+                for ($h = 0; $h < 24; $h++) {
+                    $slotTime = Carbon::create($y, $m, $d, $h, 0, 0, 'UTC');
+                    $rec = $mMap[$slotTime->format('Y-m-d H')] ?? null;
+
+                    if ($rec) {
+                        $windowStart = $slotTime->copy()->subMinutes(10);
+                        $windowEnd = $slotTime->copy()->addMinutes(15)->endOfMinute();
+
+                        $sentTs = $rec->sent_timestamp ?? $rec->received_timestamp ?? $rec->data_timestamp;
+                        $sentCarbon = Carbon::parse(is_string($sentTs) ? $sentTs : $sentTs->format('Y-m-d H:i:s'), 'UTC');
+
+                        if ($sentCarbon->between($windowStart, $windowEnd)) {
+                            if (in_array($h, $utamaHours)) {
+                                $uCount++;
+                            } else {
+                                $sCount++;
                             }
                         }
                     }
-                    $uPct = round(($uCount / ($mDays * 8)) * 100, 2);
-                    $sPct = round(($sCount / ($mDays * 16)) * 100, 2);
-                    $monthlyTrendUtama[] = ['label' => $mItem['label'], 'percentage' => $uPct];
-                    $monthlyTrendSela[] = ['label' => $mItem['label'], 'percentage' => $sPct];
-                } else {
-                    // Fallback to benchmark slide value
-                    $monthlyTrendUtama[] = ['label' => $mItem['label'], 'percentage' => $mItem['utama_bm']];
-                    $monthlyTrendSela[] = ['label' => $mItem['label'], 'percentage' => $mItem['sela_bm']];
                 }
             }
+
+            $hasData = $mRecs->count() > 0;
+            $uPct = ($hasData && $uTarget > 0) ? round(($uCount / $uTarget) * 100, 2) : 0.0;
+            $sPct = ($hasData && $sTarget > 0) ? round(($sCount / $sTarget) * 100, 2) : 0.0;
+
+            $monthlyTrendUtama[] = [
+                'label' => $label,
+                'full_label' => $fullLabel,
+                'percentage' => $uPct,
+                'timely_count' => $uCount,
+                'target_count' => $uTarget,
+                'has_data' => $hasData,
+            ];
+            $monthlyTrendSela[] = [
+                'label' => $label,
+                'full_label' => $fullLabel,
+                'percentage' => $sPct,
+                'timely_count' => $sCount,
+                'target_count' => $sTarget,
+                'has_data' => $hasData,
+            ];
         }
 
         return [

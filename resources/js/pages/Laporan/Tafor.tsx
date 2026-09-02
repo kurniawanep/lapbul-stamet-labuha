@@ -578,43 +578,58 @@ export default function TaforIndex({
                                         <Badge className="bg-sky-400 text-slate-950 font-bold">Trend Bulanan</Badge>
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="p-6 space-y-6">
-                                    {/* Grouped Bar Chart */}
-                                    <div className="h-64 flex items-end justify-between gap-3 pt-8 pb-4 px-2 border-b border-slate-200">
-                                        {dashboardStats.monthlyTrendReport.map((item, idx) => {
-                                            const maxVal = 140;
-                                            const targetHeight = Math.max(10, Math.min(100, (item.target / maxVal) * 100));
-                                            const sentHeight = Math.max(10, Math.min(100, (item.sent / maxVal) * 100));
+                                <CardContent className="p-6 space-y-6 overflow-visible">
+                                    {/* Single Bar Chart: Terkirim & Persentase */}
+                                    <div className="h-72 flex items-end justify-between gap-2 pt-16 pb-4 px-2 border-b border-slate-200 overflow-visible relative">
+                                        {(() => {
+                                            const validPcts = dashboardStats.monthlyTrendReport.filter(i => i.pct > 0).map(i => i.pct);
+                                            const minValPct = validPcts.length > 0 ? Math.max(0, Math.floor(Math.min(...validPcts) - 5)) : 0;
+                                            const pctRange = Math.max(1, 100 - minValPct);
 
-                                            return (
-                                                <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group">
-                                                    {/* Percentage Label */}
-                                                    <span className="text-[10px] font-black text-slate-800 mb-1">
-                                                        {item.pct.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%
-                                                    </span>
+                                            return dashboardStats.monthlyTrendReport.map((item, idx) => {
+                                                const heightPct = item.pct > 0 ? Math.max(8, Math.min(100, ((item.pct - minValPct) / pctRange) * 100)) : 0;
 
-                                                    {/* Dual Bars Container */}
-                                                    <div className="flex items-end gap-1 w-full justify-center">
-                                                        {/* Light Blue Bar (Seharusnya) */}
-                                                        <div
-                                                            style={{ height: `${targetHeight}%` }}
-                                                            className="w-1/2 max-w-[16px] bg-sky-200 rounded-t-sm shadow transition-all relative"
-                                                            title={`Seharusnya: ${item.target}`}
-                                                        />
-                                                        {/* Dark Blue Bar (Terkirim) */}
-                                                        <div
-                                                            style={{ height: `${sentHeight}%` }}
-                                                            className="w-1/2 max-w-[16px] bg-indigo-900 rounded-t-sm shadow hover:bg-indigo-800 transition-all relative"
-                                                            title={`Terkirim: ${item.sent}`}
-                                                        />
+                                                return (
+                                                    <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group relative">
+                                                        {/* FLOATING HOVER TOOLTIP CARD */}
+                                                        <div className="absolute -top-28 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-30 w-44 p-2.5 rounded-xl bg-slate-900/95 text-white shadow-xl backdrop-blur-sm border border-slate-700/50 flex flex-col gap-1 text-xs">
+                                                            <div className="flex items-center justify-between border-b border-slate-700 pb-1 font-bold text-sky-400">
+                                                                <span>{(item as any).full_label || item.label}</span>
+                                                            </div>
+                                                            <div className="space-y-1 text-[11px]">
+                                                                <div className="flex items-center justify-between text-indigo-300">
+                                                                    <span>Ketepatan:</span>
+                                                                    <span className="font-bold">{item.pct.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%</span>
+                                                                </div>
+                                                                <div className="flex items-center justify-between text-slate-300">
+                                                                    <span>Terkirim:</span>
+                                                                    <span className="font-bold">{item.sent} / {item.target} Data</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900/95 rotate-45 border-r border-b border-slate-700/50" />
+                                                        </div>
+
+                                                        {/* Percentage Label */}
+                                                        <span className="text-[10px] font-black text-slate-800 mb-1">
+                                                            {item.pct > 0 ? `${item.pct.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%` : '0%'}
+                                                        </span>
+
+                                                        {/* Single Bar Container */}
+                                                        <div className="w-full max-w-[36px] bg-slate-100 rounded-t-sm flex items-end justify-center h-44 p-0.5">
+                                                            <div
+                                                                style={{ height: `${heightPct}%` }}
+                                                                className={`w-full ${heightPct > 0 ? 'bg-indigo-900 group-hover:bg-indigo-800 group-hover:shadow-[0_0_8px_rgba(49,46,129,0.8)]' : 'bg-slate-200'} rounded-t-sm transition-all duration-300 relative cursor-pointer`}
+                                                                title={`Terkirim: ${item.sent} / ${item.target} (${item.pct}%)`}
+                                                            />
+                                                        </div>
+
+                                                        <span className="text-[10px] font-bold text-slate-600 mt-2 truncate w-full text-center group-hover:text-indigo-600 transition-colors">
+                                                            {item.label}
+                                                        </span>
                                                     </div>
-
-                                                    <span className="text-[11px] font-bold text-slate-600 mt-2 truncate w-full text-center">
-                                                        {item.label}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
+                                                );
+                                            });
+                                        })()}
                                     </div>
 
                                     {/* Table Legend & Values (Matching User Image 1) */}
@@ -669,10 +684,7 @@ export default function TaforIndex({
                                 </CardHeader>
                                 <CardContent className="p-6 space-y-3 font-mono text-xs">
                                     {dashboardStats.monthlyTrendReport.map((item, idx) => {
-                                        const fullMonthName = [
-                                            'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
-                                            'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'
-                                        ][idx] || item.label.toUpperCase();
+                                        const fullMonthName = ((item as any).full_label || item.label).toUpperCase();
 
                                         return (
                                             <div

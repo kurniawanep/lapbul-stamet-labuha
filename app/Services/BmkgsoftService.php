@@ -1853,13 +1853,21 @@ class BmkgsoftService
 
             $m0700 = $row['m_0700ws'] ?? [];
 
-            $opDiffBaca = isset($m0700['op_diff_baca_0700']) ? (float) $m0700['op_diff_baca_0700'] : null;
-            $tAirMax = isset($m0700['t_air_max_0700']) && (float) $m0700['t_air_max_0700'] != 9999 ? (float) $m0700['t_air_max_0700'] : null;
-            $tAirMin = isset($m0700['t_air_min_0700']) && (float) $m0700['t_air_min_0700'] != 9999 ? (float) $m0700['t_air_min_0700'] : null;
-            $tAirAvg = isset($m0700['t_air_avg_0700']) && (float) $m0700['t_air_avg_0700'] != 9999 ? (float) $m0700['t_air_avg_0700'] : null;
-            $rr0700 = isset($m0700['rr_0700']) ? (float) $m0700['rr_0700'] : null;
-            $opEva = isset($m0700['op_eva_0700']) ? (float) $m0700['op_eva_0700'] : null;
-            $wsAvg0c5 = isset($m0700['ws_avg_0c5_0700']) ? (float) $m0700['ws_avg_0c5_0700'] : null;
+            $parsePenguapanVal = function ($val) {
+                if ($val === null || $val === '') return null;
+                $f = (float) $val;
+                if ($f == 9999) return null;
+                if ($f == 8888) return 0.0;
+                return $f;
+            };
+
+            $opDiffBaca = isset($m0700['op_diff_baca_0700']) ? $parsePenguapanVal($m0700['op_diff_baca_0700']) : null;
+            $tAirMax = isset($m0700['t_air_max_0700']) ? $parsePenguapanVal($m0700['t_air_max_0700']) : null;
+            $tAirMin = isset($m0700['t_air_min_0700']) ? $parsePenguapanVal($m0700['t_air_min_0700']) : null;
+            $tAirAvg = isset($m0700['t_air_avg_0700']) ? $parsePenguapanVal($m0700['t_air_avg_0700']) : null;
+            $rr0700 = isset($m0700['rr_0700']) ? $parsePenguapanVal($m0700['rr_0700']) : null;
+            $opEva = isset($m0700['op_eva_0700']) ? $parsePenguapanVal($m0700['op_eva_0700']) : null;
+            $wsAvg0c5 = isset($m0700['ws_avg_0c5_0700']) ? $parsePenguapanVal($m0700['ws_avg_0c5_0700']) : null;
 
             $qcFlag = (int) ($row['qc_flag_op_penguapan'] ?? 0);
             $qcHistories = is_array($row['qc_histories_op_penguapan'] ?? null) ? json_encode($row['qc_histories_op_penguapan']) : ($row['qc_histories_op_penguapan'] ?? null);

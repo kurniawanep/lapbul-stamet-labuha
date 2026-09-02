@@ -27,25 +27,35 @@ class PenguapanDashboardService
         $maxPenguapanDay = null;
         $maxPenguapanVal = -1.0;
 
+        $cleanVal = function ($val) {
+            if ($val === null) return null;
+            $f = (float) $val;
+            if ($f == 8888 || $f == 9999) return 0.0;
+            return $f;
+        };
+
         foreach ($monthRecords as $rec) {
             $rawStr = is_string($rec->data_timestamp) ? $rec->data_timestamp : $rec->data_timestamp->format('Y-m-d H:i:s');
             $day = Carbon::parse($rawStr, 'UTC')->day;
             $recordsMap[$day] = $rec;
 
-            if ($rec->op_eva !== null) {
-                $totalPenguapan += $rec->op_eva;
-                if ($rec->op_eva > $maxPenguapanVal) {
-                    $maxPenguapanVal = $rec->op_eva;
+            $opEvaVal = $cleanVal($rec->op_eva);
+            if ($opEvaVal !== null) {
+                $totalPenguapan += $opEvaVal;
+                if ($opEvaVal > $maxPenguapanVal) {
+                    $maxPenguapanVal = $opEvaVal;
                     $maxPenguapanDay = $day;
                 }
             }
 
-            if ($rec->rr_0700 !== null) {
-                $totalCurahHujan += $rec->rr_0700;
+            $rrVal = $cleanVal($rec->rr_0700);
+            if ($rrVal !== null) {
+                $totalCurahHujan += $rrVal;
             }
 
-            if ($rec->ws_avg_0c5 !== null) {
-                $wsSum += $rec->ws_avg_0c5;
+            $wsVal = $cleanVal($rec->ws_avg_0c5);
+            if ($wsVal !== null) {
+                $wsSum += $wsVal;
                 $wsCount++;
             }
         }
@@ -81,9 +91,9 @@ class PenguapanDashboardService
                 return $dt->gte($mStart) && $dt->lte($mEnd);
             });
 
-            $mEva = round((float) $mRecs->sum('op_eva'), 1);
-            $mRain = round((float) $mRecs->sum('rr_0700'), 1);
-            $mWsAvg = $mRecs->count() > 0 ? round((float) $mRecs->avg('ws_avg_0c5'), 2) : 0.0;
+            $mEva = round((float) $mRecs->sum(fn($r) => $cleanVal($r->op_eva) ?? 0), 1);
+            $mRain = round((float) $mRecs->sum(fn($r) => $cleanVal($r->rr_0700) ?? 0), 1);
+            $mWsAvg = $mRecs->count() > 0 ? round((float) $mRecs->avg(fn($r) => $cleanVal($r->ws_avg_0c5) ?? 0), 2) : 0.0;
 
             $monthlyTrend[] = [
                 'month_num' => $m,

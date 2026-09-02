@@ -188,30 +188,115 @@ class MetarDashboardService
             'missing_pct' => $calcPct($totalMissing, $totalTarget),
         ];
 
-        // Benchmark data matching user's Image 1 & Image 2 (Persentase & Total Keterlambatan METAR 2026)
-        // Image 1: Jan 99.05%, Feb 99.4%, Mar 100%, Apr 100%, Mei 99.6%, Jun 99.8%, Jul 100%
-        // Image 2: Jan 39, Feb 60, Mar 50, Apr 43, Mei 45, Jun 46, Jul 30
-        $monthlyTrendPercentage = [
-            ['label' => 'Januari', 'value' => 99.05],
-            ['label' => 'Februari', 'value' => 99.4],
-            ['label' => 'Maret', 'value' => 100.0],
-            ['label' => 'April', 'value' => 100.0],
-            ['label' => 'Mei', 'value' => 99.6],
-            ['label' => 'Juni', 'value' => 99.8],
-            ['label' => 'Juli', 'value' => $bulan === 7 ? $totalSummary['timely_pct'] : 100.0],
-            ['label' => 'Agustus', 'value' => $bulan === 8 ? $totalSummary['timely_pct'] : 99.8],
+        // Dynamic 12 months trend looking back from selected month/year ($bulan, $tahun) based on real data_metar records
+        $selectedEnd = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->endOfMonth();
+        $trendStart = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->subMonths(11)->startOfMonth();
+
+        $allTrendRecords = DataMetar::whereBetween('data_timestamp', [$trendStart->toDateTimeString(), $selectedEnd->toDateTimeString()])->get();
+
+        $namaBulanShort = [
+            1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr',
+            5 => 'Mei', 6 => 'Jun', 7 => 'Jul', 8 => 'Agu',
+            9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'
         ];
 
-        $monthlyTrendLate = [
-            ['label' => 'Januari', 'value' => 39],
-            ['label' => 'Februari', 'value' => 60],
-            ['label' => 'Maret', 'value' => 50],
-            ['label' => 'April', 'value' => 43],
-            ['label' => 'Mei', 'value' => 45],
-            ['label' => 'Juni', 'value' => 46],
-            ['label' => 'Juli', 'value' => $bulan === 7 ? $totalSummary['late'] : 30],
-            ['label' => 'Agustus', 'value' => $bulan === 8 ? $totalSummary['late'] : 35],
-        ];
+        $monthlyTrendPercentage = [];
+        $monthlyTrendLate = [];
+
+        for ($i = 11; $i >= 0; $i--) {
+            $dtMonth = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->subMonths($i);
+            $m = (int) $dtMonth->month;
+            $y = (int) $dtMonth->year;
+            $mDays = $dtMonth->daysInMonth;
+
+            $mStart = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->startOfMonth();
+            $mEnd = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->endOfMonth();
+
+            $mRecs = $allTrendRecords->filter(function ($r) use ($mStart, $mEnd) {
+                $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
+                $dt = Carbon::parse($rawStr, 'UTC');
+                return $dt->gte($mStart) && $dt->lte($mEnd);
+            });
+
+            $label = $namaBulanShort[$m] . ' ' . substr((string) $y, 2);
+            $fullLabel = $namaBulanShort[$m] . ' ' . $y;
+
+            if ($mRecs->isEmpty()) {
+                $monthlyTrendPercentage[] = [
+                    'label' => $label,
+                    'full_label' => $fullLabel,
+                    'value' => 0,
+                    'timely_count' => 0,
+                    'target_count' => $mDays * 24,
+                    'has_data' => false,
+                ];
+                $monthlyTrendLate[] = [
+                    'label' => $label,
+                    'full_label' => $fullLabel,
+                    'value' => 0,
+                    'target_count' => $mDays * 24,
+                    'has_data' => false,
+                ];
+                continue;
+            }
+
+            $mMap = [];
+            foreach ($mRecs as $r) {
+                $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
+                $dt = Carbon::parse($rawStr, 'UTC');
+                $keyMinute = $dt->format('Y-m-d H:i');
+                $keyHour = $dt->format('Y-m-d H');
+                $mMap[$keyMinute] = $r;
+                if (!isset($mMap[$keyHour])) {
+                    $mMap[$keyHour] = $r;
+                }
+            }
+
+            $mTarget = $mDays * 24;
+            $mTimely = 0;
+            $mLate = 0;
+
+            for ($d = 1; $d <= $mDays; $d++) {
+                for ($h = 0; $h < 24; $h++) {
+                    $slotTime = Carbon::create($y, $m, $d, $h, 0, 0, 'UTC');
+                    $slotKeyMinute = $slotTime->format('Y-m-d H:i');
+                    $slotKeyHour = $slotTime->format('Y-m-d H');
+                    $rec = $mMap[$slotKeyMinute] ?? ($mMap[$slotKeyHour] ?? null);
+
+                    if ($rec) {
+                        $windowStart = $slotTime->copy()->subMinutes(2);
+                        $windowEnd = $slotTime->copy()->addMinutes(2)->endOfMinute();
+
+                        $sentTs = $rec->sent_timestamp ?? $rec->received_timestamp ?? $rec->data_timestamp ?? null;
+                        $sentCarbon = $sentTs ? Carbon::parse(is_string($sentTs) ? $sentTs : $sentTs->format('Y-m-d H:i:s'), 'UTC') : null;
+
+                        if ($sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
+                            $mTimely++;
+                        } elseif ($sentCarbon && $sentCarbon->gt($windowEnd)) {
+                            $mLate++;
+                        }
+                    }
+                }
+            }
+
+            $pct = $mTarget > 0 ? round(($mTimely / $mTarget) * 100, 2) : 0;
+
+            $monthlyTrendPercentage[] = [
+                'label' => $label,
+                'full_label' => $fullLabel,
+                'value' => $pct,
+                'timely_count' => $mTimely,
+                'target_count' => $mTarget,
+                'has_data' => true,
+            ];
+            $monthlyTrendLate[] = [
+                'label' => $label,
+                'full_label' => $fullLabel,
+                'value' => $mLate,
+                'target_count' => $mTarget,
+                'has_data' => true,
+            ];
+        }
 
         return [
             'manualSummary' => $manualSummary,

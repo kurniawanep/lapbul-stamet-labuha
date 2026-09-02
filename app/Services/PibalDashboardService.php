@@ -242,22 +242,91 @@ class PibalDashboardService
             'missing_pct' => $totalTarget > 0 ? round(($totalMissing / $totalTarget) * 100, 2) : 0,
         ];
 
-        // Benchmark monthly trend list for Image 3
-        $monthlyTrend = [
-            ['label' => 'JUL 2025', 'series1' => 38.71, 'series2' => 29.03],
-            ['label' => 'AGS 2025', 'series1' => 38.71, 'series2' => 29.03],
-            ['label' => 'SEP 2025', 'series1' => 63.33, 'series2' => 36.67],
-            ['label' => 'OKT 2025', 'series1' => 67.74, 'series2' => 51.61],
-            ['label' => 'NOV 2025', 'series1' => 80.00, 'series2' => 63.33],
-            ['label' => 'DES 2025', 'series1' => 64.52, 'series2' => 51.61],
-            ['label' => 'JAN 2026', 'series1' => 87.10, 'series2' => 74.19],
-            ['label' => 'FEB 2026', 'series1' => 78.57, 'series2' => 89.29],
-            ['label' => 'MAR 2026', 'series1' => 78.57, 'series2' => 89.29],
-            ['label' => 'APR 2026', 'series1' => 80.00, 'series2' => 90.00],
-            ['label' => 'MEI 2026', 'series1' => 80.65, 'series2' => 58.06],
-            ['label' => 'JUNI 2026', 'series1' => 73.33, 'series2' => 63.33],
-            ['label' => 'JULI 2026', 'series1' => $summary00['timely_pct'], 'series2' => $summary12['timely_pct']],
-        ];
+        // Dynamic 12 months trend looking back from selected ($bulan, $tahun)
+        $selectedEnd = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->endOfMonth();
+        $trendStart = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->subMonths(11)->startOfMonth();
+
+        $allYearRecords = DataPibal::whereBetween('data_timestamp', [$trendStart->toDateTimeString(), $selectedEnd->toDateTimeString()])->get();
+
+        $monthlyTrend = [];
+        $namaBulanShort = [1 => 'JAN', 2 => 'FEB', 3 => 'MAR', 4 => 'APR', 5 => 'MEI', 6 => 'JUNI', 7 => 'JULI', 8 => 'AGS', 9 => 'SEP', 10 => 'OKT', 11 => 'NOV', 12 => 'DES'];
+
+        for ($i = 11; $i >= 0; $i--) {
+            $dtMonth = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->subMonths($i);
+            $m = (int) $dtMonth->month;
+            $y = (int) $dtMonth->year;
+            $mDays = $dtMonth->daysInMonth;
+
+            $mStart = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->startOfMonth();
+            $mEnd = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->endOfMonth();
+
+            $mRecs = $allYearRecords->filter(function ($r) use ($mStart, $mEnd) {
+                $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
+                $dt = Carbon::parse($rawStr, 'UTC');
+                return $dt->gte($mStart) && $dt->lte($mEnd);
+            });
+
+            $pibalMap = [];
+            foreach ($mRecs as $r) {
+                $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
+                $dt = Carbon::parse($rawStr, 'UTC');
+                $key = $dt->format('Y-m-d H');
+                $pibalMap[$key] = $r;
+            }
+
+            $timely00 = 0;
+            $target00 = $mDays * 2; // PPAA 00 & PPBB 00
+
+            $timely12 = 0;
+            $target12 = $mDays * 2; // PPAA 12 & PPBB 12
+
+            for ($d = 1; $d <= $mDays; $d++) {
+                foreach ([0, 12] as $h) {
+                    $slotTime = Carbon::create($y, $m, $d, $h, 0, 0, 'UTC');
+                    $slotKey = $slotTime->format('Y-m-d H');
+                    $rec = $pibalMap[$slotKey] ?? null;
+
+                    $windowStart = $slotTime->copy()->subMinutes(10);
+                    $windowEnd = $slotTime->copy()->addMinutes(45)->endOfMinute();
+
+                    $sandi = strtoupper($rec->sandi_pibal ?? '');
+                    $hasPpaa = $rec && ($sandi === '' || str_contains($sandi, 'PPAA') || str_contains($sandi, 'NIL'));
+                    $hasPpbb = $rec && ($sandi === '' || str_contains($sandi, 'PPBB') || str_contains($sandi, 'NIL'));
+
+                    $sentTs = $rec->sent_timestamp ?? $rec->received_timestamp ?? $rec->data_timestamp ?? null;
+                    $sentCarbon = $sentTs ? Carbon::parse(is_string($sentTs) ? $sentTs : $sentTs->format('Y-m-d H:i:s'), 'UTC') : null;
+
+                    if ($h === 0) {
+                        if ($rec && $hasPpaa && $sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
+                            $timely00++;
+                        }
+                        if ($rec && $hasPpbb && $sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
+                            $timely00++;
+                        }
+                    } else {
+                        if ($rec && $hasPpaa && $sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
+                            $timely12++;
+                        }
+                        if ($rec && $hasPpbb && $sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
+                            $timely12++;
+                        }
+                    }
+                }
+            }
+
+            $hasData = $mRecs->count() > 0;
+            $pct00 = ($hasData && $target00 > 0) ? round(($timely00 / $target00) * 100, 2) : 0.0;
+            $pct12 = ($hasData && $target12 > 0) ? round(($timely12 / $target12) * 100, 2) : 0.0;
+
+            $label = $namaBulanShort[$m] . ' ' . $y;
+
+            $monthlyTrend[] = [
+                'label' => $label,
+                'series1' => $pct00,
+                'series2' => $pct12,
+                'has_data' => $hasData,
+            ];
+        }
 
         return [
             'summary00' => $summary00,

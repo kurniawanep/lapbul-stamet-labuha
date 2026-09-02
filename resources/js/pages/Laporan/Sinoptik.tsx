@@ -561,36 +561,61 @@ export default function SinoptikIndex({
 
                         {/* CHART SECTION 2: Monthly Trends Bar Charts (Images 4 & 5) */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {/* Bar Chart 1: Jam Penting */}
+                            {/* Bar Chart 1: Jam Penting / Utama */}
                             <Card className="border border-slate-200 shadow-md bg-white overflow-hidden">
                                 <CardHeader className="bg-slate-900 text-white p-4">
                                     <CardTitle className="text-base font-bold flex items-center gap-2">
                                         <BarChart3 className="h-5 w-5 text-sky-400" />
-                                        Persentase Pengiriman SYNOP Jam Penting (Tepat Waktu)
+                                        Persentase Pengiriman SYNOP Jam Utama (Tepat Waktu)
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="p-6">
-                                    <div className="h-64 flex items-end justify-between gap-1.5 pt-8 pb-4 px-2 border-b border-slate-200 overflow-x-auto">
-                                        {dashboardStats.monthlyTrendUtama.map((item, idx) => {
-                                            const pct = item.percentage;
-                                            const barHeight = Math.max(10, ((pct - 90) / 10) * 100);
-                                            return (
-                                                <div key={idx} className="flex-1 flex flex-col items-center min-w-[32px] group">
-                                                    <span className="text-[10px] font-extrabold text-slate-800 mb-1 group-hover:scale-110 transition-transform">
-                                                        {pct.toLocaleString('id-ID')}
-                                                    </span>
-                                                    <div className="w-full max-w-[28px] bg-slate-100 rounded-t-sm flex items-end h-44 p-0.5">
-                                                        <div
-                                                            className="w-full bg-blue-600 group-hover:bg-blue-500 rounded-t-sm transition-all duration-500"
-                                                            style={{ height: `${barHeight}%` }}
-                                                        />
+                                <CardContent className="p-6 overflow-visible">
+                                    <div className="h-72 flex items-end justify-between gap-1.5 pt-16 pb-4 px-2 border-b border-slate-200 overflow-visible relative">
+                                        {(() => {
+                                            const validPcts = dashboardStats.monthlyTrendUtama.filter(i => i.percentage > 0).map(i => i.percentage);
+                                            const minValPct = validPcts.length > 0 ? Math.max(0, Math.floor(Math.min(...validPcts) - 5)) : 0;
+                                            const pctRange = Math.max(1, 100 - minValPct);
+
+                                            return dashboardStats.monthlyTrendUtama.map((item, idx) => {
+                                                const pct = item.percentage;
+                                                const barHeight = pct > 0 ? Math.max(8, Math.min(100, ((pct - minValPct) / pctRange) * 100)) : 0;
+
+                                                return (
+                                                    <div key={idx} className="flex-1 flex flex-col items-center min-w-[32px] group relative">
+                                                        {/* FLOATING HOVER TOOLTIP CARD */}
+                                                        <div className="absolute -top-28 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-30 w-44 p-2.5 rounded-xl bg-slate-900/95 text-white shadow-xl backdrop-blur-sm border border-slate-700/50 flex flex-col gap-1 text-xs">
+                                                            <div className="flex items-center justify-between border-b border-slate-700 pb-1 font-bold text-sky-400">
+                                                                <span>{item.full_label || item.label}</span>
+                                                            </div>
+                                                            <div className="space-y-1 text-[11px]">
+                                                                <div className="flex items-center justify-between text-sky-300">
+                                                                    <span>Ketepatan:</span>
+                                                                    <span className="font-bold">{pct.toLocaleString('id-ID')}%</span>
+                                                                </div>
+                                                                <div className="flex items-center justify-between text-slate-300">
+                                                                    <span>Tepat Waktu:</span>
+                                                                    <span className="font-bold">{item.timely_count || 0} / {item.target_count || 248}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900/95 rotate-45 border-r border-b border-slate-700/50" />
+                                                        </div>
+
+                                                        <span className="text-[10px] font-extrabold text-slate-800 mb-1 group-hover:scale-110 transition-transform">
+                                                            {pct > 0 ? pct.toLocaleString('id-ID') : '0'}
+                                                        </span>
+                                                        <div className="w-full max-w-[28px] bg-slate-100 rounded-t-sm flex items-end h-44 p-0.5">
+                                                            <div
+                                                                className={`w-full ${barHeight > 0 ? 'bg-blue-600 group-hover:bg-blue-500 group-hover:shadow-[0_0_8px_rgba(37,99,235,0.8)]' : 'bg-slate-200'} rounded-t-sm transition-all duration-300 cursor-pointer`}
+                                                                style={{ height: `${barHeight}%` }}
+                                                            />
+                                                        </div>
+                                                        <span className="text-[9px] font-bold text-slate-500 mt-2 truncate w-full text-center group-hover:text-blue-600 transition-colors">
+                                                            {item.label}
+                                                        </span>
                                                     </div>
-                                                    <span className="text-[9px] font-bold text-slate-500 mt-2 truncate w-full text-center">
-                                                        {item.label}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
+                                                );
+                                            });
+                                        })()}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -603,28 +628,53 @@ export default function SinoptikIndex({
                                         Persentase Pengiriman SYNOP Jam Sela (Tepat Waktu)
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="p-6">
-                                    <div className="h-64 flex items-end justify-between gap-1.5 pt-8 pb-4 px-2 border-b border-slate-200 overflow-x-auto">
-                                        {dashboardStats.monthlyTrendSela.map((item, idx) => {
-                                            const pct = item.percentage;
-                                            const barHeight = Math.max(10, ((pct - 90) / 10) * 100);
-                                            return (
-                                                <div key={idx} className="flex-1 flex flex-col items-center min-w-[32px] group">
-                                                    <span className="text-[10px] font-extrabold text-slate-800 mb-1 group-hover:scale-110 transition-transform">
-                                                        {pct.toLocaleString('id-ID')}
-                                                    </span>
-                                                    <div className="w-full max-w-[28px] bg-slate-100 rounded-t-sm flex items-end h-44 p-0.5">
-                                                        <div
-                                                            className="w-full bg-blue-600 group-hover:bg-blue-500 rounded-t-sm transition-all duration-500"
-                                                            style={{ height: `${barHeight}%` }}
-                                                        />
+                                <CardContent className="p-6 overflow-visible">
+                                    <div className="h-72 flex items-end justify-between gap-1.5 pt-16 pb-4 px-2 border-b border-slate-200 overflow-visible relative">
+                                        {(() => {
+                                            const validPcts = dashboardStats.monthlyTrendSela.filter(i => i.percentage > 0).map(i => i.percentage);
+                                            const minValPct = validPcts.length > 0 ? Math.max(0, Math.floor(Math.min(...validPcts) - 5)) : 0;
+                                            const pctRange = Math.max(1, 100 - minValPct);
+
+                                            return dashboardStats.monthlyTrendSela.map((item, idx) => {
+                                                const pct = item.percentage;
+                                                const barHeight = pct > 0 ? Math.max(8, Math.min(100, ((pct - minValPct) / pctRange) * 100)) : 0;
+
+                                                return (
+                                                    <div key={idx} className="flex-1 flex flex-col items-center min-w-[32px] group relative">
+                                                        {/* FLOATING HOVER TOOLTIP CARD */}
+                                                        <div className="absolute -top-28 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-30 w-44 p-2.5 rounded-xl bg-slate-900/95 text-white shadow-xl backdrop-blur-sm border border-slate-700/50 flex flex-col gap-1 text-xs">
+                                                            <div className="flex items-center justify-between border-b border-slate-700 pb-1 font-bold text-sky-400">
+                                                                <span>{item.full_label || item.label}</span>
+                                                            </div>
+                                                            <div className="space-y-1 text-[11px]">
+                                                                <div className="flex items-center justify-between text-sky-300">
+                                                                    <span>Ketepatan:</span>
+                                                                    <span className="font-bold">{pct.toLocaleString('id-ID')}%</span>
+                                                                </div>
+                                                                <div className="flex items-center justify-between text-slate-300">
+                                                                    <span>Tepat Waktu:</span>
+                                                                    <span className="font-bold">{item.timely_count || 0} / {item.target_count || 496}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900/95 rotate-45 border-r border-b border-slate-700/50" />
+                                                        </div>
+
+                                                        <span className="text-[10px] font-extrabold text-slate-800 mb-1 group-hover:scale-110 transition-transform">
+                                                            {pct > 0 ? pct.toLocaleString('id-ID') : '0'}
+                                                        </span>
+                                                        <div className="w-full max-w-[28px] bg-slate-100 rounded-t-sm flex items-end h-44 p-0.5">
+                                                            <div
+                                                                className={`w-full ${barHeight > 0 ? 'bg-blue-600 group-hover:bg-blue-500 group-hover:shadow-[0_0_8px_rgba(37,99,235,0.8)]' : 'bg-slate-200'} rounded-t-sm transition-all duration-300 cursor-pointer`}
+                                                                style={{ height: `${barHeight}%` }}
+                                                            />
+                                                        </div>
+                                                        <span className="text-[9px] font-bold text-slate-500 mt-2 truncate w-full text-center group-hover:text-blue-600 transition-colors">
+                                                            {item.label}
+                                                        </span>
                                                     </div>
-                                                    <span className="text-[9px] font-bold text-slate-500 mt-2 truncate w-full text-center">
-                                                        {item.label}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
+                                                );
+                                            });
+                                        })()}
                                     </div>
                                 </CardContent>
                             </Card>

@@ -619,36 +619,55 @@ export default function PibalIndex({
                                     </div>
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="p-6">
-                                <div className="h-72 flex items-end justify-between gap-2 pt-8 pb-4 px-2 border-b border-slate-200 overflow-x-auto">
+                            <CardContent className="p-6 space-y-6 overflow-visible">
+                                <div className="h-72 flex items-end justify-between gap-2 pt-16 pb-4 px-2 border-b border-slate-200 overflow-visible relative">
                                     {dashboardStats.monthlyTrend.map((item, idx) => {
-                                        const h1 = Math.max(8, (item.series1 / 100) * 100);
-                                        const h2 = Math.max(8, (item.series2 / 100) * 100);
+                                        const h1 = item.series1 > 0 ? Math.max(6, (item.series1 / 100) * 100) : 0;
+                                        const h2 = item.series2 > 0 ? Math.max(6, (item.series2 / 100) * 100) : 0;
 
                                         return (
-                                            <div key={idx} className="flex-1 flex flex-col items-center min-w-[48px] group">
+                                            <div key={idx} className="flex-1 flex flex-col items-center min-w-[48px] group relative">
+                                                {/* FLOATING HOVER TOOLTIP CARD */}
+                                                <div className="absolute -top-28 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-30 w-44 p-2.5 rounded-xl bg-slate-900/95 text-white shadow-xl backdrop-blur-sm border border-slate-700/50 flex flex-col gap-1 text-xs">
+                                                    <div className="flex items-center justify-between border-b border-slate-700 pb-1 font-bold text-sky-400">
+                                                        <span>{item.label}</span>
+                                                    </div>
+                                                    <div className="space-y-1 text-[11px]">
+                                                        <div className="flex items-center justify-between text-blue-300">
+                                                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block"/> 00.00 UTC:</span>
+                                                            <span className="font-bold">{item.series1.toLocaleString('id-ID')}%</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-amber-300">
+                                                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block"/> 12.00 UTC:</span>
+                                                            <span className="font-bold">{item.series2.toLocaleString('id-ID')}%</span>
+                                                        </div>
+                                                    </div>
+                                                    {/* Tooltip pointer arrow */}
+                                                    <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900/95 rotate-45 border-r border-b border-slate-700/50" />
+                                                </div>
+
                                                 {/* Value Labels */}
                                                 <div className="flex items-center gap-1 mb-1 text-[9px] font-extrabold">
-                                                    <span className="text-blue-700">{item.series1.toLocaleString('id-ID')}</span>
+                                                    <span className="text-blue-700">{item.series1 > 0 ? item.series1.toLocaleString('id-ID') : '0'}</span>
                                                     <span className="text-slate-300">/</span>
-                                                    <span className="text-amber-700">{item.series2.toLocaleString('id-ID')}</span>
+                                                    <span className="text-amber-700">{item.series2 > 0 ? item.series2.toLocaleString('id-ID') : '0'}</span>
                                                 </div>
 
                                                 {/* Dual Bar Pair */}
-                                                <div className="w-full bg-slate-100 rounded-t-sm flex items-end justify-center gap-0.5 h-48 p-0.5">
+                                                <div className="w-full bg-slate-100 rounded-t-sm flex items-end justify-center gap-0.5 h-44 p-0.5">
                                                     <div
-                                                        className="flex-1 bg-blue-600 group-hover:bg-blue-500 rounded-t-sm transition-all duration-500"
+                                                        className={`flex-1 ${h1 > 0 ? 'bg-blue-600 group-hover:bg-blue-500 group-hover:shadow-[0_0_8px_rgba(37,99,235,0.8)]' : 'bg-slate-200'} rounded-t-sm transition-all duration-300 cursor-pointer`}
                                                         style={{ height: `${h1}%` }}
                                                         title={`00.00 UTC: ${item.series1}%`}
                                                     />
                                                     <div
-                                                        className="flex-1 bg-amber-600 group-hover:bg-amber-500 rounded-t-sm transition-all duration-500"
+                                                        className={`flex-1 ${h2 > 0 ? 'bg-amber-600 group-hover:bg-amber-500 group-hover:shadow-[0_0_8px_rgba(217,119,6,0.8)]' : 'bg-slate-200'} rounded-t-sm transition-all duration-300 cursor-pointer`}
                                                         style={{ height: `${h2}%` }}
                                                         title={`12.00 UTC: ${item.series2}%`}
                                                     />
                                                 </div>
 
-                                                <span className="text-[9px] font-bold text-slate-500 mt-2 truncate w-full text-center">
+                                                <span className="text-[9px] font-bold text-slate-500 mt-2 truncate w-full text-center group-hover:text-blue-600 transition-colors">
                                                     {item.label}
                                                 </span>
                                             </div>

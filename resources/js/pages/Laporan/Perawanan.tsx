@@ -319,45 +319,73 @@ export default function PerawananIndex() {
                                 <Badge className="bg-sky-400 text-slate-950 font-bold">12 Bulan</Badge>
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="p-6 space-y-6">
+                        <CardContent className="p-6 space-y-6 overflow-visible">
                             {/* Grouped Bar Chart */}
-                            <div className="h-64 flex items-end justify-between gap-2 pt-8 pb-4 px-2 border-b border-slate-200">
+                            <div className="h-72 flex items-end justify-between gap-2 pt-16 pb-4 px-2 border-b border-slate-200 overflow-visible relative">
                                 {dashboardStats.monthly_trend.map((item) => {
                                     const maxVal = 744; // 31 days * 24 hours
-                                    const clearH = Math.max(4, (item.clear / maxVal) * 100);
-                                    const partlyH = Math.max(4, (item.partly_cloudy / maxVal) * 100);
-                                    const cloudyH = Math.max(4, (item.cloudy / maxVal) * 100);
-                                    const totallyH = Math.max(4, (item.totally_cloudy / maxVal) * 100);
+                                    const clearH = Math.max(item.clear > 0 ? 4 : 0, (item.clear / maxVal) * 100);
+                                    const partlyH = Math.max(item.partly_cloudy > 0 ? 4 : 0, (item.partly_cloudy / maxVal) * 100);
+                                    const cloudyH = Math.max(item.cloudy > 0 ? 4 : 0, (item.cloudy / maxVal) * 100);
+                                    const totallyH = Math.max(item.totally_cloudy > 0 ? 4 : 0, (item.totally_cloudy / maxVal) * 100);
 
                                     return (
-                                        <div key={item.month_num} className="flex-1 flex flex-col items-center gap-2 group">
-                                            <div className="w-full flex items-end justify-center gap-0.5 h-48">
+                                        <div key={item.month_num} className="flex-1 flex flex-col items-center gap-2 group relative">
+                                            {/* FLOATING HOVER TOOLTIP CARD */}
+                                            <div className="absolute -top-36 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-30 w-48 p-3 rounded-xl bg-slate-900/95 text-white shadow-xl backdrop-blur-sm border border-slate-700/50 flex flex-col gap-1.5 text-xs">
+                                                <div className="flex items-center justify-between border-b border-slate-700 pb-1 font-bold text-sky-400">
+                                                    <span>{item.month_name} {tahun}</span>
+                                                    <span className="text-[10px] text-slate-400">{item.days_reported}/{item.target_days} Hari</span>
+                                                </div>
+                                                <div className="space-y-1 text-[11px]">
+                                                    <div className="flex items-center justify-between text-amber-300">
+                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/> Cerah:</span>
+                                                        <span className="font-bold">{item.clear} jam</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-sky-300">
+                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400 inline-block"/> Cerah Berawan:</span>
+                                                        <span className="font-bold">{item.partly_cloudy} jam</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-blue-300">
+                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block"/> Berawan:</span>
+                                                        <span className="font-bold">{item.cloudy} jam</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-slate-300">
+                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-400 inline-block"/> Mendung:</span>
+                                                        <span className="font-bold">{item.totally_cloudy} jam</span>
+                                                    </div>
+                                                </div>
+                                                {/* Tooltip pointer arrow */}
+                                                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900/95 rotate-45 border-r border-b border-slate-700/50" />
+                                            </div>
+
+                                            <div className="w-full flex items-end justify-center gap-1 h-44 relative">
                                                 {/* Clear bar */}
                                                 <div
                                                     style={{ height: `${clearH}%` }}
-                                                    className="w-1.5 bg-amber-400 rounded-t-sm transition-all group-hover:brightness-110"
-                                                    title={`${item.month_name}: Cerah ${item.clear}j`}
+                                                    className="w-2 bg-amber-400 rounded-t-sm transition-all group-hover:bg-amber-300 group-hover:shadow-[0_0_8px_rgba(251,191,36,0.8)] cursor-pointer"
+                                                    title={`${item.month_name}: Cerah ${item.clear} jam`}
                                                 />
                                                 {/* Partly Cloudy bar */}
                                                 <div
                                                     style={{ height: `${partlyH}%` }}
-                                                    className="w-1.5 bg-sky-400 rounded-t-sm transition-all group-hover:brightness-110"
-                                                    title={`${item.month_name}: Cerah Berawan ${item.partly_cloudy}j`}
+                                                    className="w-2 bg-sky-400 rounded-t-sm transition-all group-hover:bg-sky-300 group-hover:shadow-[0_0_8px_rgba(56,189,248,0.8)] cursor-pointer"
+                                                    title={`${item.month_name}: Cerah Berawan ${item.partly_cloudy} jam`}
                                                 />
                                                 {/* Cloudy bar */}
                                                 <div
                                                     style={{ height: `${cloudyH}%` }}
-                                                    className="w-1.5 bg-blue-600 rounded-t-sm transition-all group-hover:brightness-110"
-                                                    title={`${item.month_name}: Berawan ${item.cloudy}j`}
+                                                    className="w-2 bg-blue-600 rounded-t-sm transition-all group-hover:bg-blue-400 group-hover:shadow-[0_0_8px_rgba(37,99,235,0.8)] cursor-pointer"
+                                                    title={`${item.month_name}: Berawan ${item.cloudy} jam`}
                                                 />
                                                 {/* Totally Cloudy bar */}
                                                 <div
                                                     style={{ height: `${totallyH}%` }}
-                                                    className="w-1.5 bg-slate-700 rounded-t-sm transition-all group-hover:brightness-110"
-                                                    title={`${item.month_name}: Mendung ${item.totally_cloudy}j`}
+                                                    className="w-2 bg-slate-700 rounded-t-sm transition-all group-hover:bg-slate-500 group-hover:shadow-[0_0_8px_rgba(100,116,139,0.8)] cursor-pointer"
+                                                    title={`${item.month_name}: Mendung ${item.totally_cloudy} jam`}
                                                 />
                                             </div>
-                                            <span className="text-[11px] font-bold text-slate-600 group-hover:text-sky-600">
+                                            <span className="text-[11px] font-bold text-slate-600 group-hover:text-sky-600 transition-colors">
                                                 {item.month_name}
                                             </span>
                                         </div>

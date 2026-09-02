@@ -327,9 +327,9 @@ export default function PenguapanIndex() {
                                 <Badge className="bg-teal-400 text-slate-950 font-bold">12 Bulan</Badge>
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="p-6 space-y-6">
+                        <CardContent className="p-6 space-y-6 overflow-visible">
                             {/* Bar Chart */}
-                            <div className="h-64 flex items-end justify-between gap-2 pt-8 pb-4 px-2 border-b border-slate-200">
+                            <div className="h-72 flex items-end justify-between gap-2 pt-16 pb-4 px-2 border-b border-slate-200 overflow-visible relative">
                                 {(() => {
                                     const maxVal = Math.max(
                                         50,
@@ -345,22 +345,42 @@ export default function PenguapanIndex() {
                                         const rainH = Math.min(100, Math.max(rainVal > 0 ? 3 : 0, (rainVal / maxVal) * 100));
 
                                         return (
-                                            <div key={item.month_num} className="flex-1 flex flex-col items-center gap-2 group">
-                                                <div className="w-full flex items-end justify-center gap-1.5 h-48 relative overflow-hidden rounded-b-md">
+                                            <div key={item.month_num} className="flex-1 flex flex-col items-center gap-2 group relative">
+                                                {/* FLOATING HOVER TOOLTIP CARD */}
+                                                <div className="absolute -top-28 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-30 w-48 p-3 rounded-xl bg-slate-900/95 text-white shadow-xl backdrop-blur-sm border border-slate-700/50 flex flex-col gap-1.5 text-xs">
+                                                    <div className="flex items-center justify-between border-b border-slate-700 pb-1 font-bold text-teal-400">
+                                                        <span>{item.month_name} {tahun}</span>
+                                                        <span className="text-[10px] text-slate-400">{item.days_reported}/{item.target_days} Hari</span>
+                                                    </div>
+                                                    <div className="space-y-1 text-[11px]">
+                                                        <div className="flex items-center justify-between text-teal-300">
+                                                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-teal-400 inline-block"/> Penguapan:</span>
+                                                            <span className="font-bold">{evaVal} mm</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-sky-300">
+                                                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400 inline-block"/> Curah Hujan:</span>
+                                                            <span className="font-bold">{rainVal} mm</span>
+                                                        </div>
+                                                    </div>
+                                                    {/* Tooltip pointer arrow */}
+                                                    <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900/95 rotate-45 border-r border-b border-slate-700/50" />
+                                                </div>
+
+                                                <div className="w-full flex items-end justify-center gap-1.5 h-44 relative">
                                                     {/* Evaporation Bar */}
                                                     <div
                                                         style={{ height: `${evaH}%` }}
-                                                        className="w-3 bg-teal-500 rounded-t-sm transition-all group-hover:brightness-110 shadow-sm"
+                                                        className="w-3.5 bg-teal-500 rounded-t-sm transition-all group-hover:bg-teal-400 group-hover:shadow-[0_0_10px_rgba(20,184,166,0.8)] cursor-pointer shadow-sm"
                                                         title={`${item.month_name}: Penguapan ${evaVal} mm`}
                                                     />
                                                     {/* Rainfall Bar */}
                                                     <div
                                                         style={{ height: `${rainH}%` }}
-                                                        className="w-3 bg-sky-400 rounded-t-sm transition-all group-hover:brightness-110 shadow-sm"
+                                                        className="w-3.5 bg-sky-400 rounded-t-sm transition-all group-hover:bg-sky-300 group-hover:shadow-[0_0_10px_rgba(56,189,248,0.8)] cursor-pointer shadow-sm"
                                                         title={`${item.month_name}: Curah Hujan ${rainVal} mm`}
                                                     />
                                                 </div>
-                                                <span className="text-[11px] font-bold text-slate-600 group-hover:text-teal-600">
+                                                <span className="text-[11px] font-bold text-slate-600 group-hover:text-teal-600 transition-colors">
                                                     {item.month_name}
                                                 </span>
                                             </div>
@@ -526,6 +546,7 @@ export default function PenguapanIndex() {
                                             const rowNum = (penguapanRecords.current_page - 1) * penguapanRecords.per_page + idx + 1;
                                             const observerDisplay = item.pegawai?.nama || item.observer_name || 'Unassigned';
                                             const dtDisplay = formatDateTimeDisplay(item.data_timestamp);
+                                            const renderVal = (v: number | null) => (v === null || v === undefined ? '-' : v === 8888 ? 0 : v);
 
                                             return (
                                                 <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors">
@@ -539,16 +560,16 @@ export default function PenguapanIndex() {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-center font-mono font-bold text-teal-700 border-r border-slate-100">
-                                                        {item.op_diff_baca ?? '-'}
+                                                        {renderVal(item.op_diff_baca)}
                                                     </TableCell>
                                                     <TableCell className="text-center font-mono font-bold text-emerald-700 border-r border-slate-100">
-                                                        {item.op_eva ?? '-'}
+                                                        {renderVal(item.op_eva)}
                                                     </TableCell>
                                                     <TableCell className="text-center font-mono font-bold text-sky-700 border-r border-slate-100">
-                                                        {item.rr_0700 ?? '-'}
+                                                        {renderVal(item.rr_0700)}
                                                     </TableCell>
                                                     <TableCell className="text-center font-mono font-bold text-indigo-700 border-r border-slate-100">
-                                                        {item.ws_avg_0c5 ?? '-'}
+                                                        {renderVal(item.ws_avg_0c5)}
                                                     </TableCell>
                                                     <TableCell className="font-semibold text-slate-900 border-r border-slate-100">
                                                         {observerDisplay}

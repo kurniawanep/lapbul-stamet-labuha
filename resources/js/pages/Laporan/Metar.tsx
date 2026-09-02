@@ -582,29 +582,50 @@ export default function MetarIndex({
                                         <Badge className="bg-amber-400 text-slate-950 font-bold">% Ketepatan</Badge>
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="p-6">
-                                    <div className="h-64 flex items-end justify-between gap-3 pt-8 pb-4 px-2 border-b border-slate-200">
-                                        {dashboardStats.monthlyTrendPercentage.map((item, idx) => {
-                                            const minVal = 98.4;
-                                            const maxVal = 100.2;
-                                            const pctRange = maxVal - minVal;
-                                            const heightPct = Math.max(10, Math.min(100, ((item.value - minVal) / pctRange) * 100));
+                                <CardContent className="p-6 overflow-visible">
+                                    <div className="h-72 flex items-end justify-between gap-2 pt-16 pb-4 px-2 border-b border-slate-200 overflow-visible relative">
+                                        {(() => {
+                                            const validPcts = dashboardStats.monthlyTrendPercentage.filter(i => i.value > 0).map(i => i.value);
+                                            const minValPct = validPcts.length > 0 ? Math.max(0, Math.floor(Math.min(...validPcts) - 5)) : 0;
+                                            const pctRange = Math.max(1, 100 - minValPct);
 
-                                            return (
-                                                <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group">
-                                                    <span className="text-[11px] font-black text-slate-800 mb-1">
-                                                        {item.value.toLocaleString('id-ID')}
-                                                    </span>
-                                                    <div
-                                                        style={{ height: `${heightPct}%` }}
-                                                        className="w-full max-w-[36px] bg-gradient-to-t from-amber-500 via-amber-400 to-yellow-300 rounded-t-md shadow hover:brightness-110 transition-all relative"
-                                                    />
-                                                    <span className="text-[11px] font-bold text-slate-600 mt-2 truncate w-full text-center">
-                                                        {item.label}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
+                                            return dashboardStats.monthlyTrendPercentage.map((item, idx) => {
+                                                const heightPct = item.value > 0 ? Math.max(8, Math.min(100, ((item.value - minValPct) / pctRange) * 100)) : 0;
+
+                                                return (
+                                                    <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group relative">
+                                                        {/* FLOATING HOVER TOOLTIP CARD */}
+                                                        <div className="absolute -top-28 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-30 w-44 p-2.5 rounded-xl bg-slate-900/95 text-white shadow-xl backdrop-blur-sm border border-slate-700/50 flex flex-col gap-1 text-xs">
+                                                            <div className="flex items-center justify-between border-b border-slate-700 pb-1 font-bold text-amber-400">
+                                                                <span>{item.full_label || item.label}</span>
+                                                            </div>
+                                                            <div className="space-y-1 text-[11px]">
+                                                                <div className="flex items-center justify-between text-amber-300">
+                                                                    <span>Ketepatan:</span>
+                                                                    <span className="font-bold">{item.value.toLocaleString('id-ID')}%</span>
+                                                                </div>
+                                                                <div className="flex items-center justify-between text-slate-300">
+                                                                    <span>Tepat Waktu:</span>
+                                                                    <span className="font-bold">{item.timely_count || 0} / {item.target_count || 744}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900/95 rotate-45 border-r border-b border-slate-700/50" />
+                                                        </div>
+
+                                                        <span className="text-[11px] font-black text-slate-800 mb-1">
+                                                            {item.value > 0 ? item.value.toLocaleString('id-ID') : '0'}
+                                                        </span>
+                                                        <div
+                                                            style={{ height: `${heightPct}%` }}
+                                                            className={`w-full max-w-[36px] ${heightPct > 0 ? 'bg-gradient-to-t from-amber-500 via-amber-400 to-yellow-300 shadow group-hover:brightness-110 group-hover:shadow-[0_0_10px_rgba(251,191,36,0.8)]' : 'bg-slate-200'} rounded-t-md transition-all relative cursor-pointer`}
+                                                        />
+                                                        <span className="text-[10px] font-bold text-slate-600 mt-2 truncate w-full text-center group-hover:text-amber-600 transition-colors">
+                                                            {item.label}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            });
+                                        })()}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -617,27 +638,48 @@ export default function MetarIndex({
                                         <Badge className="bg-indigo-600 text-white font-bold">Series 2 (Jumlah)</Badge>
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="p-6">
-                                    <div className="h-64 flex items-end justify-between gap-3 pt-8 pb-4 px-2 border-b border-slate-200">
-                                        {dashboardStats.monthlyTrendLate.map((item, idx) => {
-                                            const maxVal = 70;
-                                            const heightPct = Math.max(10, Math.min(100, (item.value / maxVal) * 100));
+                                <CardContent className="p-6 overflow-visible">
+                                    <div className="h-72 flex items-end justify-between gap-2 pt-16 pb-4 px-2 border-b border-slate-200 overflow-visible relative">
+                                        {(() => {
+                                            const maxValLate = Math.max(10, ...dashboardStats.monthlyTrendLate.map(i => i.value));
 
-                                            return (
-                                                <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group">
-                                                    <span className="text-[11px] font-black text-slate-800 mb-1">
-                                                        {item.value}
-                                                    </span>
-                                                    <div
-                                                        style={{ height: `${heightPct}%` }}
-                                                        className="w-full max-w-[36px] bg-indigo-900 hover:bg-indigo-800 rounded-t-md shadow transition-all relative"
-                                                    />
-                                                    <span className="text-[11px] font-bold text-slate-600 mt-2 truncate w-full text-center">
-                                                        {item.label}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
+                                            return dashboardStats.monthlyTrendLate.map((item, idx) => {
+                                                const heightPct = item.value > 0 ? Math.max(8, Math.min(100, (item.value / maxValLate) * 100)) : 0;
+
+                                                return (
+                                                    <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group relative">
+                                                        {/* FLOATING HOVER TOOLTIP CARD */}
+                                                        <div className="absolute -top-28 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-30 w-44 p-2.5 rounded-xl bg-slate-900/95 text-white shadow-xl backdrop-blur-sm border border-slate-700/50 flex flex-col gap-1 text-xs">
+                                                            <div className="flex items-center justify-between border-b border-slate-700 pb-1 font-bold text-indigo-400">
+                                                                <span>{item.full_label || item.label}</span>
+                                                            </div>
+                                                            <div className="space-y-1 text-[11px]">
+                                                                <div className="flex items-center justify-between text-indigo-300">
+                                                                    <span>Terlambat:</span>
+                                                                    <span className="font-bold">{item.value} Data</span>
+                                                                </div>
+                                                                <div className="flex items-center justify-between text-slate-300">
+                                                                    <span>Target Slot:</span>
+                                                                    <span className="font-bold">{item.target_count || 744} Slot</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900/95 rotate-45 border-r border-b border-slate-700/50" />
+                                                        </div>
+
+                                                        <span className="text-[11px] font-black text-slate-800 mb-1">
+                                                            {item.value}
+                                                        </span>
+                                                        <div
+                                                            style={{ height: `${heightPct}%` }}
+                                                            className={`w-full max-w-[36px] ${heightPct > 0 ? 'bg-indigo-900 group-hover:bg-indigo-800 shadow group-hover:shadow-[0_0_10px_rgba(99,102,241,0.8)]' : 'bg-slate-200'} rounded-t-md transition-all relative cursor-pointer`}
+                                                        />
+                                                        <span className="text-[10px] font-bold text-slate-600 mt-2 truncate w-full text-center group-hover:text-indigo-600 transition-colors">
+                                                            {item.label}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            });
+                                        })()}
                                     </div>
                                 </CardContent>
                             </Card>

@@ -105,7 +105,7 @@ class TaforDashboardService
             'missing_pct' => $calcPct($missing, $totalTarget),
         ];
 
-        $monthlyTrendReport = $this->getMonthlyTrendReport($tahun);
+        $monthlyTrendReport = $this->getMonthlyTrendReport($bulan, $tahun);
 
         return [
             'summary' => $summary,
@@ -115,105 +115,105 @@ class TaforDashboardService
     }
 
     /**
-     * Get monthly TAFOR delivery trend data (Target, Terkirim, Missing, Persentase) matching official records.
+     * Get monthly TAFOR delivery trend data (12 months looking back from target month & year) using real DataTafor records.
      */
-    protected function getMonthlyTrendReport(int $tahun): array
+    protected function getMonthlyTrendReport(int $bulan, int $tahun): array
     {
-        if ($tahun === 2026) {
-            $baseMonths = [
-                ['label' => 'Jan', 'target' => 124, 'sent' => 115, 'missing' => 9, 'pct' => 92.74],
-                ['label' => 'Feb', 'target' => 112, 'sent' => 105, 'missing' => 7, 'pct' => 93.75],
-                ['label' => 'Mar', 'target' => 124, 'sent' => 122, 'missing' => 2, 'pct' => 98.39],
-                ['label' => 'Apr', 'target' => 120, 'sent' => 119, 'missing' => 1, 'pct' => 99.17],
-                ['label' => 'Mei', 'target' => 124, 'sent' => 117, 'missing' => 7, 'pct' => 94.35],
-                ['label' => 'Juni', 'target' => 120, 'sent' => 120, 'missing' => 0, 'pct' => 100.0],
-                ['label' => 'Juli', 'target' => 124, 'sent' => 124, 'missing' => 0, 'pct' => 100.0],
-            ];
+        $selectedEnd = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->endOfMonth();
+        $trendStart = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->subMonths(11)->startOfMonth();
 
-            // Compute month 8 (August) dynamically if present
-            $augDays = Carbon::createFromDate(2026, 8, 1)->daysInMonth;
-            $augStart = Carbon::createFromDate(2026, 8, 1)->startOfMonth();
-            $augEnd = Carbon::createFromDate(2026, 8, $augDays)->endOfMonth();
-            $augTarget = $augDays * 4;
+        $allTrendRecords = DataTafor::whereBetween('data_timestamp', [$trendStart->toDateTimeString(), $selectedEnd->toDateTimeString()])->get();
 
-            $augRecords = DataTafor::whereBetween('data_timestamp', [$augStart, $augEnd])->get();
-            $augMap = [];
-            foreach ($augRecords as $r) {
+        $monthlyTrendReport = [];
+        $namaBulanShort = [
+            1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr',
+            5 => 'Mei', 6 => 'Jun', 7 => 'Jul', 8 => 'Agu',
+            9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'
+        ];
+
+        $namaBulanFull = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+        ];
+
+        $taforHours = [5, 11, 17, 23];
+
+        for ($i = 11; $i >= 0; $i--) {
+            $dtMonth = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->subMonths($i);
+            $m = (int) $dtMonth->month;
+            $y = (int) $dtMonth->year;
+            $mDays = $dtMonth->daysInMonth;
+
+            $mStart = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->startOfMonth();
+            $mEnd = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->endOfMonth();
+
+            $mRecs = $allTrendRecords->filter(function ($r) use ($mStart, $mEnd) {
                 $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
                 $dt = Carbon::parse($rawStr, 'UTC');
-                $d = (int) $dt->format('j');
-                $h = (int) $dt->format('G');
-                $augMap["{$d}_{$h}"] = $r;
-            }
+                return $dt->gte($mStart) && $dt->lte($mEnd);
+            });
 
-            $augSent = 0;
-            $taforHours = [5, 11, 17, 23];
-            for ($d = 1; $d <= $augDays; $d++) {
-                foreach ($taforHours as $h) {
-                    $keyExact = "{$d}_{$h}";
-                    if (isset($augMap[$keyExact])) {
-                        $augSent++;
-                    }
-                }
-            }
+            $label = $namaBulanShort[$m] . ' ' . substr((string) $y, 2);
+            $fullLabel = $namaBulanFull[$m] . ' ' . $y;
+            $mTarget = $mDays * 4;
 
-            if ($augSent > 0) {
-                $augMissing = max(0, $augTarget - $augSent);
-                $augPct = round(($augSent / $augTarget) * 100, 2);
-                $baseMonths[] = [
-                    'label' => 'Agu',
-                    'target' => $augTarget,
-                    'sent' => $augSent,
-                    'missing' => $augMissing,
-                    'pct' => $augPct,
+            if ($mRecs->isEmpty()) {
+                $monthlyTrendReport[] = [
+                    'label' => $label,
+                    'full_label' => $fullLabel,
+                    'target' => $mTarget,
+                    'sent' => 0,
+                    'missing' => $mTarget,
+                    'pct' => 0.0,
+                    'has_data' => false,
                 ];
+                continue;
             }
 
-            return $baseMonths;
-        }
-
-        // For other years, calculate dynamically for months 1..12
-        $trend = [];
-        $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Juni', 'Juli', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-
-        for ($m = 1; $m <= 12; $m++) {
-            $days = Carbon::createFromDate($tahun, $m, 1)->daysInMonth;
-            $mStart = Carbon::createFromDate($tahun, $m, 1)->startOfMonth();
-            $mEnd = Carbon::createFromDate($tahun, $m, $days)->endOfMonth();
-            $target = $days * 4;
-
-            $records = DataTafor::whereBetween('data_timestamp', [$mStart, $mEnd])->get();
             $tMap = [];
-            foreach ($records as $r) {
+            foreach ($mRecs as $r) {
                 $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
                 $dt = Carbon::parse($rawStr, 'UTC');
                 $d = (int) $dt->format('j');
                 $h = (int) $dt->format('G');
                 $tMap["{$d}_{$h}"] = $r;
+
+                $prevH = ($h == 0) ? 23 : ($h - 1);
+                $targetDay = ($h == 0) ? ($d - 1) : $d;
+                if (!isset($tMap["{$targetDay}_{$prevH}"])) {
+                    $tMap["{$targetDay}_{$prevH}"] = $r;
+                }
             }
 
-            $sent = 0;
-            $taforHours = [5, 11, 17, 23];
-            for ($d = 1; $d <= $days; $d++) {
+            $mSent = 0;
+            for ($d = 1; $d <= $mDays; $d++) {
                 foreach ($taforHours as $h) {
-                    if (isset($tMap["{$d}_{$h}"])) {
-                        $sent++;
+                    $keyExact = "{$d}_{$h}";
+                    $prevH = ($h == 0) ? 23 : ($h - 1);
+                    $targetDay = ($h == 0) ? ($d - 1) : $d;
+                    $keyIssue = "{$targetDay}_{$prevH}";
+
+                    if (isset($tMap[$keyExact]) || isset($tMap[$keyIssue])) {
+                        $mSent++;
                     }
                 }
             }
 
-            $missing = max(0, $target - $sent);
-            $pct = $target > 0 ? round(($sent / $target) * 100, 2) : 0;
+            $mMissing = max(0, $mTarget - $mSent);
+            $pct = $mTarget > 0 ? round(($mSent / $mTarget) * 100, 2) : 0.0;
 
-            $trend[] = [
-                'label' => $monthNames[$m - 1],
-                'target' => $target,
-                'sent' => $sent,
-                'missing' => $missing,
+            $monthlyTrendReport[] = [
+                'label' => $label,
+                'full_label' => $fullLabel,
+                'target' => $mTarget,
+                'sent' => $mSent,
+                'missing' => $mMissing,
                 'pct' => $pct,
+                'has_data' => true,
             ];
         }
 
-        return $trend;
+        return $monthlyTrendReport;
     }
 }

@@ -49,6 +49,13 @@ class PenguapanExportService
             $penguapanMap[$day] = $r;
         }
 
+        $formatCellVal = function ($val) {
+            if ($val === null) return null;
+            $f = (float) $val;
+            if ($f == 8888 || $f == 9999) return 0;
+            return $val;
+        };
+
         // 3. Populate Half 1: Days 1 to 15 (Rows 12 to 26)
         for ($day = 1; $day <= 15; $day++) {
             $row = 11 + $day;
@@ -58,13 +65,13 @@ class PenguapanExportService
             $sheet->setCellValue("K{$row}", $day);
 
             if ($rec) {
-                $sheet->setCellValue("B{$row}", $rec->op_diff_baca);
-                $sheet->setCellValue("C{$row}", $rec->rr_0700);
-                $sheet->setCellValue("D{$row}", $rec->op_eva);
+                $sheet->setCellValue("B{$row}", $formatCellVal($rec->op_diff_baca));
+                $sheet->setCellValue("C{$row}", $formatCellVal($rec->rr_0700));
+                $sheet->setCellValue("D{$row}", $formatCellVal($rec->op_eva));
                 $sheet->setCellValue("E{$row}", '07.00');
 
-                $sheet->setCellValue("L{$row}", $rec->ws_avg_0c5);
-                $sheet->setCellValue("M{$row}", $rec->t_air_avg !== null ? $rec->t_air_avg : '-');
+                $sheet->setCellValue("L{$row}", $formatCellVal($rec->ws_avg_0c5));
+                $sheet->setCellValue("M{$row}", $rec->t_air_avg !== null ? $formatCellVal($rec->t_air_avg) : '-');
             } else {
                 $sheet->setCellValue("B{$row}", null);
                 $sheet->setCellValue("C{$row}", null);
@@ -87,13 +94,13 @@ class PenguapanExportService
                 $sheet->setCellValue("N{$row}", $day);
 
                 if ($rec) {
-                    $sheet->setCellValue("G{$row}", $rec->op_diff_baca);
-                    $sheet->setCellValue("H{$row}", $rec->rr_0700);
-                    $sheet->setCellValue("I{$row}", $rec->op_eva);
+                    $sheet->setCellValue("G{$row}", $formatCellVal($rec->op_diff_baca));
+                    $sheet->setCellValue("H{$row}", $formatCellVal($rec->rr_0700));
+                    $sheet->setCellValue("I{$row}", $formatCellVal($rec->op_eva));
                     $sheet->setCellValue("J{$row}", '07.00');
 
-                    $sheet->setCellValue("O{$row}", $rec->ws_avg_0c5);
-                    $sheet->setCellValue("P{$row}", $rec->t_air_avg !== null ? $rec->t_air_avg : '-');
+                    $sheet->setCellValue("O{$row}", $formatCellVal($rec->ws_avg_0c5));
+                    $sheet->setCellValue("P{$row}", $rec->t_air_avg !== null ? $formatCellVal($rec->t_air_avg) : '-');
                 } else {
                     $sheet->setCellValue("G{$row}", null);
                     $sheet->setCellValue("H{$row}", null);
