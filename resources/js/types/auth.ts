@@ -1,8 +1,18 @@
 export type User = {
     id: number;
     name: string;
+    nama?: string;
     email: string;
     avatar?: string;
+    jenis_pegawai?: 'PNS' | 'PPNPN';
+    nip?: string | null;
+    pangkat?: string | null;
+    golongan?: string | null;
+    role?: string | null;
+    jabatan?: string | null;
+    is_superadmin?: boolean;
+    permissions?: string[] | null;
+    effective_permissions?: string[];
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
     created_at: string;

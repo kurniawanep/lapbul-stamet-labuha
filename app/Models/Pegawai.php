@@ -36,6 +36,8 @@ class Pegawai extends Authenticatable implements PasskeyUser
         'pangkat',
         'golongan',
         'role',
+        'is_superadmin',
+        'permissions',
         'jabatan',
         'tanggal_masuk_kerja',
         'is_active',
@@ -58,7 +60,7 @@ class Pegawai extends Authenticatable implements PasskeyUser
      *
      * @var list<string>
      */
-    protected $appends = ['name'];
+    protected $appends = ['name', 'effective_permissions'];
 
     /**
      * Accessor for 'name' to satisfy frontend user.name expected property.
@@ -66,6 +68,63 @@ class Pegawai extends Authenticatable implements PasskeyUser
     public function getNameAttribute(): string
     {
         return $this->attributes['nama'] ?? '';
+    }
+
+    /**
+     * Get effective permissions for the user (custom or role defaults).
+     */
+    public function getEffectivePermissionsAttribute(): array
+    {
+        return $this->getEffectivePermissions();
+    }
+
+    /**
+     * Determine whether the user is a super admin.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return (bool) ($this->is_superadmin ?? false) || ($this->role === 'Super Admin');
+    }
+
+    /**
+     * Check whether user has specific permission.
+     */
+    public function hasPermission(string|array $permission): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        $effective = $this->getEffectivePermissions();
+
+        if (is_array($permission)) {
+            foreach ($permission as $p) {
+                if (in_array($p, $effective, true)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return in_array($permission, $effective, true);
+    }
+
+    /**
+     * Return active permissions list.
+     */
+    public function getEffectivePermissions(): array
+    {
+        if ($this->isSuperAdmin()) {
+            return \App\Enums\RolePermission::allKeys();
+        }
+
+        // If custom permissions array is set (not null), use it directly
+        if ($this->permissions !== null) {
+            return is_array($this->permissions) ? $this->permissions : [];
+        }
+
+        // Otherwise fallback to default permissions of the user's role
+        return \App\Enums\RolePermission::roleDefaults($this->role);
     }
 
     /**
@@ -81,6 +140,8 @@ class Pegawai extends Authenticatable implements PasskeyUser
             'two_factor_confirmed_at' => 'datetime',
             'tanggal_masuk_kerja' => 'date:Y-m-d',
             'is_active' => 'boolean',
+            'is_superadmin' => 'boolean',
+            'permissions' => 'array',
         ];
     }
 

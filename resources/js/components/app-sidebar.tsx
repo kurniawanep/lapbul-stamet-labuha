@@ -1,5 +1,28 @@
 import { Link } from '@inertiajs/react';
-import { Briefcase, Calendar, CloudRain, CloudSun, Droplets, Eye, FileCheck, FileText, Gauge, KeyRound, LayoutGrid, MessageSquare, Radio, Settings, ShieldCheck, Sun, Thermometer, TrendingUp, User, Users, Wind, Wrench, Zap } from 'lucide-react';
+import {
+    Briefcase,
+    Calendar,
+    CloudRain,
+    CloudSun,
+    Droplets,
+    FileCheck,
+    FileText,
+    Gauge,
+    KeyRound,
+    LayoutGrid,
+    MessageSquare,
+    Radio,
+    Settings,
+    ShieldCheck,
+    Sun,
+    Thermometer,
+    TrendingUp,
+    User,
+    Users,
+    Wind,
+    Wrench,
+    Zap,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -12,12 +35,13 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { usePermission } from '@/hooks/use-permission';
 import { dashboard } from '@/routes';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
+const allNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
@@ -27,16 +51,19 @@ const mainNavItems: NavItem[] = [
         title: 'Monitoring Performa',
         href: '/monitoring',
         icon: TrendingUp,
+        permission: 'monitoring.view',
     },
     {
         title: 'Pegawai',
         href: '/pegawai',
         icon: Users,
+        permission: 'pegawai.view',
     },
     {
         title: 'Jadwal Dinas',
         href: '/jadwal/operasional',
         icon: Calendar,
+        permission: 'jadwal.view',
         items: [
             {
                 title: 'Operasional & TU',
@@ -59,6 +86,7 @@ const mainNavItems: NavItem[] = [
         title: 'Laporan Bulanan',
         href: '/laporan/pibal',
         icon: FileText,
+        permission: 'laporan.view',
         items: [
             {
                 title: 'Data PIBAL',
@@ -116,6 +144,13 @@ const mainNavItems: NavItem[] = [
         title: 'WhatsApp Gateway',
         href: '/pengaturan/whatsapp',
         icon: Radio,
+        permission: 'whatsapp.manage',
+    },
+    {
+        title: 'Hak Akses',
+        href: '/admin/hak-akses',
+        icon: ShieldCheck,
+        superadminOnly: true,
     },
     {
         title: 'Setting',
@@ -137,6 +172,20 @@ const mainNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { hasPermission, isSuperAdmin } = usePermission();
+
+    const filteredNavItems = allNavItems.filter((item) => {
+        if (item.superadminOnly && !isSuperAdmin) {
+            return false;
+        }
+
+        if (item.permission && !hasPermission(item.permission)) {
+            return false;
+        }
+
+        return true;
+    });
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -152,7 +201,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={filteredNavItems} />
             </SidebarContent>
 
             <SidebarFooter>

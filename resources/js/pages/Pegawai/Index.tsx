@@ -30,6 +30,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Edit3, Plus, Search, Trash2, UserCheck, Users, AlertTriangle, Calendar, ShieldCheck, Briefcase, Mail, Key } from 'lucide-react';
+import { usePermission } from '@/hooks/use-permission';
 import type { BreadcrumbItem } from '@/types';
 
 interface Pegawai {
@@ -62,6 +63,9 @@ const GOLONGAN_OPTIONS = [
 ];
 
 export default function PegawaiIndex({ pegawais, filters, rolesPns }: Props) {
+    const { can } = usePermission();
+    const canManage = can('pegawai.manage');
+
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [jenisFilter, setJenisFilter] = useState(filters.jenis || 'ALL');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -200,12 +204,14 @@ export default function PegawaiIndex({ pegawais, filters, rolesPns }: Props) {
                             Kelola profil dan akun login PNS dan PPNPN Stasiun Meteorologi Oesman Sadik.
                         </p>
                     </div>
-                    <Button
-                        onClick={() => setIsAddModalOpen(true)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-md shadow-blue-900/20"
-                    >
-                        <Plus className="h-4 w-4" /> Tambah Pegawai
-                    </Button>
+                    {canManage && (
+                        <Button
+                            onClick={() => setIsAddModalOpen(true)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-md shadow-blue-900/20"
+                        >
+                            <Plus className="h-4 w-4" /> Tambah Pegawai
+                        </Button>
+                    )}
                 </div>
 
                 {/* Table & Search Card */}
@@ -268,13 +274,13 @@ export default function PegawaiIndex({ pegawais, filters, rolesPns }: Props) {
                                     <TableHead className="font-bold">Role / Jabatan</TableHead>
                                     <TableHead className="w-36 font-bold">Pangkat / Gol.</TableHead>
                                     <TableHead className="w-28 font-bold text-center">TMT Masuk</TableHead>
-                                    <TableHead className="w-28 font-bold text-center">Aksi</TableHead>
+                                    {canManage && <TableHead className="w-28 font-bold text-center">Aksi</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {pegawais.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="text-center py-8 text-slate-400">
+                                        <TableCell colSpan={canManage ? 8 : 7} className="text-center py-8 text-slate-400">
                                             Tidak ada data pegawai yang ditemukan.
                                         </TableCell>
                                     </TableRow>
@@ -337,26 +343,28 @@ export default function PegawaiIndex({ pegawais, filters, rolesPns }: Props) {
                                                     ? pegawai.tanggal_masuk_kerja.substring(0, 10)
                                                     : '-'}
                                             </TableCell>
-                                            <TableCell className="text-center">
-                                                <div className="flex items-center justify-center gap-1">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => openEditModal(pegawai)}
-                                                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 h-8 px-2"
-                                                    >
-                                                        <Edit3 className="h-4 w-4 mr-1" /> Edit
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => setDeletingPegawai(pegawai)}
-                                                        className="text-red-600 hover:text-red-800 hover:bg-red-50 h-8 px-2"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-1" /> Hapus
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
+                                            {canManage && (
+                                                <TableCell className="text-center">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => openEditModal(pegawai)}
+                                                            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 h-8 px-2"
+                                                        >
+                                                            <Edit3 className="h-4 w-4 mr-1" /> Edit
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => setDeletingPegawai(pegawai)}
+                                                            className="text-red-600 hover:text-red-800 hover:bg-red-50 h-8 px-2"
+                                                        >
+                                                            <Trash2 className="h-4 w-4 mr-1" /> Hapus
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            )}
                                         </TableRow>
                                     ))
                                 )}

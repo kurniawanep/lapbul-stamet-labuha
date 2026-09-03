@@ -223,6 +223,36 @@ class JadwalController extends Controller
     }
 
     /**
+     * Helper to verify if user has permission to edit schedule in a given category.
+     */
+    private function authorizeScheduleEdit(Request $request, ?int $shiftId = null, ?string $category = null): void
+    {
+        $user = $request->user();
+        if (!$user || $user->isSuperAdmin()) {
+            return;
+        }
+
+        if ($shiftId) {
+            $shift = JadwalBulananShift::find($shiftId);
+            if ($shift) {
+                $category = $shift->category;
+            }
+        }
+
+        $category = $category ?: 'operasional';
+
+        $permissionNeeded = match ($category) {
+            'teknisi' => 'jadwal.teknisi.manage',
+            'ppnpn' => 'jadwal.ppnpn.manage',
+            default => 'jadwal.operasional.manage',
+        };
+
+        if (! $user->hasPermission($permissionNeeded)) {
+            abort(403, "Anda tidak memiliki hak akses untuk mengubah jadwal dinas kategori {$category}.");
+        }
+    }
+
+    /**
      * Update a single detail cell shift.
      */
     public function updateCell(Request $request): RedirectResponse
@@ -233,6 +263,8 @@ class JadwalController extends Controller
             'tanggal' => ['required', 'date'],
             'shift_id' => ['required', 'exists:jadwal_bulanan_shifts,id'],
         ]);
+
+        $this->authorizeScheduleEdit($request, (int) $request->input('shift_id'));
 
         $jadwalBulananId = $request->input('jadwal_bulanan_id');
 
@@ -268,8 +300,13 @@ class JadwalController extends Controller
             'changes.*.shift_id' => ['required', 'exists:jadwal_bulanan_shifts,id'],
         ]);
 
-        $jadwalBulananId = $request->input('jadwal_bulanan_id');
         $changes = $request->input('changes');
+        if (!empty($changes)) {
+            $firstShiftId = (int) ($changes[0]['shift_id'] ?? 0);
+            $this->authorizeScheduleEdit($request, $firstShiftId);
+        }
+
+        $jadwalBulananId = $request->input('jadwal_bulanan_id');
 
         DB::transaction(function () use ($jadwalBulananId, $changes) {
             foreach ($changes as $change) {
@@ -307,6 +344,8 @@ class JadwalController extends Controller
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'shift_id' => ['required', 'exists:jadwal_bulanan_shifts,id'],
         ]);
+
+        $this->authorizeScheduleEdit($request, (int) $request->input('shift_id'));
 
         $startDate = Carbon::parse($request->input('start_date'));
         $endDate = Carbon::parse($request->input('end_date'));
