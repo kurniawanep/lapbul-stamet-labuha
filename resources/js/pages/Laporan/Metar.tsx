@@ -130,6 +130,9 @@ interface SummaryRow {
 interface TrendItem {
     label: string;
     value: number;
+    full_label?: string;
+    timely_count?: number;
+    target_count?: number;
 }
 
 interface AnomalyRecord {
@@ -237,6 +240,12 @@ export default function MetarIndex({
     const [selectedMetar, setSelectedMetar] = useState<DataMetarItem | null>(null);
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [syncFilter, setSyncFilter] = useState<'ALL' | 'BERHASIL' | 'GAGAL'>('ALL');
+    const [hoveredDonutSegment, setHoveredDonutSegment] = useState<{
+        label: string;
+        count: number;
+        pct: number;
+        dotColor: string;
+    } | null>(null);
 
     const syncResult = flash?.sync_result;
     const flashSuccess = flash?.success;
@@ -330,11 +339,10 @@ export default function MetarIndex({
                                         router.get(link.url, {}, { preserveState: true, preserveScroll: true });
                                     }
                                 }}
-                                className={`h-8 min-w-[32px] px-2 text-xs font-semibold ${
-                                    link.active
-                                        ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold'
-                                        : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
-                                }`}
+                                className={`h-8 min-w-[32px] px-2 text-xs font-semibold ${link.active
+                                    ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold'
+                                    : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
+                                    }`}
                             >
                                 {displayLabel}
                             </Button>
@@ -370,7 +378,7 @@ export default function MetarIndex({
                         </h1>
 
                         <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
-                            Evaluasi Kepatuhan &amp; Pemantauan Pengiriman Berita Cuaca Bandara (METAR Manual &amp; AWOS Auto).
+                            Evaluasi Monitoring Pemantauan Pengiriman Berita Cuaca Bandara.
                         </p>
                     </div>
 
@@ -427,25 +435,23 @@ export default function MetarIndex({
                         type="button"
                         variant={activeTab === 'dashboard' ? 'default' : 'ghost'}
                         onClick={() => setActiveTab('dashboard')}
-                        className={`h-9 px-4 text-xs font-bold rounded-xl transition-all flex items-center gap-2 ${
-                            activeTab === 'dashboard'
-                                ? 'bg-slate-900 text-white shadow-md'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                        }`}
+                        className={`h-9 px-4 text-xs font-bold rounded-xl transition-all flex items-center gap-2 ${activeTab === 'dashboard'
+                            ? 'bg-slate-900 text-white shadow-md'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            }`}
                     >
                         <BarChart3 className="h-4 w-4 text-amber-400" />
-                        Dashboard Monitoring Kinerja METAR
+                        Dashboard Monitoring Pengiriman METAR
                     </Button>
 
                     <Button
                         type="button"
                         variant={activeTab === 'records' ? 'default' : 'ghost'}
                         onClick={() => setActiveTab('records')}
-                        className={`h-9 px-4 text-xs font-bold rounded-xl transition-all flex items-center gap-2 ${
-                            activeTab === 'records'
-                                ? 'bg-slate-900 text-white shadow-md'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                        }`}
+                        className={`h-9 px-4 text-xs font-bold rounded-xl transition-all flex items-center gap-2 ${activeTab === 'records'
+                            ? 'bg-slate-900 text-white shadow-md'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            }`}
                     >
                         <Calendar className="h-4 w-4 text-amber-400" />
                         Daftar Data Pengamatan METAR ({totalRecords})
@@ -461,7 +467,7 @@ export default function MetarIndex({
                                 <CardTitle className="text-base font-bold flex items-center justify-between">
                                     <span className="flex items-center gap-2">
                                         <Activity className="h-5 w-5 text-amber-400" />
-                                        Ringkasan Kepatuhan &amp; Ketepatan Waktu Berita METAR
+                                        Ringkasan Monitoroing Ketepatan Waktu Pengiriman METAR
                                     </span>
                                     <Badge className="bg-amber-500 text-slate-950 font-bold">
                                         {NAMA_BULAN[bulan - 1]} {tahun}
@@ -473,55 +479,158 @@ export default function MetarIndex({
                                     {/* Donut Chart (5 cols) */}
                                     <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
                                         <div className="relative w-56 h-56 flex items-center justify-center">
-                                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                                <circle cx="50" cy="50" r="40" className="stroke-slate-200" strokeWidth="16" fill="transparent" />
+                                            {/* Floating Hover Badge */}
+                                            {hoveredDonutSegment && (
+                                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1.5 rounded-xl bg-slate-900/95 text-white text-xs font-semibold shadow-xl border border-slate-700/50 backdrop-blur-sm pointer-events-none transition-all flex items-center gap-2 whitespace-nowrap">
+                                                    <span className={`w-2.5 h-2.5 rounded-full ${hoveredDonutSegment.dotColor}`} />
+                                                    <span>{hoveredDonutSegment.label}:</span>
+                                                    <span className="font-black text-amber-400">{hoveredDonutSegment.count} Data</span>
+                                                    <span className="text-slate-300">({hoveredDonutSegment.pct.toLocaleString('id-ID')}%)</span>
+                                                </div>
+                                            )}
+
+                                            <svg className="w-full h-full transform -rotate-90 overflow-visible pointer-events-none" viewBox="0 0 100 100">
                                                 <circle
-                                                    cx="50" cy="50" r="40"
-                                                    className="stroke-slate-900 transition-all duration-1000 ease-out"
+                                                    cx="50"
+                                                    cy="50"
+                                                    r="40"
+                                                    className="stroke-slate-200 pointer-events-auto"
+                                                    strokeWidth="16"
+                                                    fill="none"
+                                                    style={{ pointerEvents: 'stroke' }}
+                                                />
+                                                <circle
+                                                    cx="50"
+                                                    cy="50"
+                                                    r="40"
+                                                    className={`stroke-slate-900 transition-all duration-200 cursor-pointer pointer-events-auto ${
+                                                        hoveredDonutSegment?.label === 'Tepat Waktu' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                    }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.totalSummary.timely_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset="0"
-                                                    fill="transparent"
-                                                />
+                                                    fill="none"
+                                                    style={{ pointerEvents: 'stroke' }}
+                                                    onMouseEnter={() => setHoveredDonutSegment({
+                                                        label: 'Tepat Waktu',
+                                                        count: dashboardStats.totalSummary.timely,
+                                                        pct: dashboardStats.totalSummary.timely_pct,
+                                                        dotColor: 'bg-slate-900',
+                                                    })}
+                                                    onMouseLeave={() => setHoveredDonutSegment(null)}
+                                                >
+                                                    <title>{`Tepat Waktu: ${dashboardStats.totalSummary.timely} Data (${dashboardStats.totalSummary.timely_pct.toLocaleString('id-ID')}%)`}</title>
+                                                </circle>
                                                 <circle
-                                                    cx="50" cy="50" r="40"
-                                                    className="stroke-amber-500 transition-all duration-1000 ease-out"
+                                                    cx="50"
+                                                    cy="50"
+                                                    r="40"
+                                                    className={`stroke-amber-500 transition-all duration-200 cursor-pointer pointer-events-auto ${
+                                                        hoveredDonutSegment?.label === 'Terlambat' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                    }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.totalSummary.late_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset={`-${(dashboardStats.totalSummary.timely_pct / 100) * 251.2}`}
-                                                    fill="transparent"
-                                                />
+                                                    fill="none"
+                                                    style={{ pointerEvents: 'stroke' }}
+                                                    onMouseEnter={() => setHoveredDonutSegment({
+                                                        label: 'Terlambat',
+                                                        count: dashboardStats.totalSummary.late,
+                                                        pct: dashboardStats.totalSummary.late_pct,
+                                                        dotColor: 'bg-amber-500',
+                                                    })}
+                                                    onMouseLeave={() => setHoveredDonutSegment(null)}
+                                                >
+                                                    <title>{`Terlambat: ${dashboardStats.totalSummary.late} Data (${dashboardStats.totalSummary.late_pct.toLocaleString('id-ID')}%)`}</title>
+                                                </circle>
                                                 <circle
-                                                    cx="50" cy="50" r="40"
-                                                    className="stroke-rose-400 transition-all duration-1000 ease-out"
+                                                    cx="50"
+                                                    cy="50"
+                                                    r="40"
+                                                    className={`stroke-rose-400 transition-all duration-200 cursor-pointer pointer-events-auto ${
+                                                        hoveredDonutSegment?.label === 'Missing' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                    }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.totalSummary.missing_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset={`-${((dashboardStats.totalSummary.timely_pct + dashboardStats.totalSummary.late_pct) / 100) * 251.2}`}
-                                                    fill="transparent"
-                                                />
+                                                    fill="none"
+                                                    style={{ pointerEvents: 'stroke' }}
+                                                    onMouseEnter={() => setHoveredDonutSegment({
+                                                        label: 'Missing',
+                                                        count: dashboardStats.totalSummary.missing,
+                                                        pct: dashboardStats.totalSummary.missing_pct,
+                                                        dotColor: 'bg-rose-400',
+                                                    })}
+                                                    onMouseLeave={() => setHoveredDonutSegment(null)}
+                                                >
+                                                    <title>{`Missing: ${dashboardStats.totalSummary.missing} Data (${dashboardStats.totalSummary.missing_pct.toLocaleString('id-ID')}%)`}</title>
+                                                </circle>
                                             </svg>
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                                                <span className="text-3xl font-black text-amber-500 tracking-tight">
-                                                    {dashboardStats.totalSummary.target} Data
+                                            <div
+                                                className="absolute inset-8 rounded-full flex flex-col items-center justify-center text-center transition-all z-10 cursor-default"
+                                                onMouseEnter={() => setHoveredDonutSegment(null)}
+                                            >
+                                                <span className="text-3xl font-black text-amber-500 tracking-tight transition-transform pointer-events-none">
+                                                    {hoveredDonutSegment ? `${hoveredDonutSegment.count} Data` : `${dashboardStats.totalSummary.timely} Data`}
                                                 </span>
-                                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
-                                                    Total Evaluasi
+                                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5 pointer-events-none">
+                                                    {hoveredDonutSegment ? hoveredDonutSegment.label : 'Tepat Waktu'}
                                                 </span>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-center gap-6 mt-6">
-                                            <div className="flex items-center gap-2">
+                                        {/* Legend with interactive hover */}
+                                        <div className="flex items-center justify-center gap-4 sm:gap-6 mt-6">
+                                            <div
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
+                                                    hoveredDonutSegment?.label === 'Tepat Waktu' ? 'bg-amber-100 ring-1 ring-amber-300' : 'hover:bg-slate-100'
+                                                }`}
+                                                onMouseEnter={() => setHoveredDonutSegment({
+                                                    label: 'Tepat Waktu',
+                                                    count: dashboardStats.totalSummary.timely,
+                                                    pct: dashboardStats.totalSummary.timely_pct,
+                                                    dotColor: 'bg-slate-900',
+                                                })}
+                                                onMouseLeave={() => setHoveredDonutSegment(null)}
+                                            >
                                                 <div className="w-3.5 h-3.5 rounded-sm bg-slate-900" />
-                                                <span className="text-xs font-bold text-slate-700">Tepat Waktu</span>
+                                                <span className="text-xs font-bold text-slate-700">
+                                                    Tepat Waktu ({dashboardStats.totalSummary.timely})
+                                                </span>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
+                                                    hoveredDonutSegment?.label === 'Terlambat' ? 'bg-amber-100 ring-1 ring-amber-300' : 'hover:bg-slate-100'
+                                                }`}
+                                                onMouseEnter={() => setHoveredDonutSegment({
+                                                    label: 'Terlambat',
+                                                    count: dashboardStats.totalSummary.late,
+                                                    pct: dashboardStats.totalSummary.late_pct,
+                                                    dotColor: 'bg-amber-500',
+                                                })}
+                                                onMouseLeave={() => setHoveredDonutSegment(null)}
+                                            >
                                                 <div className="w-3.5 h-3.5 rounded-sm bg-amber-500" />
-                                                <span className="text-xs font-bold text-slate-700">Terlambat</span>
+                                                <span className="text-xs font-bold text-slate-700">
+                                                    Terlambat ({dashboardStats.totalSummary.late})
+                                                </span>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
+                                                    hoveredDonutSegment?.label === 'Missing' ? 'bg-rose-100 ring-1 ring-rose-300' : 'hover:bg-slate-100'
+                                                }`}
+                                                onMouseEnter={() => setHoveredDonutSegment({
+                                                    label: 'Missing',
+                                                    count: dashboardStats.totalSummary.missing,
+                                                    pct: dashboardStats.totalSummary.missing_pct,
+                                                    dotColor: 'bg-rose-400',
+                                                })}
+                                                onMouseLeave={() => setHoveredDonutSegment(null)}
+                                            >
                                                 <div className="w-3.5 h-3.5 rounded-sm bg-rose-400" />
-                                                <span className="text-xs font-bold text-slate-700">Missing</span>
+                                                <span className="text-xs font-bold text-slate-700">
+                                                    Missing ({dashboardStats.totalSummary.missing})
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -635,7 +744,7 @@ export default function MetarIndex({
                                 <CardHeader className="bg-slate-900 text-white p-4">
                                     <CardTitle className="text-base font-bold flex items-center justify-between">
                                         <span>Total Keterlambatan Data METAR {tahun}</span>
-                                        <Badge className="bg-indigo-600 text-white font-bold">Series 2 (Jumlah)</Badge>
+                                        <Badge className="bg-indigo-600 text-white font-bold">Jumlah</Badge>
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-6 overflow-visible">
@@ -778,10 +887,10 @@ export default function MetarIndex({
                                 anomalyTab === 'missing'
                                     ? metarMissing
                                     : anomalyTab === 'terlambat'
-                                    ? metarLate
-                                    : anomalyTab === 'lebih_awal'
-                                    ? metarEarly
-                                    : metarAnomalies;
+                                        ? metarLate
+                                        : anomalyTab === 'lebih_awal'
+                                            ? metarEarly
+                                            : metarAnomalies;
 
                             return (
                                 <Card className="border border-slate-200 shadow-md bg-white overflow-hidden">
@@ -798,11 +907,10 @@ export default function MetarIndex({
                                                     type="button"
                                                     size="sm"
                                                     onClick={() => setAnomalyTab('all')}
-                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${
-                                                        anomalyTab === 'all'
-                                                            ? 'bg-amber-400 text-slate-950 shadow-md font-black'
-                                                            : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
-                                                    }`}
+                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${anomalyTab === 'all'
+                                                        ? 'bg-amber-400 text-slate-950 shadow-md font-black'
+                                                        : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
+                                                        }`}
                                                 >
                                                     Semua ({metarAnomalies.length})
                                                 </Button>
@@ -811,11 +919,10 @@ export default function MetarIndex({
                                                     type="button"
                                                     size="sm"
                                                     onClick={() => setAnomalyTab('missing')}
-                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${
-                                                        anomalyTab === 'missing'
-                                                            ? 'bg-rose-600 text-white shadow-md font-black'
-                                                            : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
-                                                    }`}
+                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${anomalyTab === 'missing'
+                                                        ? 'bg-rose-600 text-white shadow-md font-black'
+                                                        : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
+                                                        }`}
                                                 >
                                                     Missing ({metarMissing.length})
                                                 </Button>
@@ -824,11 +931,10 @@ export default function MetarIndex({
                                                     type="button"
                                                     size="sm"
                                                     onClick={() => setAnomalyTab('terlambat')}
-                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${
-                                                        anomalyTab === 'terlambat'
-                                                            ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                                                            : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
-                                                    }`}
+                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${anomalyTab === 'terlambat'
+                                                        ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                                                        : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
+                                                        }`}
                                                 >
                                                     Terlambat ({metarLate.length})
                                                 </Button>
@@ -837,11 +943,10 @@ export default function MetarIndex({
                                                     type="button"
                                                     size="sm"
                                                     onClick={() => setAnomalyTab('lebih_awal')}
-                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${
-                                                        anomalyTab === 'lebih_awal'
-                                                            ? 'bg-blue-500 text-white shadow-md font-black'
-                                                            : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
-                                                    }`}
+                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${anomalyTab === 'lebih_awal'
+                                                        ? 'bg-blue-500 text-white shadow-md font-black'
+                                                        : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
+                                                        }`}
                                                 >
                                                     Lebih Awal ({metarEarly.length})
                                                 </Button>

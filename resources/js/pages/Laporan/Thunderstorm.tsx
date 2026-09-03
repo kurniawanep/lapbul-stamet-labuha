@@ -172,7 +172,7 @@ export default function ThunderstormIndex({
                             </h1>
                         </div>
                         <p className="text-sm text-amber-200/80 font-medium pl-10">
-                            Analisis & Rekapitulasi Kejadian Badai Guntur (Sandi WWW1W2) • Stasiun Meteorologi Oesman Sadik
+                            Analisis & Rekapitulasi Kejadian Thunderstorm (Berdasarkan Sandi WWW1W2)
                         </p>
                     </div>
 
@@ -372,11 +372,10 @@ export default function ThunderstormIndex({
                                                 return (
                                                     <TableCell
                                                         key={d}
-                                                        className={`p-1 text-center font-mono border-r border-slate-200/50 ${
-                                                            dayData.has_ts
-                                                                ? 'bg-amber-400/20 text-amber-950 font-extrabold'
-                                                                : 'text-slate-400'
-                                                        }`}
+                                                        className={`p-1 text-center font-mono border-r border-slate-200/50 ${dayData.has_ts
+                                                            ? 'bg-amber-400/20 text-amber-950 font-extrabold'
+                                                            : 'text-slate-400'
+                                                            }`}
                                                         title={
                                                             dayData.has_ts
                                                                 ? `${mRow.month_name} tgl ${d}: ${dayData.slots_count} slot TS`
@@ -428,10 +427,10 @@ export default function ThunderstormIndex({
                             <div>
                                 <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
                                     <Zap className="w-5 h-5 text-amber-600" />
-                                    Rincian Slot Kejadian Thunderstorm ({NAMA_BULAN[bulan - 1]} {tahun})
+                                    Rincian Slot Thunderstorm ({NAMA_BULAN[bulan - 1]} {tahun})
                                 </CardTitle>
                                 <p className="text-xs text-slate-600 mt-1">
-                                    Daftar pengamatan Sinoptik yang memenuhi kriteria Thunderstorm (ww=17,29,91-96,98-99 atau w1/w2=9)
+                                    Daftar pengamatan Sinoptik yang memenuhi kriteria Thunderstorm (ww=17, 29, 91-96, 98-99 atau w1/w2=9)
                                 </p>
                             </div>
                             <Badge variant="secondary" className="w-fit">
@@ -471,7 +470,7 @@ export default function ThunderstormIndex({
                                         {recordsList.map((item, idx) => {
                                             const recIndex =
                                                 ((thunderstormRecords.current_page || 1) - 1) *
-                                                    (thunderstormRecords.per_page || 15) +
+                                                (thunderstormRecords.per_page || 15) +
                                                 idx +
                                                 1;
 

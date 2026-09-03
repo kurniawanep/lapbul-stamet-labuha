@@ -105,7 +105,7 @@ export default function Dashboard() {
                             </h1>
 
                             <p className="text-slate-300 text-xs md:text-sm max-w-2xl leading-relaxed">
-                                Sistem Informasi Manajemen Jadwal Dinas, Monitoring Performa Observasi, dan Otomasi Pelaporan Meteorologi Terpadu.
+                                Sistem Informasi Manajemen Jadwal Dinas, Monitoring Performa Operasional, dan Otomasi Laporan Bulanan.
                             </p>
                         </div>
 

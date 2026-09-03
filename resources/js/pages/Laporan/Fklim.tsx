@@ -246,6 +246,12 @@ export default function FklimIndex({
     const [isSyncing, setIsSyncing] = useState(false);
     const [selectedFklim, setSelectedFklim] = useState<DataFklimItem | null>(null);
     const [showSyncModal, setShowSyncModal] = useState(false);
+    const [hoveredDonutSegment, setHoveredDonutSegment] = useState<{
+        label: string;
+        count: number;
+        pct: number;
+        dotColor: string;
+    } | null>(null);
 
     const syncResult = flash?.sync_result;
     const flashSuccess = flash?.success;
@@ -339,11 +345,10 @@ export default function FklimIndex({
                                         router.get(link.url, {}, { preserveState: true, preserveScroll: true });
                                     }
                                 }}
-                                className={`h-8 min-w-[32px] px-2 text-xs font-semibold ${
-                                    link.active
-                                        ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold'
-                                        : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
-                                }`}
+                                className={`h-8 min-w-[32px] px-2 text-xs font-semibold ${link.active
+                                    ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold'
+                                    : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
+                                    }`}
                             >
                                 {displayLabel}
                             </Button>
@@ -379,7 +384,7 @@ export default function FklimIndex({
                         </h1>
 
                         <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
-                            Rekapitulasi Kepatuhan &amp; Pengiriman Data Iklim Harian (1 Laporan / Hari).
+                            Rekapitulasi Kepatuhan &amp; Pengiriman Data Iklim Harian.
                         </p>
                     </div>
 
@@ -450,11 +455,10 @@ export default function FklimIndex({
                         type="button"
                         variant={activeTab === 'dashboard' ? 'default' : 'ghost'}
                         onClick={() => setActiveTab('dashboard')}
-                        className={`h-9 px-4 text-xs font-bold rounded-xl transition-all flex items-center gap-2 ${
-                            activeTab === 'dashboard'
-                                ? 'bg-slate-900 text-white shadow-md'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                        }`}
+                        className={`h-9 px-4 text-xs font-bold rounded-xl transition-all flex items-center gap-2 ${activeTab === 'dashboard'
+                            ? 'bg-slate-900 text-white shadow-md'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            }`}
                     >
                         <BarChart3 className="h-4 w-4 text-amber-400" />
                         Dashboard Monitoring Kinerja FKLIM
@@ -464,11 +468,10 @@ export default function FklimIndex({
                         type="button"
                         variant={activeTab === 'records' ? 'default' : 'ghost'}
                         onClick={() => setActiveTab('records')}
-                        className={`h-9 px-4 text-xs font-bold rounded-xl transition-all flex items-center gap-2 ${
-                            activeTab === 'records'
-                                ? 'bg-slate-900 text-white shadow-md'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                        }`}
+                        className={`h-9 px-4 text-xs font-bold rounded-xl transition-all flex items-center gap-2 ${activeTab === 'records'
+                            ? 'bg-slate-900 text-white shadow-md'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            }`}
                     >
                         <Calendar className="h-4 w-4 text-amber-400" />
                         Daftar Data Pengamatan FKLIM ({totalRecords})
@@ -484,7 +487,7 @@ export default function FklimIndex({
                                 <CardTitle className="text-base font-bold flex items-center justify-between">
                                     <span className="flex items-center gap-2">
                                         <Activity className="h-5 w-5 text-amber-400" />
-                                        Ringkasan Kepatuhan &amp; Ketepatan Waktu Laporan FKLIM
+                                        Ringkasan Monitoring Ketepatan Waktu Laporan FKLIM
                                     </span>
                                     <Badge className="bg-amber-500 text-white font-bold">
                                         {NAMA_BULAN[bulan - 1]} {tahun}
@@ -496,43 +499,119 @@ export default function FklimIndex({
                                     {/* Donut Chart */}
                                     <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
                                         <div className="relative w-56 h-56 flex items-center justify-center">
-                                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                                <circle cx="50" cy="50" r="40" className="stroke-slate-200" strokeWidth="16" fill="transparent" />
+                                            {/* Floating Hover Badge */}
+                                            {hoveredDonutSegment && (
+                                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1.5 rounded-xl bg-slate-900/95 text-white text-xs font-semibold shadow-xl border border-slate-700/50 backdrop-blur-sm pointer-events-none transition-all flex items-center gap-2 whitespace-nowrap">
+                                                    <span className={`w-2.5 h-2.5 rounded-full ${hoveredDonutSegment.dotColor}`} />
+                                                    <span>{hoveredDonutSegment.label}:</span>
+                                                    <span className="font-black text-amber-400">{hoveredDonutSegment.count} Data</span>
+                                                    <span className="text-slate-300">({hoveredDonutSegment.pct.toLocaleString('id-ID')}%)</span>
+                                                </div>
+                                            )}
+
+                                            <svg className="w-full h-full transform -rotate-90 overflow-visible pointer-events-none" viewBox="0 0 100 100">
                                                 <circle
-                                                    cx="50" cy="50" r="40"
-                                                    className="stroke-amber-600 transition-all duration-1000 ease-out"
+                                                    cx="50"
+                                                    cy="50"
+                                                    r="40"
+                                                    className="stroke-slate-200 pointer-events-auto"
+                                                    strokeWidth="16"
+                                                    fill="none"
+                                                    style={{ pointerEvents: 'stroke' }}
+                                                />
+                                                <circle
+                                                    cx="50"
+                                                    cy="50"
+                                                    r="40"
+                                                    className={`stroke-amber-600 transition-all duration-200 cursor-pointer pointer-events-auto ${
+                                                        hoveredDonutSegment?.label === 'Terkirim' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                    }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.summary.timely_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset="0"
-                                                    fill="transparent"
-                                                />
+                                                    fill="none"
+                                                    style={{ pointerEvents: 'stroke' }}
+                                                    onMouseEnter={() => setHoveredDonutSegment({
+                                                        label: 'Terkirim',
+                                                        count: dashboardStats.summary.timely,
+                                                        pct: dashboardStats.summary.timely_pct,
+                                                        dotColor: 'bg-amber-600',
+                                                    })}
+                                                    onMouseLeave={() => setHoveredDonutSegment(null)}
+                                                >
+                                                    <title>{`Terkirim: ${dashboardStats.summary.timely} Data (${dashboardStats.summary.timely_pct.toLocaleString('id-ID')}%)`}</title>
+                                                </circle>
                                                 <circle
-                                                    cx="50" cy="50" r="40"
-                                                    className="stroke-rose-400 transition-all duration-1000 ease-out"
+                                                    cx="50"
+                                                    cy="50"
+                                                    r="40"
+                                                    className={`stroke-rose-400 transition-all duration-200 cursor-pointer pointer-events-auto ${
+                                                        hoveredDonutSegment?.label === 'Missing' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                    }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.summary.missing_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset={`-${(dashboardStats.summary.timely_pct / 100) * 251.2}`}
-                                                    fill="transparent"
-                                                />
+                                                    fill="none"
+                                                    style={{ pointerEvents: 'stroke' }}
+                                                    onMouseEnter={() => setHoveredDonutSegment({
+                                                        label: 'Missing',
+                                                        count: dashboardStats.summary.missing,
+                                                        pct: dashboardStats.summary.missing_pct,
+                                                        dotColor: 'bg-rose-400',
+                                                    })}
+                                                    onMouseLeave={() => setHoveredDonutSegment(null)}
+                                                >
+                                                    <title>{`Missing: ${dashboardStats.summary.missing} Data (${dashboardStats.summary.missing_pct.toLocaleString('id-ID')}%)`}</title>
+                                                </circle>
                                             </svg>
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                                                <span className="text-3xl font-black text-amber-600 tracking-tight">
-                                                    {dashboardStats.summary.target} Data
+                                            <div
+                                                className="absolute inset-8 rounded-full flex flex-col items-center justify-center text-center transition-all z-10 cursor-default"
+                                                onMouseEnter={() => setHoveredDonutSegment(null)}
+                                            >
+                                                <span className="text-3xl font-black text-amber-600 tracking-tight transition-transform pointer-events-none">
+                                                    {hoveredDonutSegment ? `${hoveredDonutSegment.count} Data` : `${dashboardStats.summary.timely} Data`}
                                                 </span>
-                                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
-                                                    Total Target
+                                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5 pointer-events-none">
+                                                    {hoveredDonutSegment ? hoveredDonutSegment.label : 'Terkirim'}
                                                 </span>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-center gap-6 mt-6">
-                                            <div className="flex items-center gap-2">
+                                        {/* Legend with interactive hover */}
+                                        <div className="flex items-center justify-center gap-4 sm:gap-6 mt-6">
+                                            <div
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
+                                                    hoveredDonutSegment?.label === 'Terkirim' ? 'bg-amber-100 ring-1 ring-amber-300' : 'hover:bg-slate-100'
+                                                }`}
+                                                onMouseEnter={() => setHoveredDonutSegment({
+                                                    label: 'Terkirim',
+                                                    count: dashboardStats.summary.timely,
+                                                    pct: dashboardStats.summary.timely_pct,
+                                                    dotColor: 'bg-amber-600',
+                                                })}
+                                                onMouseLeave={() => setHoveredDonutSegment(null)}
+                                            >
                                                 <div className="w-3.5 h-3.5 rounded-sm bg-amber-600" />
-                                                <span className="text-xs font-bold text-slate-700">Terkirim</span>
+                                                <span className="text-xs font-bold text-slate-700">
+                                                    Terkirim ({dashboardStats.summary.timely})
+                                                </span>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
+                                                    hoveredDonutSegment?.label === 'Missing' ? 'bg-rose-100 ring-1 ring-rose-300' : 'hover:bg-slate-100'
+                                                }`}
+                                                onMouseEnter={() => setHoveredDonutSegment({
+                                                    label: 'Missing',
+                                                    count: dashboardStats.summary.missing,
+                                                    pct: dashboardStats.summary.missing_pct,
+                                                    dotColor: 'bg-rose-400',
+                                                })}
+                                                onMouseLeave={() => setHoveredDonutSegment(null)}
+                                            >
                                                 <div className="w-3.5 h-3.5 rounded-sm bg-rose-400" />
-                                                <span className="text-xs font-bold text-slate-700">Missing</span>
+                                                <span className="text-xs font-bold text-slate-700">
+                                                    Missing ({dashboardStats.summary.missing})
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -685,11 +764,10 @@ export default function FklimIndex({
                                             return (
                                                 <div
                                                     key={idx}
-                                                    className={`flex items-center justify-between p-2 rounded-lg border transition-all ${
-                                                        item.missing > 0
-                                                            ? 'bg-rose-50/80 border-rose-200 text-rose-950 font-extrabold'
-                                                            : 'bg-emerald-50/50 border-emerald-100 text-emerald-900 font-bold'
-                                                    }`}
+                                                    className={`flex items-center justify-between p-2 rounded-lg border transition-all ${item.missing > 0
+                                                        ? 'bg-rose-50/80 border-rose-200 text-rose-950 font-extrabold'
+                                                        : 'bg-emerald-50/50 border-emerald-100 text-emerald-900 font-bold'
+                                                        }`}
                                                 >
                                                     <span className="tracking-tight truncate mr-1">{fullMonthName.slice(0, 3)}</span>
                                                     <span className="text-xs font-black tracking-wider whitespace-nowrap">
@@ -713,7 +791,7 @@ export default function FklimIndex({
                                         <div className="flex items-center justify-between">
                                             <CardTitle className="text-base font-bold flex items-center gap-2">
                                                 <AlertTriangle className="h-5 w-5 text-amber-400" />
-                                                Rincian Miss Data FKLIM Evaluasi Kepatuhan GTS ({NAMA_BULAN[bulan - 1]} {tahun})
+                                                Rincian Miss Data FKLIM Evaluasi Monitoring GTS ({NAMA_BULAN[bulan - 1]} {tahun})
                                             </CardTitle>
                                             <Badge className="bg-rose-600 text-white font-bold">
                                                 {fklimAnomalies.length} Missing Data

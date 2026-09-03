@@ -3,7 +3,7 @@ import { Link, usePage } from '@inertiajs/react';
 import BmkgLogo from '@/components/bmkg-logo';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
-import { Clock, ShieldCheck, Sparkles, MapPin, Activity } from 'lucide-react';
+import { Clock, Sparkles, MapPin } from 'lucide-react';
 
 export default function AuthSplitLayout({
     children,
@@ -16,7 +16,7 @@ export default function AuthSplitLayout({
         const updateClock = () => {
             const now = new Date();
             const options: Intl.DateTimeFormatOptions = {
-                timeZone: 'Asia/Jayapura', // WIT timezone (UTC+9)
+                timeZone: 'Asia/Jayapura',
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit',

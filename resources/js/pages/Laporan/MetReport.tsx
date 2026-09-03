@@ -278,10 +278,10 @@ export default function MetReportIndex({
                         </div>
                         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-2.5">
                             <MessageSquare className="h-7 w-7 text-emerald-400 animate-pulse" />
-                            Data MET REPORT (QAM) WhatsApp Recap
+                            MET REPORT (QAM) Recap
                         </h1>
                         <p className="text-emerald-100/80 text-sm">
-                            Rekap Otomatis Pesan Informasi Cuaca Bandara dari Grup WhatsApp MET REPORT
+                            Rekap Otomatis Pesan Informasi Cuaca Bandara
                         </p>
                     </div>
 
@@ -609,11 +609,10 @@ export default function MetReportIndex({
                                                 key={key}
                                                 variant={link.active ? 'default' : 'outline'}
                                                 size="sm"
-                                                className={`h-8 min-w-[32px] text-xs px-2.5 ${
-                                                    link.active
-                                                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold'
-                                                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                                                }`}
+                                                className={`h-8 min-w-[32px] text-xs px-2.5 ${link.active
+                                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold'
+                                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                                    }`}
                                                 onClick={() => router.get(link.url!, {}, { preserveState: true })}
                                             >
                                                 {label}

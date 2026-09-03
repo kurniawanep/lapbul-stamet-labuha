@@ -141,6 +141,9 @@ interface SummaryRow {
 interface MonthlyTrendItem {
     label: string;
     percentage: number;
+    full_label?: string;
+    timely_count?: number;
+    target_count?: number;
 }
 
 interface AnomalyRecord {
@@ -248,6 +251,12 @@ export default function SinoptikIndex({
     const [selectedSinoptik, setSelectedSinoptik] = useState<DataSinoptikItem | null>(null);
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [syncFilter, setSyncFilter] = useState<'ALL' | 'BERHASIL' | 'GAGAL'>('ALL');
+    const [hoveredDonutSegment, setHoveredDonutSegment] = useState<{
+        label: string;
+        count: number;
+        pct: number;
+        dotColor: string;
+    } | null>(null);
 
     const syncResult = flash?.sync_result;
     const flashSuccess = flash?.success;
@@ -413,11 +422,10 @@ export default function SinoptikIndex({
                     <Button
                         variant={activeTab === 'dashboard' ? 'default' : 'ghost'}
                         onClick={() => setActiveTab('dashboard')}
-                        className={`gap-2 font-bold text-sm rounded-xl ${
-                            activeTab === 'dashboard'
-                                ? 'bg-slate-900 text-white shadow-md'
-                                : 'text-slate-600 hover:bg-slate-200/60'
-                        }`}
+                        className={`gap-2 font-bold text-sm rounded-xl ${activeTab === 'dashboard'
+                            ? 'bg-slate-900 text-white shadow-md'
+                            : 'text-slate-600 hover:bg-slate-200/60'
+                            }`}
                     >
                         <LayoutDashboard className="h-4 w-4 text-amber-400" />
                         Dashboard Monitoring Kinerja SYNOP
@@ -425,11 +433,10 @@ export default function SinoptikIndex({
                     <Button
                         variant={activeTab === 'records' ? 'default' : 'ghost'}
                         onClick={() => setActiveTab('records')}
-                        className={`gap-2 font-bold text-sm rounded-xl ${
-                            activeTab === 'records'
-                                ? 'bg-slate-900 text-white shadow-md'
-                                : 'text-slate-600 hover:bg-slate-200/60'
-                        }`}
+                        className={`gap-2 font-bold text-sm rounded-xl ${activeTab === 'records'
+                            ? 'bg-slate-900 text-white shadow-md'
+                            : 'text-slate-600 hover:bg-slate-200/60'
+                            }`}
                     >
                         <TableIcon className="h-4 w-4 text-sky-400" />
                         Daftar Data Pengamatan AAXX ({totalRecords})
@@ -452,57 +459,121 @@ export default function SinoptikIndex({
                                     {/* Donut Visual */}
                                     <div className="lg:col-span-6 flex flex-col items-center justify-center p-6 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
                                         <div className="relative w-56 h-56 flex items-center justify-center">
-                                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                            {/* Floating Hover Badge */}
+                                            {hoveredDonutSegment && (
+                                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1.5 rounded-xl bg-slate-900/95 text-white text-xs font-semibold shadow-xl border border-slate-700/50 backdrop-blur-sm pointer-events-none transition-all flex items-center gap-2 whitespace-nowrap">
+                                                    <span className={`w-2.5 h-2.5 rounded-full ${hoveredDonutSegment.dotColor}`} />
+                                                    <span>{hoveredDonutSegment.label}:</span>
+                                                    <span className="font-black text-amber-400">{hoveredDonutSegment.count} Data</span>
+                                                    <span className="text-slate-300">({hoveredDonutSegment.pct.toLocaleString('id-ID')}%)</span>
+                                                </div>
+                                            )}
+
+                                            <svg className="w-full h-full transform -rotate-90 overflow-visible pointer-events-none" viewBox="0 0 100 100">
                                                 {/* Background Circle */}
                                                 <circle
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className="stroke-slate-200"
+                                                    className="stroke-slate-200 pointer-events-auto"
                                                     strokeWidth="16"
-                                                    fill="transparent"
+                                                    fill="none"
+                                                    style={{ pointerEvents: 'stroke' }}
                                                 />
                                                 {/* Timely Arc (Dark Blue / Sky) */}
                                                 <circle
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className="stroke-sky-900 transition-all duration-1000 ease-out"
+                                                    className={`stroke-sky-900 transition-all duration-200 cursor-pointer pointer-events-auto ${
+                                                        hoveredDonutSegment?.label === 'Tepat Waktu' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                    }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.totalSummary.timely_pct / 100) * 251.2} 251.2`}
-                                                    fill="transparent"
-                                                />
+                                                    fill="none"
+                                                    style={{ pointerEvents: 'stroke' }}
+                                                    onMouseEnter={() => setHoveredDonutSegment({
+                                                        label: 'Tepat Waktu',
+                                                        count: dashboardStats.totalSummary.timely,
+                                                        pct: dashboardStats.totalSummary.timely_pct,
+                                                        dotColor: 'bg-sky-900',
+                                                    })}
+                                                    onMouseLeave={() => setHoveredDonutSegment(null)}
+                                                >
+                                                    <title>{`Tepat Waktu: ${dashboardStats.totalSummary.timely} Data (${dashboardStats.totalSummary.timely_pct.toLocaleString('id-ID')}%)`}</title>
+                                                </circle>
                                                 {/* Late Arc (Bright Blue) */}
                                                 <circle
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className="stroke-sky-400 transition-all duration-1000 ease-out"
+                                                    className={`stroke-sky-400 transition-all duration-200 cursor-pointer pointer-events-auto ${
+                                                        hoveredDonutSegment?.label === 'Terlambat' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                    }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.totalSummary.late_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset={`-${(dashboardStats.totalSummary.timely_pct / 100) * 251.2}`}
-                                                    fill="transparent"
-                                                />
+                                                    fill="none"
+                                                    style={{ pointerEvents: 'stroke' }}
+                                                    onMouseEnter={() => setHoveredDonutSegment({
+                                                        label: 'Terlambat',
+                                                        count: dashboardStats.totalSummary.late,
+                                                        pct: dashboardStats.totalSummary.late_pct,
+                                                        dotColor: 'bg-sky-400',
+                                                    })}
+                                                    onMouseLeave={() => setHoveredDonutSegment(null)}
+                                                >
+                                                    <title>{`Terlambat: ${dashboardStats.totalSummary.late} Data (${dashboardStats.totalSummary.late_pct.toLocaleString('id-ID')}%)`}</title>
+                                                </circle>
                                             </svg>
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                                                <span className="text-3xl font-black text-slate-900 tracking-tight">
-                                                    {dashboardStats.totalSummary.target} Data
+                                            <div
+                                                className="absolute inset-8 rounded-full flex flex-col items-center justify-center text-center transition-all z-10 cursor-default"
+                                                onMouseEnter={() => setHoveredDonutSegment(null)}
+                                            >
+                                                <span className="text-3xl font-black text-amber-500 tracking-tight transition-transform pointer-events-none">
+                                                    {hoveredDonutSegment ? `${hoveredDonutSegment.count} Data` : `${dashboardStats.totalSummary.timely} Data`}
                                                 </span>
-                                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
-                                                    Total Evaluasi
+                                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5 pointer-events-none">
+                                                    {hoveredDonutSegment ? hoveredDonutSegment.label : 'Tepat Waktu'}
                                                 </span>
                                             </div>
                                         </div>
 
-                                        {/* Legend */}
-                                        <div className="flex items-center justify-center gap-6 mt-6">
-                                            <div className="flex items-center gap-2">
+                                        {/* Legend with interactive hover */}
+                                        <div className="flex items-center justify-center gap-4 sm:gap-6 mt-6">
+                                            <div
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
+                                                    hoveredDonutSegment?.label === 'Tepat Waktu' ? 'bg-sky-100 ring-1 ring-sky-300' : 'hover:bg-slate-100'
+                                                }`}
+                                                onMouseEnter={() => setHoveredDonutSegment({
+                                                    label: 'Tepat Waktu',
+                                                    count: dashboardStats.totalSummary.timely,
+                                                    pct: dashboardStats.totalSummary.timely_pct,
+                                                    dotColor: 'bg-sky-900',
+                                                })}
+                                                onMouseLeave={() => setHoveredDonutSegment(null)}
+                                            >
                                                 <div className="w-3.5 h-3.5 rounded-sm bg-sky-900" />
-                                                <span className="text-xs font-bold text-slate-700">Tepat Waktu</span>
+                                                <span className="text-xs font-bold text-slate-700">
+                                                    Tepat Waktu ({dashboardStats.totalSummary.timely})
+                                                </span>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
+                                                    hoveredDonutSegment?.label === 'Terlambat' ? 'bg-blue-100 ring-1 ring-blue-300' : 'hover:bg-slate-100'
+                                                }`}
+                                                onMouseEnter={() => setHoveredDonutSegment({
+                                                    label: 'Terlambat',
+                                                    count: dashboardStats.totalSummary.late,
+                                                    pct: dashboardStats.totalSummary.late_pct,
+                                                    dotColor: 'bg-sky-400',
+                                                })}
+                                                onMouseLeave={() => setHoveredDonutSegment(null)}
+                                            >
                                                 <div className="w-3.5 h-3.5 rounded-sm bg-sky-400" />
-                                                <span className="text-xs font-bold text-slate-700">Terlambat</span>
+                                                <span className="text-xs font-bold text-slate-700">
+                                                    Terlambat ({dashboardStats.totalSummary.late})
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -513,7 +584,6 @@ export default function SinoptikIndex({
                                             <p className="font-medium">
                                                 Pengiriman berita SYNOP (Utama, Penting, dan Jam Sela) pada periode{' '}
                                                 <span className="font-bold text-slate-900">{NAMA_BULAN[bulan - 1]} {tahun}</span>{' '}
-                                                menunjukkan tingkat ketepatan waktu yang tinggi.
                                             </p>
                                         </div>
 
@@ -831,7 +901,7 @@ export default function SinoptikIndex({
                                                         <TableCell className="text-center border-r border-slate-200">100</TableCell>
                                                         <TableCell className="text-center border-r border-slate-200 font-bold text-emerald-700">{st.timely}</TableCell>
                                                         <TableCell className="text-center border-r border-slate-200 font-bold text-emerald-700">{st.timely_pct.toLocaleString('id-ID')}</TableCell>
-                                                        
+
                                                         {/* Red Highlight Cell if Late > 0 */}
                                                         <TableCell className={`text-center border-r border-slate-200 font-bold ${st.late > 0 ? 'bg-red-600 text-white font-black' : 'text-slate-700'}`}>
                                                             {st.late}
@@ -910,7 +980,7 @@ export default function SinoptikIndex({
                                                         <TableCell className="text-center border-r border-slate-200">100</TableCell>
                                                         <TableCell className="text-center border-r border-slate-200 font-bold text-emerald-700">{st.timely}</TableCell>
                                                         <TableCell className="text-center border-r border-slate-200 font-bold text-emerald-700">{st.timely_pct.toLocaleString('id-ID')}</TableCell>
-                                                        
+
                                                         {/* Red Highlight Cell if Late > 0 */}
                                                         <TableCell className={`text-center border-r border-slate-200 font-bold ${st.late > 0 ? 'bg-red-600 text-white font-black' : 'text-slate-700'}`}>
                                                             {st.late}
@@ -958,10 +1028,10 @@ export default function SinoptikIndex({
                                 anomalyTab === 'missing'
                                     ? sinopMissing
                                     : anomalyTab === 'terlambat'
-                                    ? sinopLate
-                                    : anomalyTab === 'lebih_awal'
-                                    ? sinopEarly
-                                    : sinopAnomalies;
+                                        ? sinopLate
+                                        : anomalyTab === 'lebih_awal'
+                                            ? sinopEarly
+                                            : sinopAnomalies;
 
                             return (
                                 <Card className="border border-slate-200 shadow-md bg-white overflow-hidden">
@@ -969,7 +1039,7 @@ export default function SinoptikIndex({
                                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                                             <CardTitle className="text-base font-bold flex items-center gap-2">
                                                 <AlertTriangle className="h-5 w-5 text-amber-400" />
-                                                Rincian Sandi SYNOP Evaluasi Kepatuhan GTS
+                                                Rincian Sandi SYNOP Evaluasi Monitoring GTS
                                             </CardTitle>
 
                                             {/* Sub-tabs for Missing, Terlambat, Lebih Awal */}
@@ -978,11 +1048,10 @@ export default function SinoptikIndex({
                                                     type="button"
                                                     size="sm"
                                                     onClick={() => setAnomalyTab('all')}
-                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${
-                                                        anomalyTab === 'all'
-                                                            ? 'bg-sky-500 text-slate-950 shadow-md font-black'
-                                                            : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
-                                                    }`}
+                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${anomalyTab === 'all'
+                                                        ? 'bg-sky-500 text-slate-950 shadow-md font-black'
+                                                        : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
+                                                        }`}
                                                 >
                                                     Semua ({sinopAnomalies.length})
                                                 </Button>
@@ -991,11 +1060,10 @@ export default function SinoptikIndex({
                                                     type="button"
                                                     size="sm"
                                                     onClick={() => setAnomalyTab('missing')}
-                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${
-                                                        anomalyTab === 'missing'
-                                                            ? 'bg-rose-600 text-white shadow-md font-black'
-                                                            : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
-                                                    }`}
+                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${anomalyTab === 'missing'
+                                                        ? 'bg-rose-600 text-white shadow-md font-black'
+                                                        : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
+                                                        }`}
                                                 >
                                                     Missing ({sinopMissing.length})
                                                 </Button>
@@ -1004,11 +1072,10 @@ export default function SinoptikIndex({
                                                     type="button"
                                                     size="sm"
                                                     onClick={() => setAnomalyTab('terlambat')}
-                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${
-                                                        anomalyTab === 'terlambat'
-                                                            ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                                                            : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
-                                                    }`}
+                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${anomalyTab === 'terlambat'
+                                                        ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                                                        : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
+                                                        }`}
                                                 >
                                                     Terlambat ({sinopLate.length})
                                                 </Button>
@@ -1017,11 +1084,10 @@ export default function SinoptikIndex({
                                                     type="button"
                                                     size="sm"
                                                     onClick={() => setAnomalyTab('lebih_awal')}
-                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${
-                                                        anomalyTab === 'lebih_awal'
-                                                            ? 'bg-blue-500 text-white shadow-md font-black'
-                                                            : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
-                                                    }`}
+                                                    className={`h-7 px-3 text-xs font-bold rounded-lg transition-all ${anomalyTab === 'lebih_awal'
+                                                        ? 'bg-blue-500 text-white shadow-md font-black'
+                                                        : 'bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50'
+                                                        }`}
                                                 >
                                                     Lebih Awal ({sinopEarly.length})
                                                 </Button>
@@ -1337,11 +1403,10 @@ export default function SinoptikIndex({
                                                     key={key}
                                                     variant={link.active ? 'default' : 'outline'}
                                                     size="sm"
-                                                    className={`h-8 min-w-[32px] text-xs px-2.5 ${
-                                                        link.active
-                                                            ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold'
-                                                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                                                    }`}
+                                                    className={`h-8 min-w-[32px] text-xs px-2.5 ${link.active
+                                                        ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold'
+                                                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                                        }`}
                                                     onClick={() => router.get(link.url!, {}, { preserveState: true })}
                                                 >
                                                     {label}
@@ -1508,33 +1573,30 @@ export default function SinoptikIndex({
                                         <button
                                             type="button"
                                             onClick={() => setSyncFilter('ALL')}
-                                            className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors ${
-                                                syncFilter === 'ALL'
-                                                    ? 'bg-white text-slate-900 shadow-sm'
-                                                    : 'text-slate-600 hover:text-slate-900'
-                                            }`}
+                                            className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors ${syncFilter === 'ALL'
+                                                ? 'bg-white text-slate-900 shadow-sm'
+                                                : 'text-slate-600 hover:text-slate-900'
+                                                }`}
                                         >
                                             Semua ({syncResult.details.length})
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setSyncFilter('BERHASIL')}
-                                            className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors ${
-                                                syncFilter === 'BERHASIL'
-                                                    ? 'bg-emerald-600 text-white shadow-sm'
-                                                    : 'text-slate-600 hover:text-slate-900'
-                                            }`}
+                                            className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors ${syncFilter === 'BERHASIL'
+                                                ? 'bg-emerald-600 text-white shadow-sm'
+                                                : 'text-slate-600 hover:text-slate-900'
+                                                }`}
                                         >
                                             Sukses ({syncResult.synced_count})
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setSyncFilter('GAGAL')}
-                                            className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors ${
-                                                syncFilter === 'GAGAL'
-                                                    ? 'bg-rose-600 text-white shadow-sm'
-                                                    : 'text-slate-600 hover:text-slate-900'
-                                            }`}
+                                            className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors ${syncFilter === 'GAGAL'
+                                                ? 'bg-rose-600 text-white shadow-sm'
+                                                : 'text-slate-600 hover:text-slate-900'
+                                                }`}
                                         >
                                             Gagal ({syncResult.failed_count})
                                         </button>
@@ -1551,11 +1613,10 @@ export default function SinoptikIndex({
                                         .map((item, index) => (
                                             <div
                                                 key={index}
-                                                className={`p-2.5 rounded-lg border text-xs flex items-center justify-between ${
-                                                    item.status === 'berhasil'
-                                                        ? 'bg-emerald-50/50 border-emerald-200 text-emerald-950'
-                                                        : 'bg-rose-50/50 border-rose-200 text-rose-950'
-                                                }`}
+                                                className={`p-2.5 rounded-lg border text-xs flex items-center justify-between ${item.status === 'berhasil'
+                                                    ? 'bg-emerald-50/50 border-emerald-200 text-emerald-950'
+                                                    : 'bg-rose-50/50 border-rose-200 text-rose-950'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-2">
                                                     {item.status === 'berhasil' ? (

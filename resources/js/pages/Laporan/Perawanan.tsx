@@ -150,7 +150,7 @@ export default function PerawananIndex() {
                                 Laporan Bulanan Perawanan
                             </h1>
                             <p className="text-slate-300 text-xs md:text-sm max-w-xl">
-                                Stasiun Meteorologi Oesman Sadik Halmahera Selatan &bull; Kategori Perawanan (Cerah, Cerah Berawan, Berawan, Mendung)
+                                Stasiun Meteorologi Oesman Sadik Halmahera Selatan
                             </p>
                         </div>
 
@@ -339,19 +339,19 @@ export default function PerawananIndex() {
                                                 </div>
                                                 <div className="space-y-1 text-[11px]">
                                                     <div className="flex items-center justify-between text-amber-300">
-                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/> Cerah:</span>
+                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Cerah:</span>
                                                         <span className="font-bold">{item.clear} jam</span>
                                                     </div>
                                                     <div className="flex items-center justify-between text-sky-300">
-                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400 inline-block"/> Cerah Berawan:</span>
+                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400 inline-block" /> Cerah Berawan:</span>
                                                         <span className="font-bold">{item.partly_cloudy} jam</span>
                                                     </div>
                                                     <div className="flex items-center justify-between text-blue-300">
-                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block"/> Berawan:</span>
+                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> Berawan:</span>
                                                         <span className="font-bold">{item.cloudy} jam</span>
                                                     </div>
                                                     <div className="flex items-center justify-between text-slate-300">
-                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-400 inline-block"/> Mendung:</span>
+                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-400 inline-block" /> Mendung:</span>
                                                         <span className="font-bold">{item.totally_cloudy} jam</span>
                                                     </div>
                                                 </div>

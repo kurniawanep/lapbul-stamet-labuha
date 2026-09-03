@@ -157,7 +157,7 @@ export default function PenguapanIndex() {
                                 Laporan Bulanan Penguapan
                             </h1>
                             <p className="text-slate-300 text-xs md:text-sm max-w-xl">
-                                Stasiun Meteorologi Oesman Sadik Halmahera Selatan &bull; Parameter Evaporasi, Curah Hujan 07.00 &amp; Anemometer 0.5m
+                                Stasiun Meteorologi Oesman Sadik Halmahera Selatan
                             </p>
                         </div>
 
@@ -354,11 +354,11 @@ export default function PenguapanIndex() {
                                                     </div>
                                                     <div className="space-y-1 text-[11px]">
                                                         <div className="flex items-center justify-between text-teal-300">
-                                                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-teal-400 inline-block"/> Penguapan:</span>
+                                                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-teal-400 inline-block" /> Penguapan:</span>
                                                             <span className="font-bold">{evaVal} mm</span>
                                                         </div>
                                                         <div className="flex items-center justify-between text-sky-300">
-                                                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400 inline-block"/> Curah Hujan:</span>
+                                                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400 inline-block" /> Curah Hujan:</span>
                                                             <span className="font-bold">{rainVal} mm</span>
                                                         </div>
                                                     </div>
@@ -546,7 +546,7 @@ export default function PenguapanIndex() {
                                             const rowNum = (penguapanRecords.current_page - 1) * penguapanRecords.per_page + idx + 1;
                                             const observerDisplay = item.pegawai?.nama || item.observer_name || 'Unassigned';
                                             const dtDisplay = formatDateTimeDisplay(item.data_timestamp);
-                                            const renderVal = (v: number | null) => (v === null || v === undefined ? '-' : v === 8888 ? 0 : v);
+                                            const renderVal = (v: number | null | undefined) => (v === null || v === undefined ? '-' : v === 8888 ? 0 : v);
 
                                             return (
                                                 <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors">
