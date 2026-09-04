@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\DataMetar;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class MetarDashboardService
 {
@@ -23,7 +24,10 @@ class MetarDashboardService
         $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
         $endDate = Carbon::createFromDate($tahun, $bulan, $daysInMonth)->endOfMonth();
 
-        $records = DataMetar::with('pegawai')->whereBetween('data_timestamp', [$startDate, $endDate])->get();
+        $records = DataMetar::with('pegawai:id,nama')
+            ->select('id', 'data_timestamp', 'sent_timestamp', 'received_timestamp', 'observer_name', 'pegawai_id')
+            ->whereBetween('data_timestamp', [$startDate, $endDate])
+            ->get();
         $metarMap = [];
         foreach ($records as $r) {
             $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
@@ -192,7 +196,24 @@ class MetarDashboardService
         $selectedEnd = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->endOfMonth();
         $trendStart = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->subMonths(11)->startOfMonth();
 
-        $allTrendRecords = DataMetar::whereBetween('data_timestamp', [$trendStart->toDateTimeString(), $selectedEnd->toDateTimeString()])->get();
+        $allTrendRecords = DB::table('data_metar')
+            ->select('data_timestamp', 'sent_timestamp', 'received_timestamp')
+            ->whereBetween('data_timestamp', [$trendStart->toDateTimeString(), $selectedEnd->toDateTimeString()])
+            ->get();
+
+        $trendMap = [];
+        $monthCountMap = [];
+        foreach ($allTrendRecords as $r) {
+            $ts = is_string($r->data_timestamp) ? $r->data_timestamp : (string) $r->data_timestamp;
+            $minuteKey = substr($ts, 0, 16); // "YYYY-MM-DD HH:mm"
+            $hourKey = substr($ts, 0, 13);   // "YYYY-MM-DD HH"
+            $monthKey = substr($ts, 0, 7);   // "YYYY-MM"
+            $trendMap[$minuteKey] = $r;
+            if (!isset($trendMap[$hourKey])) {
+                $trendMap[$hourKey] = $r;
+            }
+            $monthCountMap[$monthKey] = ($monthCountMap[$monthKey] ?? 0) + 1;
+        }
 
         $namaBulanShort = [
             1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr',
@@ -208,20 +229,13 @@ class MetarDashboardService
             $m = (int) $dtMonth->month;
             $y = (int) $dtMonth->year;
             $mDays = $dtMonth->daysInMonth;
-
-            $mStart = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->startOfMonth();
-            $mEnd = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->endOfMonth();
-
-            $mRecs = $allTrendRecords->filter(function ($r) use ($mStart, $mEnd) {
-                $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
-                $dt = Carbon::parse($rawStr, 'UTC');
-                return $dt->gte($mStart) && $dt->lte($mEnd);
-            });
+            $monthKey = sprintf('%04d-%02d', $y, $m);
 
             $label = $namaBulanShort[$m] . ' ' . substr((string) $y, 2);
             $fullLabel = $namaBulanShort[$m] . ' ' . $y;
 
-            if ($mRecs->isEmpty()) {
+            $hasData = ($monthCountMap[$monthKey] ?? 0) > 0;
+            if (!$hasData) {
                 $monthlyTrendPercentage[] = [
                     'label' => $label,
                     'full_label' => $fullLabel,
@@ -240,35 +254,23 @@ class MetarDashboardService
                 continue;
             }
 
-            $mMap = [];
-            foreach ($mRecs as $r) {
-                $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
-                $dt = Carbon::parse($rawStr, 'UTC');
-                $keyMinute = $dt->format('Y-m-d H:i');
-                $keyHour = $dt->format('Y-m-d H');
-                $mMap[$keyMinute] = $r;
-                if (!isset($mMap[$keyHour])) {
-                    $mMap[$keyHour] = $r;
-                }
-            }
-
             $mTarget = $mDays * 24;
             $mTimely = 0;
             $mLate = 0;
 
             for ($d = 1; $d <= $mDays; $d++) {
                 for ($h = 0; $h < 24; $h++) {
-                    $slotTime = Carbon::create($y, $m, $d, $h, 0, 0, 'UTC');
-                    $slotKeyMinute = $slotTime->format('Y-m-d H:i');
-                    $slotKeyHour = $slotTime->format('Y-m-d H');
-                    $rec = $mMap[$slotKeyMinute] ?? ($mMap[$slotKeyHour] ?? null);
+                    $slotKeyMinute = sprintf('%04d-%02d-%02d %02d:00', $y, $m, $d, $h);
+                    $slotKeyHour = sprintf('%04d-%02d-%02d %02d', $y, $m, $d, $h);
+                    $rec = $trendMap[$slotKeyMinute] ?? ($trendMap[$slotKeyHour] ?? null);
 
                     if ($rec) {
+                        $slotTime = Carbon::create($y, $m, $d, $h, 0, 0, 'UTC');
                         $windowStart = $slotTime->copy()->subMinutes(2);
                         $windowEnd = $slotTime->copy()->addMinutes(2)->endOfMinute();
 
                         $sentTs = $rec->sent_timestamp ?? $rec->received_timestamp ?? $rec->data_timestamp ?? null;
-                        $sentCarbon = $sentTs ? Carbon::parse(is_string($sentTs) ? $sentTs : $sentTs->format('Y-m-d H:i:s'), 'UTC') : null;
+                        $sentCarbon = $sentTs ? Carbon::parse(is_string($sentTs) ? $sentTs : (string) $sentTs, 'UTC') : null;
 
                         if ($sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
                             $mTimely++;

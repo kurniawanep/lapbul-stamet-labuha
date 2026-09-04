@@ -11,6 +11,7 @@ use App\Models\DataSinoptik;
 use App\Models\DataTafor;
 use Carbon\Carbon;
 use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -18,8 +19,11 @@ use Illuminate\Support\Facades\Log;
 class BmkgsoftService
 {
     protected string $baseUrl;
+
     protected string $username;
+
     protected string $password;
+
     protected ObserverResolverService $observerResolver;
 
     public function __construct()
@@ -60,13 +64,15 @@ class BmkgsoftService
                     }
                 }
 
-                Log::error("BMKGSoft Login Failed", [
+                Log::error('BMKGSoft Login Failed', [
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
+
                 return null;
             } catch (\Exception $e) {
-                Log::error("BMKGSoft Login Exception: " . $e->getMessage());
+                Log::error('BMKGSoft Login Exception: '.$e->getMessage());
+
                 return null;
             }
         });
@@ -78,7 +84,7 @@ class BmkgsoftService
     public function fetchPibalDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
     {
         $token = $this->getToken();
-        if (!$token) {
+        if (! $token) {
             return [
                 'success' => false,
                 'data' => [],
@@ -129,6 +135,7 @@ class BmkgsoftService
 
             if ($response->successful()) {
                 $payload = $response->json();
+
                 return [
                     'success' => true,
                     'data' => is_array($payload) ? ($payload['data'] ?? $payload) : [],
@@ -139,7 +146,7 @@ class BmkgsoftService
             return [
                 'success' => false,
                 'data' => [],
-                'error' => "HTTP {$response->status()}: " . $response->body(),
+                'error' => "HTTP {$response->status()}: ".$response->body(),
             ];
         } catch (\Exception $e) {
             return [
@@ -159,7 +166,7 @@ class BmkgsoftService
 
         $fetchResult = $this->fetchPibalDataWithResult($startDate, $endDate, $stationId);
 
-        if (!$fetchResult['success']) {
+        if (! $fetchResult['success']) {
             return [
                 'success' => false,
                 'synced_count' => 0,
@@ -180,7 +187,7 @@ class BmkgsoftService
             $timestamp = $item['data_timestamp'] ?? null;
             $observerName = $item['observer_name'] ?? null;
 
-            if (!$timestamp) {
+            if (! $timestamp) {
                 $failedCount++;
                 $details[] = [
                     'timestamp' => 'N/A',
@@ -188,6 +195,7 @@ class BmkgsoftService
                     'status' => 'gagal',
                     'reason' => 'Missing data_timestamp field',
                 ];
+
                 continue;
             }
 
@@ -266,11 +274,12 @@ class BmkgsoftService
                                 ])
                                 ->get("{$this->baseUrl}/api/v21/monitoring/gts/pilot/daily/date/{$dateStr}");
                         }
+
                         return $requests;
                     });
 
                     foreach ($responses as $resMon) {
-                        if ($resMon instanceof \Illuminate\Http\Client\Response && $resMon->successful()) {
+                        if ($resMon instanceof Response && $resMon->successful()) {
                             $monData = $resMon->json('data') ?? [];
                             $foundStn = null;
                             foreach ($monData as $stn) {
@@ -326,7 +335,7 @@ class BmkgsoftService
                 }
             }
         } catch (\Exception $e) {
-            Log::warning("GTS Pilot monitoring enrichment error: " . $e->getMessage());
+            Log::warning('GTS Pilot monitoring enrichment error: '.$e->getMessage());
         }
 
         return [
@@ -334,7 +343,7 @@ class BmkgsoftService
             'synced_count' => $syncedCount,
             'failed_count' => $failedCount,
             'total_fetched' => count($items),
-            'message' => "Berhasil menyinkronkan {$syncedCount} dari " . count($items) . " data PIBAL.",
+            'message' => "Berhasil menyinkronkan {$syncedCount} dari ".count($items).' data PIBAL.',
             'error_reason' => null,
             'details' => $details,
         ];
@@ -346,7 +355,7 @@ class BmkgsoftService
     public function fetchTaforDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
     {
         $token = $this->getToken();
-        if (!$token) {
+        if (! $token) {
             return [
                 'success' => false,
                 'data' => [],
@@ -410,7 +419,7 @@ class BmkgsoftService
             return [
                 'success' => false,
                 'data' => [],
-                'error' => "HTTP {$response->status()}: " . $response->body(),
+                'error' => "HTTP {$response->status()}: ".$response->body(),
             ];
         } catch (\Exception $e) {
             return [
@@ -449,7 +458,7 @@ class BmkgsoftService
 
             $fetchResult = $this->fetchTaforDataWithResult($dateFromStr, $dateToStr, $stationId);
 
-            if (!$fetchResult['success']) {
+            if (! $fetchResult['success']) {
                 $overallError = $fetchResult['error'];
                 break;
             }
@@ -461,7 +470,7 @@ class BmkgsoftService
                 $timestamp = $item['data_timestamp'] ?? null;
                 $observerName = $item['sender_username'] ?? ($item['observer_name'] ?? null);
 
-                if (!$timestamp) {
+                if (! $timestamp) {
                     $totalFailed++;
                     $allDetails[] = [
                         'timestamp' => 'N/A',
@@ -469,6 +478,7 @@ class BmkgsoftService
                         'status' => 'gagal',
                         'reason' => 'Missing data_timestamp field',
                     ];
+
                     continue;
                 }
 
@@ -552,7 +562,7 @@ class BmkgsoftService
     public function fetchMetarDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
     {
         $token = $this->getToken();
-        if (!$token) {
+        if (! $token) {
             return [
                 'success' => false,
                 'data' => [],
@@ -616,7 +626,7 @@ class BmkgsoftService
             return [
                 'success' => false,
                 'data' => [],
-                'error' => "HTTP {$response->status()}: " . $response->body(),
+                'error' => "HTTP {$response->status()}: ".$response->body(),
             ];
         } catch (\Exception $e) {
             return [
@@ -655,7 +665,7 @@ class BmkgsoftService
 
             $fetchResult = $this->fetchMetarDataWithResult($dateFromStr, $dateToStr, $stationId);
 
-            if (!$fetchResult['success']) {
+            if (! $fetchResult['success']) {
                 $overallError = $fetchResult['error'];
                 break;
             }
@@ -667,7 +677,7 @@ class BmkgsoftService
                 $timestamp = $item['data_timestamp'] ?? null;
                 $observerName = $item['sender_username'] ?? ($item['observer_name'] ?? null);
 
-                if (!$timestamp) {
+                if (! $timestamp) {
                     $totalFailed++;
                     $allDetails[] = [
                         'timestamp' => 'N/A',
@@ -675,6 +685,7 @@ class BmkgsoftService
                         'status' => 'gagal',
                         'reason' => 'Missing data_timestamp field',
                     ];
+
                     continue;
                 }
 
@@ -758,11 +769,12 @@ class BmkgsoftService
                                 ])
                                 ->get("{$this->baseUrl}/api/v21/monitoring/gts/metar/daily/date/{$dateStr}");
                         }
+
                         return $requests;
                     });
 
                     foreach ($responses as $resMon) {
-                        if ($resMon instanceof \Illuminate\Http\Client\Response && $resMon->successful()) {
+                        if ($resMon instanceof Response && $resMon->successful()) {
                             $monData = $resMon->json('data') ?? [];
                             $foundStn = null;
                             foreach ($monData as $stn) {
@@ -801,7 +813,7 @@ class BmkgsoftService
                 }
             }
         } catch (\Exception $e) {
-            Log::warning("GTS METAR monitoring enrichment error: " . $e->getMessage());
+            Log::warning('GTS METAR monitoring enrichment error: '.$e->getMessage());
         }
 
         if ($overallError && $totalSynced === 0) {
@@ -833,7 +845,7 @@ class BmkgsoftService
     public function fetchSinoptikDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
     {
         $token = $this->getToken();
-        if (!$token) {
+        if (! $token) {
             return [
                 'success' => false,
                 'data' => [],
@@ -892,7 +904,7 @@ class BmkgsoftService
             return [
                 'success' => false,
                 'data' => [],
-                'error' => "HTTP {$response->status()}: " . $response->body(),
+                'error' => "HTTP {$response->status()}: ".$response->body(),
             ];
         } catch (\Exception $e) {
             return [
@@ -931,7 +943,7 @@ class BmkgsoftService
 
             $fetchResult = $this->fetchSinoptikDataWithResult($dateFromStr, $dateToStr, $stationId);
 
-            if (!$fetchResult['success']) {
+            if (! $fetchResult['success']) {
                 $overallError = $fetchResult['error'];
                 break;
             }
@@ -947,8 +959,10 @@ class BmkgsoftService
             $getValue = function (array $row, string $key) use ($headerMap) {
                 if (isset($headerMap[$key])) {
                     $colIdx = $headerMap[$key];
+
                     return $row[$colIdx] ?? null;
                 }
+
                 return null;
             };
 
@@ -957,7 +971,7 @@ class BmkgsoftService
                 $observerName = $getValue($row, 'observer_name');
                 $sandiRaw = $getValue($row, 'edited_encoded_synop') ?? $getValue($row, 'encoded_synop');
 
-                if (!$timestamp) {
+                if (! $timestamp) {
                     $totalFailed++;
                     $allDetails[] = [
                         'timestamp' => 'N/A',
@@ -965,6 +979,7 @@ class BmkgsoftService
                         'status' => 'gagal',
                         'reason' => 'Missing data_timestamp field',
                     ];
+
                     continue;
                 }
 
@@ -1105,11 +1120,12 @@ class BmkgsoftService
                                 ])
                                 ->get("{$this->baseUrl}/api/v21/monitoring/gts/synoptic/daily/date/{$dateStr}");
                         }
+
                         return $requests;
                     });
 
                     foreach ($responses as $resMon) {
-                        if ($resMon instanceof \Illuminate\Http\Client\Response && $resMon->successful()) {
+                        if ($resMon instanceof Response && $resMon->successful()) {
                             $monData = $resMon->json('data') ?? [];
                             $foundStn = null;
                             foreach ($monData as $stn) {
@@ -1165,7 +1181,7 @@ class BmkgsoftService
                 }
             }
         } catch (\Exception $e) {
-            Log::warning("GTS Synoptic monitoring enrichment error: " . $e->getMessage());
+            Log::warning('GTS Synoptic monitoring enrichment error: '.$e->getMessage());
         }
 
         if ($overallError && $totalSynced === 0) {
@@ -1197,7 +1213,7 @@ class BmkgsoftService
     public function fetchFklimDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
     {
         $token = $this->getToken();
-        if (!$token) {
+        if (! $token) {
             return [
                 'success' => false,
                 'data' => [],
@@ -1262,7 +1278,7 @@ class BmkgsoftService
                     }
                 }
             } else {
-                $overallError = "HTTP {$responseExport->status()}: " . $responseExport->body();
+                $overallError = "HTTP {$responseExport->status()}: ".$responseExport->body();
             }
         } catch (\Exception $e) {
             $overallError = $e->getMessage();
@@ -1300,13 +1316,17 @@ class BmkgsoftService
                         };
 
                         $ts = $getValue('data_timestamp');
-                        if (!$ts) continue;
+                        if (! $ts) {
+                            continue;
+                        }
 
                         $dateKey = Carbon::parse($ts)->format('Y-m-d');
 
-                        if (!isset($itemsByDate[$dateKey])) {
+                        if (! isset($itemsByDate[$dateKey])) {
                             $cuKhusus = $getValue('cuaca_khusus');
-                            if ($cuKhusus === 'N/A') $cuKhusus = null;
+                            if ($cuKhusus === 'N/A') {
+                                $cuKhusus = null;
+                            }
 
                             $itemsByDate[$dateKey] = [
                                 'station_id' => $stationId,
@@ -1348,8 +1368,9 @@ class BmkgsoftService
             }
         }
 
-        if (!empty($itemsByDate)) {
+        if (! empty($itemsByDate)) {
             ksort($itemsByDate);
+
             return [
                 'success' => true,
                 'data' => array_values($itemsByDate),
@@ -1392,7 +1413,7 @@ class BmkgsoftService
 
             $fetchResult = $this->fetchFklimDataWithResult($dateFromStr, $dateToStr, $stationId);
 
-            if (!$fetchResult['success']) {
+            if (! $fetchResult['success']) {
                 $overallError = $fetchResult['error'];
                 break;
             }
@@ -1404,7 +1425,7 @@ class BmkgsoftService
                 $timestamp = $row['data_timestamp'] ?? null;
                 $observerName = $row['observer_name'] ?? null;
 
-                if (!$timestamp) {
+                if (! $timestamp) {
                     $totalFailed++;
                     $allDetails[] = [
                         'timestamp' => 'N/A',
@@ -1412,6 +1433,7 @@ class BmkgsoftService
                         'status' => 'gagal',
                         'reason' => 'Missing data_timestamp field',
                     ];
+
                     continue;
                 }
 
@@ -1515,7 +1537,7 @@ class BmkgsoftService
     public function fetchPerawananDataWithResult(string $startDate, string $endDate): array
     {
         $token = $this->getToken();
-        if (!$token) {
+        if (! $token) {
             return [
                 'success' => false,
                 'data' => [],
@@ -1576,7 +1598,7 @@ class BmkgsoftService
     public function syncPerawananData(string $startDate, string $endDate): array
     {
         $result = $this->fetchPerawananDataWithResult($startDate, $endDate);
-        if (!$result['success']) {
+        if (! $result['success']) {
             return [
                 'success' => false,
                 'synced_count' => 0,
@@ -1601,7 +1623,9 @@ class BmkgsoftService
             $stationName = $row[$headerMap['station_name'] ?? 0] ?? 'Stasiun Meteorologi Oesman Sadik';
             $rawTs = $row[$headerMap['data_timestamp'] ?? 1] ?? null;
 
-            if (!$rawTs) continue;
+            if (! $rawTs) {
+                continue;
+            }
 
             $timestamp = Carbon::parse($rawTs, 'UTC')->toDateTimeString();
             $clear = (int) ($row[$headerMap['clear'] ?? 2] ?? 0);
@@ -1611,6 +1635,11 @@ class BmkgsoftService
             $totalObs = (int) ($row[$headerMap['total_observation'] ?? 6] ?? 24);
             $notes = $row[$headerMap['notes'] ?? 7] ?? null;
             $observerName = $row[$headerMap['observer_name'] ?? 10] ?? null;
+
+            // Skip dummy records that have 0 observations and 0 cloud values
+            if ($totalObs === 0 && $clear === 0 && $partlyCloudy === 0 && $cloudy === 0 && $totallyCloudy === 0) {
+                continue;
+            }
 
             try {
                 DataPerawanan::updateOrCreate(
@@ -1667,7 +1696,7 @@ class BmkgsoftService
     public function fetchPenguapanDataWithResult(string $dateFrom, string $dateTo, int $stationId = 138): array
     {
         $token = $this->getToken();
-        if (!$token) {
+        if (! $token) {
             return [
                 'success' => false,
                 'data' => [],
@@ -1732,7 +1761,7 @@ class BmkgsoftService
                     }
                 }
             } else {
-                $overallError = "HTTP {$responseExport->status()}: " . $responseExport->body();
+                $overallError = "HTTP {$responseExport->status()}: ".$responseExport->body();
             }
         } catch (\Exception $e) {
             $overallError = $e->getMessage();
@@ -1770,11 +1799,13 @@ class BmkgsoftService
                         };
 
                         $ts = $getValue('data_timestamp');
-                        if (!$ts) continue;
+                        if (! $ts) {
+                            continue;
+                        }
 
                         $dateKey = Carbon::parse($ts)->format('Y-m-d');
 
-                        if (!isset($itemsByDate[$dateKey])) {
+                        if (! isset($itemsByDate[$dateKey])) {
                             $itemsByDate[$dateKey] = [
                                 'station_id' => $stationId,
                                 'station_name' => $getValue('station_name') ?? 'Stasiun Meteorologi Oesman Sadik',
@@ -1800,8 +1831,9 @@ class BmkgsoftService
             }
         }
 
-        if (!empty($itemsByDate)) {
+        if (! empty($itemsByDate)) {
             ksort($itemsByDate);
+
             return [
                 'success' => true,
                 'data' => array_values($itemsByDate),
@@ -1825,7 +1857,7 @@ class BmkgsoftService
 
         $fetchResult = $this->fetchPenguapanDataWithResult($startDate, $endDate, $stationId);
 
-        if (!$fetchResult['success']) {
+        if (! $fetchResult['success']) {
             return [
                 'success' => false,
                 'synced_count' => 0,
@@ -1846,7 +1878,9 @@ class BmkgsoftService
             $stationName = $row['station_name'] ?? 'Stasiun Meteorologi Oesman Sadik';
             $rawTs = $row['data_timestamp'] ?? null;
 
-            if (!$rawTs) continue;
+            if (! $rawTs) {
+                continue;
+            }
 
             $timestamp = Carbon::parse($rawTs)->format('Y-m-d H:i:s');
             $observerName = $row['observer_name'] ?? null;
@@ -1854,10 +1888,17 @@ class BmkgsoftService
             $m0700 = $row['m_0700ws'] ?? [];
 
             $parsePenguapanVal = function ($val) {
-                if ($val === null || $val === '') return null;
+                if ($val === null || $val === '') {
+                    return null;
+                }
                 $f = (float) $val;
-                if ($f == 9999) return null;
-                if ($f == 8888) return 0.0;
+                if ($f == 9999) {
+                    return null;
+                }
+                if ($f == 8888) {
+                    return 0.0;
+                }
+
                 return $f;
             };
 

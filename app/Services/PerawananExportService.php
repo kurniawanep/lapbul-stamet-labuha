@@ -53,7 +53,9 @@ class PerawananExportService
         foreach ($records as $r) {
             $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
             $day = Carbon::parse($rawStr, 'UTC')->day;
-            $perawananMap[$day] = $r;
+            if (!isset($perawananMap[$day]) || $r->total_observation > 0) {
+                $perawananMap[$day] = $r;
+            }
         }
 
         // 4. Populate Daily Rows 13 to 43 (Days 1 to 31)

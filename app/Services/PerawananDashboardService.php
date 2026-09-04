@@ -27,6 +27,10 @@ class PerawananDashboardService
         $totalObservationHours = 0;
 
         foreach ($monthRecords as $rec) {
+            if ($rec->total_observation === 0 && $rec->clear === 0 && $rec->partly_cloudy === 0 && $rec->cloudy === 0 && $rec->totally_cloudy === 0) {
+                continue;
+            }
+
             $rawStr = is_string($rec->data_timestamp) ? $rec->data_timestamp : $rec->data_timestamp->format('Y-m-d H:i:s');
             $day = Carbon::parse($rawStr, 'UTC')->day;
             $recordsMap[$day] = $rec;

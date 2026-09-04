@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\DataPibal;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class PibalDashboardService
 {
@@ -23,7 +24,10 @@ class PibalDashboardService
         $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
         $endDate = Carbon::createFromDate($tahun, $bulan, $daysInMonth)->endOfMonth();
 
-        $records = DataPibal::with('pegawai')->whereBetween('data_timestamp', [$startDate, $endDate])->get();
+        $records = DataPibal::with('pegawai:id,nama')
+            ->select('id', 'data_timestamp', 'sent_timestamp', 'received_timestamp', 'sandi_pibal', 'observer_name', 'pegawai_id')
+            ->whereBetween('data_timestamp', [$startDate, $endDate])
+            ->get();
         $pibalMap = [];
         foreach ($records as $r) {
             $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
@@ -246,7 +250,20 @@ class PibalDashboardService
         $selectedEnd = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->endOfMonth();
         $trendStart = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->subMonths(11)->startOfMonth();
 
-        $allYearRecords = DataPibal::whereBetween('data_timestamp', [$trendStart->toDateTimeString(), $selectedEnd->toDateTimeString()])->get();
+        $allYearRecords = DB::table('data_pibal')
+            ->select('data_timestamp', 'sent_timestamp', 'received_timestamp', 'sandi_pibal')
+            ->whereBetween('data_timestamp', [$trendStart->toDateTimeString(), $selectedEnd->toDateTimeString()])
+            ->get();
+
+        $trendMap = [];
+        $monthCountMap = [];
+        foreach ($allYearRecords as $r) {
+            $ts = is_string($r->data_timestamp) ? $r->data_timestamp : (string) $r->data_timestamp;
+            $hourKey = substr($ts, 0, 13);
+            $monthKey = substr($ts, 0, 7);
+            $trendMap[$hourKey] = $r;
+            $monthCountMap[$monthKey] = ($monthCountMap[$monthKey] ?? 0) + 1;
+        }
 
         $monthlyTrend = [];
         $namaBulanShort = [1 => 'JAN', 2 => 'FEB', 3 => 'MAR', 4 => 'APR', 5 => 'MEI', 6 => 'JUNI', 7 => 'JULI', 8 => 'AGS', 9 => 'SEP', 10 => 'OKT', 11 => 'NOV', 12 => 'DES'];
@@ -256,23 +273,7 @@ class PibalDashboardService
             $m = (int) $dtMonth->month;
             $y = (int) $dtMonth->year;
             $mDays = $dtMonth->daysInMonth;
-
-            $mStart = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->startOfMonth();
-            $mEnd = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->endOfMonth();
-
-            $mRecs = $allYearRecords->filter(function ($r) use ($mStart, $mEnd) {
-                $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
-                $dt = Carbon::parse($rawStr, 'UTC');
-                return $dt->gte($mStart) && $dt->lte($mEnd);
-            });
-
-            $pibalMap = [];
-            foreach ($mRecs as $r) {
-                $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
-                $dt = Carbon::parse($rawStr, 'UTC');
-                $key = $dt->format('Y-m-d H');
-                $pibalMap[$key] = $r;
-            }
+            $monthKey = sprintf('%04d-%02d', $y, $m);
 
             $timely00 = 0;
             $target00 = $mDays * 2; // PPAA 00 & PPBB 00
@@ -282,39 +283,41 @@ class PibalDashboardService
 
             for ($d = 1; $d <= $mDays; $d++) {
                 foreach ([0, 12] as $h) {
-                    $slotTime = Carbon::create($y, $m, $d, $h, 0, 0, 'UTC');
-                    $slotKey = $slotTime->format('Y-m-d H');
-                    $rec = $pibalMap[$slotKey] ?? null;
+                    $slotKey = sprintf('%04d-%02d-%02d %02d', $y, $m, $d, $h);
+                    $rec = $trendMap[$slotKey] ?? null;
 
-                    $windowStart = $slotTime->copy()->subMinutes(15);
-                    $windowEnd = $slotTime->copy()->addMinutes(45)->endOfMinute();
+                    if ($rec) {
+                        $slotTime = Carbon::create($y, $m, $d, $h, 0, 0, 'UTC');
+                        $windowStart = $slotTime->copy()->subMinutes(15);
+                        $windowEnd = $slotTime->copy()->addMinutes(45)->endOfMinute();
 
-                    $sandi = strtoupper($rec->sandi_pibal ?? '');
-                    $hasPpaa = $rec && ($sandi === '' || str_contains($sandi, 'PPAA') || str_contains($sandi, 'NIL'));
-                    $hasPpbb = $rec && ($sandi === '' || str_contains($sandi, 'PPBB') || str_contains($sandi, 'NIL'));
+                        $sandi = strtoupper($rec->sandi_pibal ?? '');
+                        $hasPpaa = ($sandi === '' || str_contains($sandi, 'PPAA') || str_contains($sandi, 'NIL'));
+                        $hasPpbb = ($sandi === '' || str_contains($sandi, 'PPBB') || str_contains($sandi, 'NIL'));
 
-                    $sentTs = $rec->sent_timestamp ?? $rec->received_timestamp ?? $rec->data_timestamp ?? null;
-                    $sentCarbon = $sentTs ? Carbon::parse(is_string($sentTs) ? $sentTs : $sentTs->format('Y-m-d H:i:s'), 'UTC') : null;
+                        $sentTs = $rec->sent_timestamp ?? $rec->received_timestamp ?? $rec->data_timestamp ?? null;
+                        $sentCarbon = $sentTs ? Carbon::parse(is_string($sentTs) ? $sentTs : (string) $sentTs, 'UTC') : null;
 
-                    if ($h === 0) {
-                        if ($rec && $hasPpaa && $sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
-                            $timely00++;
-                        }
-                        if ($rec && $hasPpbb && $sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
-                            $timely00++;
-                        }
-                    } else {
-                        if ($rec && $hasPpaa && $sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
-                            $timely12++;
-                        }
-                        if ($rec && $hasPpbb && $sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
-                            $timely12++;
+                        if ($h === 0) {
+                            if ($hasPpaa && $sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
+                                $timely00++;
+                            }
+                            if ($hasPpbb && $sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
+                                $timely00++;
+                            }
+                        } else {
+                            if ($hasPpaa && $sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
+                                $timely12++;
+                            }
+                            if ($hasPpbb && $sentCarbon && $sentCarbon->between($windowStart, $windowEnd)) {
+                                $timely12++;
+                            }
                         }
                     }
                 }
             }
 
-            $hasData = $mRecs->count() > 0;
+            $hasData = ($monthCountMap[$monthKey] ?? 0) > 0;
             $pct00 = ($hasData && $target00 > 0) ? round(($timely00 / $target00) * 100, 2) : 0.0;
             $pct12 = ($hasData && $target12 > 0) ? round(($timely12 / $target12) * 100, 2) : 0.0;
 

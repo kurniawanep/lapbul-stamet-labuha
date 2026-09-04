@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\DataSinoptik;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class SinoptikDashboardService
 {
@@ -23,7 +24,10 @@ class SinoptikDashboardService
         $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
         $endDate = Carbon::createFromDate($tahun, $bulan, $daysInMonth)->endOfMonth();
 
-        $records = DataSinoptik::with('pegawai')->whereBetween('data_timestamp', [$startDate, $endDate])->get();
+        $records = DataSinoptik::with('pegawai:id,nama')
+            ->select('id', 'data_timestamp', 'sent_timestamp', 'received_timestamp', 'observer_name', 'pegawai_id')
+            ->whereBetween('data_timestamp', [$startDate, $endDate])
+            ->get();
         $sinopMap = [];
         foreach ($records as $r) {
             $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
@@ -200,7 +204,20 @@ class SinoptikDashboardService
         $selectedEnd = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->endOfMonth();
         $trendStart = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->subMonths(11)->startOfMonth();
 
-        $allTrendRecords = DataSinoptik::whereBetween('data_timestamp', [$trendStart->toDateTimeString(), $selectedEnd->toDateTimeString()])->get();
+        $allTrendRecords = DB::table('data_sinoptik')
+            ->select('data_timestamp', 'sent_timestamp', 'received_timestamp')
+            ->whereBetween('data_timestamp', [$trendStart->toDateTimeString(), $selectedEnd->toDateTimeString()])
+            ->get();
+
+        $trendMap = [];
+        $monthCountMap = [];
+        foreach ($allTrendRecords as $r) {
+            $ts = is_string($r->data_timestamp) ? $r->data_timestamp : (string) $r->data_timestamp;
+            $hourKey = substr($ts, 0, 13);
+            $monthKey = substr($ts, 0, 7);
+            $trendMap[$hourKey] = $r;
+            $monthCountMap[$monthKey] = ($monthCountMap[$monthKey] ?? 0) + 1;
+        }
 
         $monthlyTrendUtama = [];
         $monthlyTrendSela = [];
@@ -211,25 +228,10 @@ class SinoptikDashboardService
             $m = (int) $dtMonth->month;
             $y = (int) $dtMonth->year;
             $mDays = $dtMonth->daysInMonth;
-
-            $mStart = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->startOfMonth();
-            $mEnd = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->endOfMonth();
-
-            $mRecs = $allTrendRecords->filter(function ($r) use ($mStart, $mEnd) {
-                $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
-                $dt = Carbon::parse($rawStr, 'UTC');
-                return $dt->gte($mStart) && $dt->lte($mEnd);
-            });
+            $monthKey = sprintf('%04d-%02d', $y, $m);
 
             $label = $namaBulanShort[$m] . '_' . $y;
             $fullLabel = $namaBulanShort[$m] . ' ' . $y;
-
-            $mMap = [];
-            foreach ($mRecs as $mr) {
-                $rawStr = is_string($mr->data_timestamp) ? $mr->data_timestamp : $mr->data_timestamp->format('Y-m-d H:i:s');
-                $dt = Carbon::parse($rawStr, 'UTC');
-                $mMap[$dt->format('Y-m-d H')] = $mr;
-            }
 
             $uCount = 0;
             $sCount = 0;
@@ -238,15 +240,16 @@ class SinoptikDashboardService
 
             for ($d = 1; $d <= $mDays; $d++) {
                 for ($h = 0; $h < 24; $h++) {
-                    $slotTime = Carbon::create($y, $m, $d, $h, 0, 0, 'UTC');
-                    $rec = $mMap[$slotTime->format('Y-m-d H')] ?? null;
+                    $slotKey = sprintf('%04d-%02d-%02d %02d', $y, $m, $d, $h);
+                    $rec = $trendMap[$slotKey] ?? null;
 
                     if ($rec) {
+                        $slotTime = Carbon::create($y, $m, $d, $h, 0, 0, 'UTC');
                         $windowStart = $slotTime->copy()->subMinutes(10);
                         $windowEnd = $slotTime->copy()->addMinutes(15)->endOfMinute();
 
                         $sentTs = $rec->sent_timestamp ?? $rec->received_timestamp ?? $rec->data_timestamp;
-                        $sentCarbon = Carbon::parse(is_string($sentTs) ? $sentTs : $sentTs->format('Y-m-d H:i:s'), 'UTC');
+                        $sentCarbon = Carbon::parse(is_string($sentTs) ? $sentTs : (string) $sentTs, 'UTC');
 
                         if ($sentCarbon->between($windowStart, $windowEnd)) {
                             if (in_array($h, $utamaHours)) {
@@ -259,7 +262,7 @@ class SinoptikDashboardService
                 }
             }
 
-            $hasData = $mRecs->count() > 0;
+            $hasData = ($monthCountMap[$monthKey] ?? 0) > 0;
             $uPct = ($hasData && $uTarget > 0) ? round(($uCount / $uTarget) * 100, 2) : 0.0;
             $sPct = ($hasData && $sTarget > 0) ? round(($sCount / $sTarget) * 100, 2) : 0.0;
 

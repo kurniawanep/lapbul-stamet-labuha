@@ -12,6 +12,7 @@ test('authenticated user can view sinoptik monthly report page with pagination',
         'email' => 'admin@bmkg.go.id',
         'password' => Hash::make('password'),
         'jenis_pegawai' => 'PNS',
+        'is_superadmin' => true,
     ]);
 
     DataSinoptik::create([
@@ -53,6 +54,7 @@ test('sinoptik sync fetches and stores observation data into data_sinoptik table
             'password' => Hash::make('password'),
             'jenis_pegawai' => 'PNS',
             'role' => 'Observer & Forecaster',
+            'is_superadmin' => true,
         ]
     );
 

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\DataTafor;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class TaforDashboardService
 {
@@ -23,7 +24,8 @@ class TaforDashboardService
         $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
         $endDate = Carbon::createFromDate($tahun, $bulan, $daysInMonth)->endOfMonth();
 
-        $records = DataTafor::with('pegawai')
+        $records = DataTafor::with('pegawai:id,nama')
+            ->select('id', 'data_timestamp', 'sent_timestamp', 'received_timestamp', 'observer_name', 'pegawai_id')
             ->whereBetween('data_timestamp', [$startDate, $endDate])
             ->get();
 
@@ -122,7 +124,28 @@ class TaforDashboardService
         $selectedEnd = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->endOfMonth();
         $trendStart = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'UTC')->subMonths(11)->startOfMonth();
 
-        $allTrendRecords = DataTafor::whereBetween('data_timestamp', [$trendStart->toDateTimeString(), $selectedEnd->toDateTimeString()])->get();
+        $allTrendRecords = DB::table('data_tafor')
+            ->select('data_timestamp', 'sent_timestamp', 'received_timestamp')
+            ->whereBetween('data_timestamp', [$trendStart->toDateTimeString(), $selectedEnd->toDateTimeString()])
+            ->get();
+
+        $trendMap = [];
+        $monthCountMap = [];
+        foreach ($allTrendRecords as $r) {
+            $ts = is_string($r->data_timestamp) ? $r->data_timestamp : (string) $r->data_timestamp;
+            $dt = Carbon::parse($ts, 'UTC');
+            $d = (int) $dt->format('j');
+            $h = (int) $dt->format('G');
+            $monthKey = $dt->format('Y-m');
+
+            $trendMap["{$monthKey}_{$d}_{$h}"] = $r;
+            $prevH = ($h == 0) ? 23 : ($h - 1);
+            $targetDay = ($h == 0) ? ($d - 1) : $d;
+            if (!isset($trendMap["{$monthKey}_{$targetDay}_{$prevH}"])) {
+                $trendMap["{$monthKey}_{$targetDay}_{$prevH}"] = $r;
+            }
+            $monthCountMap[$monthKey] = ($monthCountMap[$monthKey] ?? 0) + 1;
+        }
 
         $monthlyTrendReport = [];
         $namaBulanShort = [
@@ -144,21 +167,14 @@ class TaforDashboardService
             $m = (int) $dtMonth->month;
             $y = (int) $dtMonth->year;
             $mDays = $dtMonth->daysInMonth;
-
-            $mStart = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->startOfMonth();
-            $mEnd = Carbon::create($y, $m, 1, 0, 0, 0, 'UTC')->endOfMonth();
-
-            $mRecs = $allTrendRecords->filter(function ($r) use ($mStart, $mEnd) {
-                $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
-                $dt = Carbon::parse($rawStr, 'UTC');
-                return $dt->gte($mStart) && $dt->lte($mEnd);
-            });
+            $monthKey = sprintf('%04d-%02d', $y, $m);
 
             $label = $namaBulanShort[$m] . ' ' . substr((string) $y, 2);
             $fullLabel = $namaBulanFull[$m] . ' ' . $y;
             $mTarget = $mDays * 4;
 
-            if ($mRecs->isEmpty()) {
+            $hasData = ($monthCountMap[$monthKey] ?? 0) > 0;
+            if (!$hasData) {
                 $monthlyTrendReport[] = [
                     'label' => $label,
                     'full_label' => $fullLabel,
@@ -171,31 +187,16 @@ class TaforDashboardService
                 continue;
             }
 
-            $tMap = [];
-            foreach ($mRecs as $r) {
-                $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
-                $dt = Carbon::parse($rawStr, 'UTC');
-                $d = (int) $dt->format('j');
-                $h = (int) $dt->format('G');
-                $tMap["{$d}_{$h}"] = $r;
-
-                $prevH = ($h == 0) ? 23 : ($h - 1);
-                $targetDay = ($h == 0) ? ($d - 1) : $d;
-                if (!isset($tMap["{$targetDay}_{$prevH}"])) {
-                    $tMap["{$targetDay}_{$prevH}"] = $r;
-                }
-            }
-
             $mSent = 0;
+            $mMissing = 0;
+
             for ($d = 1; $d <= $mDays; $d++) {
                 foreach ($taforHours as $h) {
-                    $keyExact = "{$d}_{$h}";
-                    $prevH = ($h == 0) ? 23 : ($h - 1);
-                    $targetDay = ($h == 0) ? ($d - 1) : $d;
-                    $keyIssue = "{$targetDay}_{$prevH}";
-
-                    if (isset($tMap[$keyExact]) || isset($tMap[$keyIssue])) {
+                    $key = "{$monthKey}_{$d}_{$h}";
+                    if (isset($trendMap[$key])) {
                         $mSent++;
+                    } else {
+                        $mMissing++;
                     }
                 }
             }
