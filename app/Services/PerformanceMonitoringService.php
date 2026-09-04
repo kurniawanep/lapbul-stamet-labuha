@@ -346,7 +346,7 @@ class PerformanceMonitoringService
         for ($d = 1; $d <= $daysInMonth; $d++) {
             foreach ($pibalHours as $h) {
                 $slotTime = Carbon::create($tahun, $bulan, $d, $h, 0, 0, 'UTC');
-                $windowStart = $slotTime->copy()->subMinutes(10);
+                $windowStart = $slotTime->copy()->subMinutes(15);
                 $windowEnd = $slotTime->copy()->addMinutes(45)->endOfMinute();
 
                 $slotKey = "{$d}_{$h}";

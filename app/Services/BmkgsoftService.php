@@ -297,9 +297,9 @@ class BmkgsoftService
                                             $delayMinutes = 0;
 
                                             if ($deltaMin !== null) {
-                                                if ($deltaMin >= 0 && $deltaMin <= 45) {
+                                                if ($deltaMin >= -15 && $deltaMin <= 45) {
                                                     $status = 'tepat_waktu';
-                                                } elseif ($deltaMin < 0) {
+                                                } elseif ($deltaMin < -15) {
                                                     $status = 'lebih_awal';
                                                 } else {
                                                     $status = 'terlambat';

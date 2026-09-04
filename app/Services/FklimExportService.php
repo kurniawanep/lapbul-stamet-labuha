@@ -166,7 +166,7 @@ class FklimExportService
 
         // 5. Calculate Most Frequent Wind Direction for T42 (wd_cardinal) and V42 (wd_ff_max)
         $tValues = [];
-        $vValues = [];
+        $vRecords = [];
         for ($day = 1; $day <= $daysInMonth; $day++) {
             $rec = $fklimMap[$day] ?? null;
             if ($rec) {
@@ -174,18 +174,83 @@ class FklimExportService
                     $tValues[] = $rec->wd_cardinal;
                 }
                 if (!empty($rec->wd_ff_max)) {
-                    $vValues[] = $rec->wd_ff_max;
+                    $vRecords[] = [
+                        'dir' => $rec->wd_ff_max,
+                        'speed' => $rec->ff_max !== null ? (float) $rec->ff_max : null,
+                    ];
                 }
             }
         }
 
         $mostFrequentT = $this->getMostFrequentDirection($tValues);
-        $mostFrequentV = $this->getMostFrequentDirection($vValues);
+        $mostFrequentV = $this->getMostFrequentV42Direction($vRecords);
 
         $sheet->setCellValue('T42', $mostFrequentT);
         $sheet->setCellValue('V42', $mostFrequentV);
 
         return $spreadsheet;
+    }
+
+    /**
+     * Calculate most frequent wind direction for V42 (wd_ff_max).
+     * If there is a tie / multiple values, select the direction corresponding to the maximum wind speed (ff_max).
+     */
+    protected function getMostFrequentV42Direction(array $vRecords): string
+    {
+        if (empty($vRecords)) {
+            return '-';
+        }
+
+        $counts = [];
+        $maxSpeedPerDir = [];
+
+        foreach ($vRecords as $item) {
+            $dirStr = $item['dir'] ?? '';
+            $speed = $item['speed'] ?? null;
+
+            $tokens = preg_split('/[;,\\/\\s]+/', trim((string) $dirStr));
+            foreach ($tokens as $token) {
+                $token = strtoupper(trim($token));
+                if (!empty($token) && $token !== 'C' && $token !== '-') {
+                    $counts[$token] = ($counts[$token] ?? 0) + 1;
+                    if ($speed !== null) {
+                        $maxSpeedPerDir[$token] = isset($maxSpeedPerDir[$token])
+                            ? max($maxSpeedPerDir[$token], $speed)
+                            : $speed;
+                    }
+                }
+            }
+        }
+
+        if (empty($counts)) {
+            return '-';
+        }
+
+        $maxCount = max($counts);
+        $topTokens = array_keys(array_filter($counts, fn($c) => $c === $maxCount));
+
+        if (count($topTokens) === 1) {
+            return $topTokens[0];
+        }
+
+        // If there are multiple values (e.g. 2 values / tie), select the direction corresponding to maximum wind speed (ff_max)
+        $standardOrder = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+        usort($topTokens, function ($a, $b) use ($maxSpeedPerDir, $standardOrder) {
+            $speedA = $maxSpeedPerDir[$a] ?? -999;
+            $speedB = $maxSpeedPerDir[$b] ?? -999;
+
+            if ($speedA !== $speedB) {
+                return $speedB <=> $speedA; // Higher speed first
+            }
+
+            $posA = array_search($a, $standardOrder);
+            $posB = array_search($b, $standardOrder);
+            $posA = $posA === false ? 99 : $posA;
+            $posB = $posB === false ? 99 : $posB;
+            return $posA <=> $posB;
+        });
+
+        return $topTokens[0];
     }
 
     /**

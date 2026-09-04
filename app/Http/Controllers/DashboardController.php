@@ -46,7 +46,12 @@ class DashboardController extends Controller
             'perawanan' => DataPerawanan::whereBetween('data_timestamp', [$startDate, $endDate])->count(),
             'penguapan' => DataPenguapan::whereBetween('data_timestamp', [$startDate, $endDate])->count(),
             'met_report' => DataMetReport::whereBetween('data_timestamp', [$startDate, $endDate])->count(),
-            'flight_document' => DataFlightDocument::whereBetween('created_at', [$startDate, $endDate])->count(),
+            'flight_document' => DataFlightDocument::where(function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('departure_at', [$startDate, $endDate])
+                  ->orWhere(function ($sub) use ($startDate, $endDate) {
+                      $sub->whereNull('departure_at')->whereBetween('created_at', [$startDate, $endDate]);
+                  });
+            })->where('status', 'Selesai')->count(),
         ];
 
         return Inertia::render('dashboard', [

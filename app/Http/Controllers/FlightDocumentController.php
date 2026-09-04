@@ -55,14 +55,19 @@ class FlightDocumentController extends Controller
 
         $records = $query->orderBy('departure_at', 'desc')->paginate(15)->withQueryString();
 
-        // Calculate Statistics
-        $totalFd = DataFlightDocument::whereBetween('departure_at', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])->count();
+        // Calculate Statistics (Hanya hitung data dengan status Selesai)
+        $totalFd = DataFlightDocument::whereBetween('departure_at', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])
+            ->where('status', 'Selesai')
+            ->count();
         $uniqueFlights = DataFlightDocument::whereBetween('departure_at', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])
+            ->where('status', 'Selesai')
             ->distinct('flight_number')
             ->count('flight_number');
 
-        // Daily Matrix
-        $allMonthRecords = DataFlightDocument::whereBetween('departure_at', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])->get();
+        // Daily Matrix (Hanya hitung data dengan status Selesai)
+        $allMonthRecords = DataFlightDocument::whereBetween('departure_at', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])
+            ->where('status', 'Selesai')
+            ->get();
         $dailyMatrix = [];
         for ($d = 1; $d <= $daysInMonth; $d++) {
             $dayRecords = $allMonthRecords->filter(function ($item) use ($d) {
@@ -198,6 +203,7 @@ class FlightDocumentController extends Controller
 
             if ($doc) {
                 $doc->update([
+                    'status' => 'Selesai',
                     'is_wa_dispatched' => true,
                     'wa_dispatched_at' => $timestamp ? Carbon::parse($timestamp)->format('Y-m-d H:i:s') : Carbon::now(),
                     'wa_sender_name' => $sender,
@@ -242,6 +248,7 @@ class FlightDocumentController extends Controller
         $doc->update([
             'is_wa_dispatched' => $newStatus,
             'wa_dispatched_at' => $newStatus ? Carbon::now() : null,
+            'status' => $newStatus ? 'Selesai' : $doc->status,
         ]);
 
         return redirect()->back()->with('success', 'Status pengiriman WA berhasil diperbarui.');

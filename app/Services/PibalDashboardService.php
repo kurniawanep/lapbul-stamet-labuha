@@ -58,7 +58,7 @@ class PibalDashboardService
                 $slotKey = $slotTime->format('Y-m-d H');
                 $rec = $pibalMap[$slotKey] ?? null;
 
-                $windowStart = $slotTime->copy()->subMinutes(10);
+                $windowStart = $slotTime->copy()->subMinutes(15);
                 $windowEnd = $slotTime->copy()->addMinutes(45)->endOfMinute();
 
                 $sandi = strtoupper($rec->sandi_pibal ?? '');
@@ -286,7 +286,7 @@ class PibalDashboardService
                     $slotKey = $slotTime->format('Y-m-d H');
                     $rec = $pibalMap[$slotKey] ?? null;
 
-                    $windowStart = $slotTime->copy()->subMinutes(10);
+                    $windowStart = $slotTime->copy()->subMinutes(15);
                     $windowEnd = $slotTime->copy()->addMinutes(45)->endOfMinute();
 
                     $sandi = strtoupper($rec->sandi_pibal ?? '');

@@ -65,3 +65,40 @@ test('authenticated user can export fklim monthly report excel', function () {
     $response->assertStatus(200);
     $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 });
+
+test('fklim export resolves V42 tie using direction with maximum wind speed', function () {
+    // S occurs 2 times (max speed 18 kt)
+    DataFklim::create([
+        'data_timestamp' => '2026-07-01 00:00:00',
+        'wd_cardinal' => 'S',
+        'ff_max' => 15.0,
+        'wd_ff_max' => 'S',
+    ]);
+    DataFklim::create([
+        'data_timestamp' => '2026-07-02 00:00:00',
+        'wd_cardinal' => 'S',
+        'ff_max' => 18.0,
+        'wd_ff_max' => 'S',
+    ]);
+
+    // SE occurs 2 times (max speed 26 kt)
+    DataFklim::create([
+        'data_timestamp' => '2026-07-03 00:00:00',
+        'wd_cardinal' => 'SE',
+        'ff_max' => 20.0,
+        'wd_ff_max' => 'SE',
+    ]);
+    DataFklim::create([
+        'data_timestamp' => '2026-07-04 00:00:00',
+        'wd_cardinal' => 'SE',
+        'ff_max' => 26.0,
+        'wd_ff_max' => 'SE',
+    ]);
+
+    $service = app(\App\Services\FklimExportService::class);
+    $spreadsheet = $service->generateFklimSpreadsheet(7, 2026);
+    $sheet = $spreadsheet->getActiveSheet();
+
+    // V42 must be SE because 26 kt > 18 kt
+    expect($sheet->getCell('V42')->getValue())->toBe('SE');
+});
