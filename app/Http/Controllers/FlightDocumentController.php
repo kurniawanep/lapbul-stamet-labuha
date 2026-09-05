@@ -214,13 +214,26 @@ class FlightDocumentController extends Controller
                 ]);
                 $matchedCount++;
             } else {
+                $flNumber = $item['flight_number'] ?? 'WA Dispatch';
+                $route = $item['route'] ?? 'WAEL -> WAMM';
+                if (!isset($item['route'])) {
+                    if (str_contains($flNumber, '1173')) {
+                        $route = 'WAEL -> WAEE';
+                    } elseif (str_contains($flNumber, '2273') || str_contains($flNumber, '2275') || str_contains($flNumber, '2277')) {
+                        $route = 'WAEL -> WAMM';
+                    }
+                }
+
+                $flightType = $item['type'] ?? ((str_contains($flNumber, '227')) ? 'Charter' : 'Terjadwal');
+
                 DataFlightDocument::create([
                     'station_code' => 'WAEL',
                     'no_fd' => $fn,
-                    'flight_number' => 'WA Dispatch',
-                    'route' => 'WAEL -> WAMM',
+                    'flight_number' => $flNumber,
+                    'airline_name' => str_starts_with($flNumber, 'IW') ? 'Wings Air' : 'Aviation',
+                    'route' => $route,
                     'departure_at' => $timestamp ? Carbon::parse($timestamp)->format('Y-m-d H:i:s') : Carbon::now(),
-                    'type' => 'Terjadwal',
+                    'type' => $flightType,
                     'status' => 'Selesai',
                     'is_wa_dispatched' => true,
                     'wa_dispatched_at' => $timestamp ? Carbon::parse($timestamp)->format('Y-m-d H:i:s') : Carbon::now(),
