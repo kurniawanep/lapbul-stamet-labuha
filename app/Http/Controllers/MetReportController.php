@@ -102,7 +102,9 @@ class MetReportController extends Controller
 
         $count = 0;
         foreach ($items as $parsed) {
-            $pegawai = $this->observerResolver->getObserverByTimestamp($parsed['data_timestamp']);
+            $pegawai = $this->observerResolver->getObserverByTimestamp($parsed['data_timestamp'], 'UTC');
+            $teknisi = $this->observerResolver->getTeknisiByTimestamp($parsed['data_timestamp'], 'UTC');
+            $ppnpn = $this->observerResolver->getPpnpnByTimestamp($parsed['data_timestamp'], 'UTC');
 
             DataMetReport::updateOrCreate(
                 ['data_timestamp' => Carbon::parse($parsed['data_timestamp'])->format('Y-m-d H:i:s')],
@@ -124,6 +126,8 @@ class MetReportController extends Controller
                     'raw_message' => $parsed['raw_message'],
                     'observer_name' => $pegawai ? $pegawai->nama : null,
                     'pegawai_id' => $pegawai ? $pegawai->id : null,
+                    'teknisi_id' => $teknisi ? $teknisi->id : null,
+                    'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
                 ]
             );
             $count++;
@@ -162,7 +166,9 @@ class MetReportController extends Controller
 
             $savedIds = [];
             foreach ($items as $parsed) {
-                $pegawai = $this->observerResolver->getObserverByTimestamp($parsed['data_timestamp']);
+                $pegawai = $this->observerResolver->getObserverByTimestamp($parsed['data_timestamp'], 'UTC');
+                $teknisi = $this->observerResolver->getTeknisiByTimestamp($parsed['data_timestamp'], 'UTC');
+                $ppnpn = $this->observerResolver->getPpnpnByTimestamp($parsed['data_timestamp'], 'UTC');
 
                 $record = DataMetReport::updateOrCreate(
                     ['data_timestamp' => Carbon::parse($parsed['data_timestamp'])->format('Y-m-d H:i:s')],
@@ -184,6 +190,8 @@ class MetReportController extends Controller
                         'raw_message' => $parsed['raw_message'],
                         'observer_name' => $pegawai ? $pegawai->nama : null,
                         'pegawai_id' => $pegawai ? $pegawai->id : null,
+                        'teknisi_id' => $teknisi ? $teknisi->id : null,
+                        'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
                     ]
                 );
                 $savedIds[] = $record->id;
@@ -230,6 +238,7 @@ class MetReportController extends Controller
 
                 if ($doc) {
                     $doc->update([
+                        'status' => 'Selesai',
                         'is_wa_dispatched' => true,
                         'wa_dispatched_at' => $timestamp ? Carbon::parse($timestamp)->format('Y-m-d H:i:s') : Carbon::now(),
                         'wa_sender_name' => $sender,

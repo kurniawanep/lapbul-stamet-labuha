@@ -46,6 +46,14 @@ class DataMetReport extends Model
     ];
 
     /**
+     * Prepare a date for array / JSON serialization without unwanted timezone shifts.
+     */
+    protected function serializeDate(\DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d H:i:s');
+    }
+
+    /**
      * Relationship to Pegawai observer model.
      */
     public function pegawai(): BelongsTo

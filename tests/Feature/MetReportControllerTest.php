@@ -50,6 +50,7 @@ test('authenticated user can view met report page and store manual qam message',
         'email' => 'admin@bmkg.go.id',
         'password' => Hash::make('password'),
         'jenis_pegawai' => 'PNS',
+        'is_superadmin' => true,
     ]);
 
     $sampleText = "MET REPORT (QAM)\nOESMAN SADIK AIRPORT (WAEL)\nLABUHA\nDATE : 13 / 08 / 2026\nTIME : 23.00 UTC\n==================\nWIND : VRB 02 KT\nVISIBILITY : 9 KM\nWEATHER : NIL\nCLOUD : FEW 1800 FT\nTT/TD : 27°C / 23°C\nQNH : 1013 / 29.93\nQFE : 1011 / 29.87\nREMARKS : -\nTREND : NOSIG=\n==================\nhttps://bmkghalsel.carrd.co/#bandara";

@@ -649,6 +649,7 @@ export default function MetReportIndex({
                                 <div>
                                     <p className="text-slate-500 font-medium">Waktu Data</p>
                                     <p className="font-bold text-slate-900 mt-0.5">{formatDateTimeDisplay(selectedReport.data_timestamp).topUtc}</p>
+                                    <p className="text-[11px] font-semibold text-emerald-700">{formatDateTimeDisplay(selectedReport.data_timestamp).bottomWit}</p>
                                 </div>
                                 <div>
                                     <p className="text-slate-500 font-medium">Suhu TT / TD</p>
