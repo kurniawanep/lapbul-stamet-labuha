@@ -101,7 +101,7 @@ test('quick paste matches wa chat text with flight documents and automatically s
         'is_wa_dispatched' => false,
     ]);
 
-    $sampleWaChat = "[14/08/26 22.30] Dinar: <attached: BMKG-FD-2608-T5AG80.pdf>";
+    $sampleWaChat = "[14/08/26 22.30] Dinar: <attached: BMKG-FD-2608-T5AG80.pdf>\n15/08/2026, 06:10 - Stamet Oesman Sadik: <Media omitted>\nFD IW 1173.pdf";
 
     $response = $this->actingAs($user)->post('/laporan/flight-document/manual', [
         'raw_message' => $sampleWaChat,
@@ -111,6 +111,12 @@ test('quick paste matches wa chat text with flight documents and automatically s
 
     $this->assertDatabaseHas('data_flight_document', [
         'no_fd' => 'BMKG-FD-2608-T5AG80',
+        'status' => 'Selesai',
+        'is_wa_dispatched' => true,
+    ]);
+
+    $this->assertDatabaseHas('data_flight_document', [
+        'no_fd' => 'FD IW 1173.pdf',
         'status' => 'Selesai',
         'is_wa_dispatched' => true,
     ]);

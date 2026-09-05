@@ -247,6 +247,26 @@ class FlightDocumentController extends Controller
             }
         }
 
+        $targetBulan = null;
+        $targetTahun = null;
+        if (!empty($parsedItems)) {
+            foreach ($parsedItems as $item) {
+                if (!empty($item['timestamp'])) {
+                    $dt = Carbon::parse($item['timestamp']);
+                    $targetBulan = $dt->month;
+                    $targetTahun = $dt->year;
+                    break;
+                }
+            }
+        }
+
+        if ($targetBulan && $targetTahun) {
+            return redirect()->route('laporan.flight-document', [
+                'bulan' => $targetBulan,
+                'tahun' => $targetTahun,
+            ])->with('success', "Berhasil mencocokkan & mencatat {$matchedCount} riwayat pengiriman WA untuk bulan {$targetBulan}/{$targetTahun}.");
+        }
+
         return redirect()->back()->with('success', "Berhasil mencocokkan & mencatat {$matchedCount} riwayat pengiriman WA.");
     }
 

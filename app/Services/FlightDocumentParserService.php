@@ -12,10 +12,11 @@ class FlightDocumentParserService
     public function isFlightDocumentMsg(string $rawText): bool
     {
         return (bool) (
-            preg_match('/FD[_\-][A-Za-z0-9]/i', $rawText) ||
+            preg_match('/FD[_\-\s][^\r\n]*\.pdf/i', $rawText) ||
+            preg_match('/FD[_\-\s][A-Za-z0-9]/i', $rawText) ||
             preg_match('/BMKG-FD/i', $rawText) ||
-            preg_match('/FD_WAEL/i', $rawText) ||
-            (preg_match('/<Media omitted>|\(file terlampir\)|<attached:/i', $rawText) && preg_match('/FD[_\-]/i', $rawText))
+            preg_match('/FD_WAEL|FD-WAEL|FD\s+WAEL/i', $rawText) ||
+            (preg_match('/<Media omitted>|\(file terlampir\)|<attached:/i', $rawText) && preg_match('/FD[_\-\s]/i', $rawText))
         );
     }
 
@@ -23,6 +24,7 @@ class FlightDocumentParserService
      * Parse raw text export / quick paste content for Flight Document WA dispatches.
      * Matches patterns like:
      * "21/03/2025, 06:10 - Stamet Oesman Sadik: <Media omitted>\nFD-IW1173-2025320.pdf"
+     * "21/03/2025, 06:10 - Stamet Oesman Sadik: <Media omitted>\nFD IW 1173.pdf"
      * "21/03/2025, 06:10 - Stamet Oesman Sadik: FD_IW1173_20250320.pdf"
      * "[17/07/26 04.30.15] Dinar: <attached: FD_WAEL_20260717_0430.pdf>"
      * "7/17/26, 4:30 PM - Dinar: BMKG-FD-2608-T5AG80"
@@ -76,21 +78,25 @@ class FlightDocumentParserService
                 }
             }
 
-            // Extract Filename / FD Code (e.g. FD-IW1173-2025320.pdf, FD_WAEL_20260717_0430.pdf, BMKG-FD-2608-T5AG80)
+            // Extract Filename / FD Code ending with .pdf or BMKG-FD code
             if (preg_match('/(BMKG-FD-[A-Z0-9-]+)/i', $block, $m)) {
                 $filename = strtoupper(trim($m[1]));
-            } elseif (preg_match('/(FD[_\-][A-Z0-9_\-]+\.pdf)/i', $block, $m)) {
+            } elseif (preg_match('/(FD[_\-\s][^\r\n<>:"\/\\|?*]+\.pdf)/i', $block, $m)) {
                 $filename = trim($m[1]);
             } elseif (preg_match('/(FD[^\s\(\)<>]+\.pdf)/i', $block, $m)) {
                 $filename = trim($m[1]);
-            } elseif (preg_match('/(FD[_\-][A-Z0-9_\-]+)/i', $block, $m)) {
+            } elseif (preg_match('/(FD[_\-\s][A-Za-z0-9_\-\s]+)/i', $block, $m)) {
                 $filename = trim($m[1]);
             }
 
-            // Extract Flight Number from filename (e.g. FD-IW1173-... -> IW 1173, FD_IW2273_... -> IW 2273, FD-2273-... -> IW 2273)
-            if ($filename && preg_match('/FD[_\-]([A-Z]{2})?(\d{3,4})/i', $filename, $fnMatch)) {
+            // Extract Flight Number from filename (e.g. FD-IW1173-... -> IW 1173, FD-BMKG-IW1173.pdf -> IW 1173, FD IW 1173.pdf -> IW 1173, FD_2273.pdf -> IW 2273)
+            if ($filename && preg_match('/(?:IW|JT|ID|GA|QG|SJ|IN|IL|XN)\s*[-_]?\s*(\d{3,4})/i', $filename, $fnMatch)) {
+                $flightNumber = 'IW ' . $fnMatch[1];
+            } elseif ($filename && preg_match('/FD[_\-\s]+(?:([A-Za-z]{2})[\s_\-]*)?(\d{3,4})/i', $filename, $fnMatch)) {
                 $airlineCode = !empty($fnMatch[1]) ? strtoupper($fnMatch[1]) : 'IW';
                 $flightNumber = $airlineCode . ' ' . $fnMatch[2];
+            } elseif (preg_match('/\b(?:IW|WON)\s*[-_]?\s*(\d{3,4})\b/i', $block, $fnMatch)) {
+                $flightNumber = 'IW ' . $fnMatch[1];
             }
 
             // Fallback: If filename has timestamp like FD_WAEL_20260717_0430.pdf
@@ -109,10 +115,10 @@ class FlightDocumentParserService
             $route = 'WAEL -> WAMM';
             $type = 'Terjadwal';
             if ($flightNumber) {
-                if (str_contains($flightNumber, '1173')) {
+                if (str_contains($flightNumber, '1173') || str_contains($flightNumber, '1174')) {
                     $route = 'WAEL -> WAEE';
                     $type = 'Terjadwal';
-                } elseif (str_contains($flightNumber, '2273') || str_contains($flightNumber, '2275') || str_contains($flightNumber, '2277')) {
+                } elseif (preg_match('/227\d/', $flightNumber)) {
                     $route = 'WAEL -> WAMM';
                     $type = 'Charter';
                 }
