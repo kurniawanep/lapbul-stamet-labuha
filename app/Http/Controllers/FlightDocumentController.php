@@ -197,9 +197,12 @@ class FlightDocumentController extends Controller
                 ])->where('is_wa_dispatched', false)->first();
             }
 
-            $pegawai = $timestamp ? $this->observerResolver->resolvePegawai($timestamp, $sender) : null;
-            $teknisi = $timestamp ? $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC') : null;
-            $ppnpn = $timestamp ? $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC') : null;
+            $pegawai = $timestamp ? $this->observerResolver->getObserverByTimestamp($timestamp, 'Asia/Jayapura') : null;
+            if (!$pegawai && $timestamp) {
+                $pegawai = $this->observerResolver->resolvePegawai($timestamp, $sender, 'Asia/Jayapura');
+            }
+            $teknisi = $timestamp ? $this->observerResolver->getTeknisiByTimestamp($timestamp, 'Asia/Jayapura') : null;
+            $ppnpn = $timestamp ? $this->observerResolver->getPpnpnByTimestamp($timestamp, 'Asia/Jayapura') : null;
 
             if ($doc) {
                 $doc->update([

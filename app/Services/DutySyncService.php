@@ -26,14 +26,14 @@ class DutySyncService
 
         $daysInMonth = Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
 
-        $operationalTables = [
-            'data_sinoptik',
-            'data_metar',
-            'data_tafor',
-            'data_pibal',
-            'data_fklim',
-            'data_met_report',
-            'data_flight_document',
+        $tableTimestampMap = [
+            'data_sinoptik' => 'data_timestamp',
+            'data_metar' => 'data_timestamp',
+            'data_tafor' => 'data_timestamp',
+            'data_pibal' => 'data_timestamp',
+            'data_fklim' => 'data_timestamp',
+            'data_met_report' => 'data_timestamp',
+            'data_flight_document' => 'departure_at',
         ];
 
         $totalUpdated = 0;
@@ -79,18 +79,21 @@ class DutySyncService
                     'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
                 ];
 
-                foreach ($operationalTables as $table) {
-                    $timestampCol = in_array($table, ['data_flight_document', 'data_met_report'])
-                        ? (DB::getSchemaBuilder()->hasColumn($table, 'data_timestamp') ? 'data_timestamp' : 'created_at')
-                        : 'data_timestamp';
-
-                    if (DB::getSchemaBuilder()->hasColumn($table, $timestampCol)) {
-                        $count = DB::table($table)
-                            ->whereBetween($timestampCol, [$utcStart, $utcEnd])
-                            ->update($updatePayload);
-
-                        $totalUpdated += $count;
+                foreach ($tableTimestampMap as $table => $timestampCol) {
+                    if (!DB::getSchemaBuilder()->hasTable($table) || !DB::getSchemaBuilder()->hasColumn($table, $timestampCol)) {
+                        continue;
                     }
+
+                    $payload = $updatePayload;
+                    if (DB::getSchemaBuilder()->hasColumn($table, 'observer_name')) {
+                        $payload['observer_name'] = $observer ? $observer->nama : null;
+                    }
+
+                    $count = DB::table($table)
+                        ->whereBetween($timestampCol, [$utcStart, $utcEnd])
+                        ->update($payload);
+
+                    $totalUpdated += $count;
                 }
             }
         }

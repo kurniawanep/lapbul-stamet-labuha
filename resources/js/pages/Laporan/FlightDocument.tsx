@@ -403,7 +403,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                     <TableHead>Rute</TableHead>
                                     <TableHead>Waktu Keberangkatan (UTC)</TableHead>
                                     <TableHead>Status Dokumen</TableHead>
-                                    <TableHead>Petugas Observer</TableHead>
+                                    <TableHead>Petugas Piket (Jadwal Dinas)</TableHead>
                                     <TableHead className="text-right">Aksi</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -443,8 +443,21 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                                 </Badge>
                                             </TableCell>
 
-                                            <TableCell className="text-xs text-slate-700">
-                                                {item.observer_name || 'WA Group Member'}
+                                            <TableCell className="text-xs">
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[10px] uppercase font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">Observer</span>
+                                                        <span className="font-semibold text-slate-900">{item.pegawai?.nama || item.observer_name || '-'}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 text-[11px] text-slate-600">
+                                                        <span className="text-[10px] uppercase font-bold text-amber-700 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">Teknisi</span>
+                                                        <span>{item.teknisi?.nama || '-'}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                                                        <span className="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">PPNPN</span>
+                                                        <span>{item.ppnpn?.nama || '-'}</span>
+                                                    </div>
+                                                </div>
                                             </TableCell>
 
                                             <TableCell className="text-right">

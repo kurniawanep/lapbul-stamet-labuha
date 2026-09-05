@@ -51,6 +51,24 @@ test('duty sync service resynchronizes observation records with updated duty sch
         'observer_name' => 'Old Name',
     ]);
 
+    $metReport = \App\Models\DataMetReport::create([
+        'station_code' => 'WAEL',
+        'station_name' => 'Oesman Sadik Airport (WAEL)',
+        'data_timestamp' => '2026-08-01 00:00:00', // 09:00 WIT -> Shift Pagi
+        'observer_name' => 'Old Observer',
+        'wind' => 'CALM',
+        'visibility' => '9 KM',
+    ]);
+
+    $flightDoc = \App\Models\DataFlightDocument::create([
+        'station_code' => 'WAEL',
+        'no_fd' => 'BMKG-FD-TEST-SYNC',
+        'departure_at' => '2026-08-01 00:00:00', // 09:00 WIT -> Shift Pagi
+        'flight_number' => 'IW-1173',
+        'status' => 'Selesai',
+        'observer_name' => 'Old Observer',
+    ]);
+
     $service = app(DutySyncService::class);
     $result = $service->syncObservationsForPeriod(8, 2026);
 
@@ -58,4 +76,12 @@ test('duty sync service resynchronizes observation records with updated duty sch
 
     $sinop->refresh();
     expect($sinop->pegawai_id)->toBe($observer->id);
+
+    $metReport->refresh();
+    expect($metReport->pegawai_id)->toBe($observer->id);
+    expect($metReport->observer_name)->toBe($observer->nama);
+
+    $flightDoc->refresh();
+    expect($flightDoc->pegawai_id)->toBe($observer->id);
+    expect($flightDoc->observer_name)->toBe($observer->nama);
 });
