@@ -234,7 +234,16 @@ class MetReportController extends Controller
                     ])->where('is_wa_dispatched', false)->first();
                 }
 
-                $pegawai = $timestamp ? $this->observerResolver->resolvePegawai($timestamp, $sender) : null;
+                $pegawai = $timestamp ? $this->observerResolver->getObserverByTimestamp($timestamp, 'Asia/Jayapura') : null;
+                if (!$pegawai && $timestamp) {
+                    $pegawai = $this->observerResolver->resolvePegawai($timestamp, $sender, 'Asia/Jayapura');
+                }
+                $teknisi = $timestamp ? $this->observerResolver->getTeknisiByTimestamp($timestamp, 'Asia/Jayapura') : null;
+                $ppnpn = $timestamp ? $this->observerResolver->getPpnpnByTimestamp($timestamp, 'Asia/Jayapura') : null;
+
+                $flNumber = $item['flight_number'] ?? 'WA Dispatch';
+                $route = $item['route'] ?? 'WAEL -> WAMM';
+                $flightType = $item['type'] ?? (str_contains($flNumber, '227') ? 'Charter' : 'Terjadwal');
 
                 if ($doc) {
                     $doc->update([
@@ -243,6 +252,8 @@ class MetReportController extends Controller
                         'wa_dispatched_at' => $timestamp ? Carbon::parse($timestamp)->format('Y-m-d H:i:s') : Carbon::now(),
                         'wa_sender_name' => $sender,
                         'pegawai_id' => $pegawai ? $pegawai->id : $doc->pegawai_id,
+                        'teknisi_id' => $teknisi ? $teknisi->id : $doc->teknisi_id,
+                        'ppnpn_id' => $ppnpn ? $ppnpn->id : $doc->ppnpn_id,
                         'observer_name' => $pegawai ? $pegawai->nama : ($sender ?: $doc->observer_name),
                     ]);
                     $savedIds[] = $doc->id;
@@ -250,16 +261,19 @@ class MetReportController extends Controller
                     $newDoc = \App\Models\DataFlightDocument::create([
                         'station_code' => 'WAEL',
                         'no_fd' => $fn ?: 'BMKG-FD-' . date('Ymd-His'),
-                        'flight_number' => 'WA Dispatch',
-                        'route' => 'WAEL -> WAMM',
+                        'flight_number' => $flNumber,
+                        'airline_name' => str_starts_with($flNumber, 'IW') ? 'Wings Air' : 'Aviation',
+                        'route' => $route,
                         'departure_at' => $timestamp ? Carbon::parse($timestamp)->format('Y-m-d H:i:s') : Carbon::now(),
-                        'type' => 'Terjadwal',
+                        'type' => $flightType,
                         'status' => 'Selesai',
                         'is_wa_dispatched' => true,
                         'wa_dispatched_at' => $timestamp ? Carbon::parse($timestamp)->format('Y-m-d H:i:s') : Carbon::now(),
                         'wa_sender_name' => $sender,
                         'observer_name' => $pegawai ? $pegawai->nama : $sender,
                         'pegawai_id' => $pegawai ? $pegawai->id : null,
+                        'teknisi_id' => $teknisi ? $teknisi->id : null,
+                        'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
                     ]);
                     $savedIds[] = $newDoc->id;
                 }
