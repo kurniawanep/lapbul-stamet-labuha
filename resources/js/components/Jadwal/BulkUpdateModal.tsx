@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
 import {
     Dialog,
@@ -58,13 +58,26 @@ export default function BulkUpdateModal({
     const defaultStartDate = `${tahun}-${String(bulan).padStart(2, '0')}-01`;
     const defaultEndDate = `${tahun}-${String(bulan).padStart(2, '0')}-05`;
 
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         jadwal_bulanan_id: jadwalBulananId,
         pegawai_ids: [] as number[],
         start_date: defaultStartDate,
         end_date: defaultEndDate,
         shift_id: shifts.length > 0 ? String(shifts[0].id) : '',
     });
+
+    useEffect(() => {
+        if (open) {
+            clearErrors();
+            setData({
+                jadwal_bulanan_id: jadwalBulananId,
+                pegawai_ids: [],
+                start_date: `${tahun}-${String(bulan).padStart(2, '0')}-01`,
+                end_date: `${tahun}-${String(bulan).padStart(2, '0')}-05`,
+                shift_id: shifts.length > 0 ? String(shifts[0].id) : '',
+            });
+        }
+    }, [open, jadwalBulananId, bulan, tahun, shifts]);
 
     const togglePegawai = (id: number) => {
         if (data.pegawai_ids.includes(id)) {

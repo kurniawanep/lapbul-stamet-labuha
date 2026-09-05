@@ -628,6 +628,7 @@ export default function Index({
 
             {/* Bulk Update Modal */}
             <BulkUpdateModal
+                key={`bulk-${jadwalBulanan.id}-${bulan}-${tahun}`}
                 open={isBulkModalOpen}
                 onOpenChange={setIsBulkModalOpen}
                 jadwalBulananId={jadwalBulanan.id}
@@ -639,6 +640,7 @@ export default function Index({
 
             {/* Master Shift Modal for current schedule category */}
             <MasterShiftModal
+                key={`shift-${category}`}
                 open={isShiftModalOpen}
                 onOpenChange={setIsShiftModalOpen}
                 category={category}
