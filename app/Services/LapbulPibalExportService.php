@@ -302,7 +302,7 @@ class LapbulPibalExportService
         // ----------------------------------------------------
         $ae31Sheet = $spreadsheet->getSheetByName('Ae. 31');
         if ($ae31Sheet) {
-            $ae31Sheet->setCellValue('I9', ': Hasil pengamatan kegiatan aerologi bulan ' . $this->namaBulanIndo[$bulan] . ' ' . $tahun . ' :');
+            $ae31Sheet->setCellValue('C9', '5. Hasil pengamatan kegiatan aerologi bulan ' . $this->namaBulanIndo[$bulan] . ' ' . $tahun);
 
             $maxObsAlt = 0;
             $maxObsDate = '';
@@ -393,6 +393,9 @@ class LapbulPibalExportService
 
         foreach ($meSheets as $hour => $sheet) {
             if (!$sheet) continue;
+
+            $sheet->setCellValue('X2', $bulanUpper);
+            $sheet->setCellValue('AL2', $tahun);
 
             for ($day = 1; $day <= $daysInMonth; $day++) {
                 $rowNumTable1 = 7 + $day;  // Upper Wind 1: Row 8..38 (Day 1..31)
@@ -558,6 +561,8 @@ class LapbulPibalExportService
         foreach ($ae39Sheets as $hour => $sheet) {
             if (!$sheet) continue;
 
+            $sheet->setCellValue('C2', "{$bulanUpper} {$tahun}");
+
             for ($day = 1; $day <= $daysInMonth; $day++) {
                 $rowNumTable1 = 5 + $day;  // Upper Air Steadiness 1: Row 6..36 (Day 1..31)
                 $rowNumTable2 = 45 + $day; // Upper Air Steadiness 2: Row 46..76 (Day 1..31)
@@ -622,55 +627,55 @@ class LapbulPibalExportService
             }
 
             // Populate TTD block on "Ae. 39" / "Ae. 39 (2)"
-            $sheet->mergeCells('S79:W79');
-            $sheet->setCellValue('S79', $exportDateStr);
-            $sheet->getStyle('S79:W79')
+            $sheet->mergeCells('S83:W83');
+            $sheet->setCellValue('S83', $exportDateStr);
+            $sheet->getStyle('S83:W83')
                 ->getFont()
                 ->setName('Times New Roman')
                 ->setSize(12);
-            $sheet->getStyle('S79:W79')
+            $sheet->getStyle('S83:W83')
                 ->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-            $sheet->mergeCells('B80:I80');
-            $sheet->setCellValue('B80', 'Pembuat Laporan');
-            $sheet->getStyle('B80:I80')
+            $sheet->mergeCells('B84:I84');
+            $sheet->setCellValue('B84', 'Pembuat Laporan');
+            $sheet->getStyle('B84:I84')
                 ->getFont()
                 ->setName('Times New Roman')
                 ->setSize(12)
                 ->setBold(true);
-            $sheet->getStyle('B80:I80')
+            $sheet->getStyle('B84:I84')
                 ->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-            $sheet->mergeCells('S80:W80');
-            $sheet->setCellValue('S80', 'Kepala');
-            $sheet->getStyle('S80:W80')
+            $sheet->mergeCells('S84:W84');
+            $sheet->setCellValue('S84', 'Kepala');
+            $sheet->getStyle('S84:W84')
                 ->getFont()
                 ->setName('Times New Roman')
                 ->setSize(12)
                 ->setBold(true);
-            $sheet->getStyle('S80:W80')
+            $sheet->getStyle('S84:W84')
                 ->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-            $sheet->mergeCells('B85:I85');
-            $sheet->setCellValue('B85', 'Mirza Chrisandy Pesulima, S.Tr');
-            $sheet->getStyle('B85:I85')
+            $sheet->mergeCells('B89:I89');
+            $sheet->setCellValue('B89', 'Mirza Chrisandy Pesulima, S.Tr');
+            $sheet->getStyle('B89:I89')
                 ->getFont()
                 ->setName('Times New Roman')
                 ->setSize(12);
-            $sheet->getStyle('B85:I85')
+            $sheet->getStyle('B89:I89')
                 ->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-            $sheet->mergeCells('S85:W85');
-            $sheet->setCellValue('S85', 'Ben Arther Molle, S.Tr., M.Si');
-            $sheet->getStyle('S85:W85')
+            $sheet->mergeCells('S89:W89');
+            $sheet->setCellValue('S89', 'Ben Arther Molle, S.Tr., M.Si');
+            $sheet->getStyle('S89:W89')
                 ->getFont()
                 ->setName('Times New Roman')
                 ->setSize(12);
-            $sheet->getStyle('S85:W85')
+            $sheet->getStyle('S89:W89')
                 ->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER);
         }
