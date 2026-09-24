@@ -52,7 +52,7 @@ class PibalDashboardService
                     return $name;
                 }
             }
-            $scheduled = $this->observerResolver->getObserverByTimestamp($slotTime->format('Y-m-d H:i:s'), 'UTC');
+            $scheduled = $this->observerResolver->getPibalDutyOfficer($slotTime->format('Y-m-d H:i:s'), 'UTC');
             return $scheduled->nama ?? '-';
         };
 

@@ -17,7 +17,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class PerawananController extends Controller
 {
     protected BmkgsoftService $bmkgsoftService;
+
     protected PerawananDashboardService $dashboardService;
+
     protected PerawananExportService $exportService;
 
     public function __construct(
@@ -77,8 +79,8 @@ class PerawananController extends Controller
 
         $result = $this->bmkgsoftService->syncPerawananData($startDate, $endDate);
 
-        if (!$result['success']) {
-            return redirect()->back()->with('error', "Gagal sinkron data Perawanan: " . ($result['error_reason'] ?? $result['message']));
+        if (! $result['success']) {
+            return redirect()->back()->with('error', 'Gagal sinkron data Perawanan: '.($result['error_reason'] ?? $result['message']));
         }
 
         return redirect()->back()

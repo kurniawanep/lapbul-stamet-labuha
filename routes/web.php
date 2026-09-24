@@ -74,18 +74,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/jadwal/bulk-update', [JadwalController::class, 'bulkUpdate'])->name('jadwal.bulk-update');
     Route::post('/jadwal/sync-observations', [JadwalController::class, 'syncObservations'])->name('jadwal.sync-observations');
 
-    // Master Shifts Management (Khusus Super Admin)
+    // Master Shifts Management (Authorized in Controller by Category or Super Admin)
     Route::get('/jadwal/shifts', [JadwalController::class, 'shiftsIndex'])
-        ->middleware('superadmin')
         ->name('jadwal.shifts.index');
+    Route::post('/jadwal/shifts/batch-update', [JadwalController::class, 'batchUpdateShifts'])
+        ->name('jadwal.shifts.batch-update');
     Route::post('/jadwal/shifts', [JadwalController::class, 'storeShift'])
-        ->middleware('superadmin')
         ->name('jadwal.shifts.store');
     Route::patch('/jadwal/shifts/{shift}', [JadwalController::class, 'updateShift'])
-        ->middleware('superadmin')
         ->name('jadwal.shifts.update');
     Route::delete('/jadwal/shifts/{shift}', [JadwalController::class, 'destroyShift'])
-        ->middleware('superadmin')
         ->name('jadwal.shifts.destroy');
 
     // Laporan Bulanan - Data PIBAL Routes

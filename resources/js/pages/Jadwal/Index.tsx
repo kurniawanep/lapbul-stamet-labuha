@@ -494,9 +494,8 @@ export default function Index({
                                                     return (
                                                         <TableCell
                                                             key={d}
-                                                            className={`p-0 border-r text-center relative ${
-                                                                isDirty ? 'ring-2 ring-blue-500 ring-inset z-10' : ''
-                                                            }`}
+                                                            className={`p-0 border-r text-center relative ${isDirty ? 'ring-2 ring-blue-500 ring-inset z-10' : ''
+                                                                }`}
                                                         >
                                                             {isDirty && (
                                                                 <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-blue-600 z-20" title="Perubahan belum disimpan" />
@@ -570,11 +569,10 @@ export default function Index({
                                                 {shifts.map((s) => (
                                                     <TableCell key={s.id} className="text-center">
                                                         <span
-                                                            className={`inline-block min-w-[20px] px-1.5 py-0.5 rounded text-[11px] font-medium ${
-                                                                counts[s.kode_shift] > 0
+                                                            className={`inline-block min-w-[20px] px-1.5 py-0.5 rounded text-[11px] font-medium ${counts[s.kode_shift] > 0
                                                                     ? 'bg-slate-100 text-slate-900 border border-slate-300'
                                                                     : 'text-slate-300'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             {counts[s.kode_shift] || 0}
                                                         </span>
@@ -640,11 +638,14 @@ export default function Index({
 
             {/* Master Shift Modal for current schedule category */}
             <MasterShiftModal
-                key={`shift-${category}`}
+                key={`shift-${category}-${bulan}-${tahun}`}
                 open={isShiftModalOpen}
                 onOpenChange={setIsShiftModalOpen}
                 category={category}
                 shifts={shifts}
+                bulan={bulan}
+                tahun={tahun}
+                jadwalBulananId={jadwalBulanan.id}
             />
 
             {/* Syncing Progress Card Modal */}

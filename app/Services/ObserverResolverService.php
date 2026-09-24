@@ -30,6 +30,44 @@ class ObserverResolverService
     }
 
     /**
+     * Resolve Pegawai model for PIBAL observation (prioritizes PF when within duty hours, fallback to P).
+     */
+    public function resolvePibalPegawai(?string $timestamp, ?string $observerName = null, ?string $fromTz = null): ?Pegawai
+    {
+        if (!empty($timestamp)) {
+            $scheduledPegawai = $this->getPibalDutyOfficer($timestamp, $fromTz);
+            if ($scheduledPegawai) {
+                return $scheduledPegawai;
+            }
+        }
+
+        if (!empty($observerName)) {
+            return $this->resolvePegawaiByName($observerName);
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve Pegawai model for TAFOR issuance (prioritizes PF when within duty hours, fallback to P).
+     */
+    public function resolveTaforPegawai(?string $timestamp, ?string $observerName = null, ?string $fromTz = null): ?Pegawai
+    {
+        if (!empty($timestamp)) {
+            $scheduledPegawai = $this->getTaforDutyOfficer($timestamp, $fromTz);
+            if ($scheduledPegawai) {
+                return $scheduledPegawai;
+            }
+        }
+
+        if (!empty($observerName)) {
+            return $this->resolvePegawaiByName($observerName);
+        }
+
+        return null;
+    }
+
+    /**
      * Intelligent multi-stage matching of observer name with Pegawai records.
      */
     public function resolvePegawaiByName(string $observerName): ?Pegawai
@@ -226,6 +264,121 @@ class ObserverResolverService
         }
 
         return null;
+    }
+
+    /**
+     * Resolve duty officer for PIBAL observation.
+     * Rule: If PF (Pagi Forecast) is scheduled and active during the observation time range on that day,
+     * PF is assigned. Otherwise falls back to P (Pagi Obs / observer piket).
+     */
+    public function getPibalDutyOfficer(string $dateTimeString, ?string $fromTz = null): ?Pegawai
+    {
+        return $this->getForecastOrObserverDutyOfficer($dateTimeString, $fromTz);
+    }
+
+    /**
+     * Resolve duty officer for TAFOR issuance.
+     * Rule: If PF (Pagi Forecast) is scheduled and active during the issuance time range on that day,
+     * PF is assigned. Otherwise falls back to P (Pagi Obs / observer piket).
+     */
+    public function getTaforDutyOfficer(string $dateTimeString, ?string $fromTz = null): ?Pegawai
+    {
+        return $this->getForecastOrObserverDutyOfficer($dateTimeString, $fromTz);
+    }
+
+    /**
+     * Core helper: Resolve Forecaster (PF) if active during duty hours, or fallback to P (Pagi Obs).
+     */
+    public function getForecastOrObserverDutyOfficer(string $dateTimeString, ?string $fromTz = null): ?Pegawai
+    {
+        if ($fromTz) {
+            $dt = Carbon::parse($dateTimeString, $fromTz)->setTimezone('Asia/Jayapura');
+        } elseif (preg_match('/[Z\+\-]/i', $dateTimeString)) {
+            $dt = Carbon::parse($dateTimeString)->setTimezone('Asia/Jayapura');
+        } else {
+            $dt = Carbon::parse($dateTimeString, 'Asia/Jayapura');
+        }
+
+        $timeStr = $dt->format('H:i:s');
+        $currentDateStr = $dt->toDateString();
+        $previousDateStr = $dt->copy()->subDay()->toDateString();
+
+        // 1. Check if PF (Pagi Forecast / Forecast) is scheduled on this date
+        $pfDetail = JadwalDetail::with(['pegawai', 'shift'])
+            ->where('tanggal', $currentDateStr)
+            ->whereHas('shift', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->where('kode_shift', 'PF')
+                        ->orWhere('kode_shift', 'LIKE', 'PF%')
+                        ->orWhere('nama_shift', 'LIKE', '%FORECAST%')
+                        ->orWhere('nama_shift', 'LIKE', '%FOD%');
+                })->where('is_tidak_masuk_kerja', false);
+            })
+            ->first();
+
+        if ($pfDetail && $pfDetail->pegawai) {
+            $shift = $pfDetail->shift;
+            // If PF has working hours configured, check if timeStr is within range
+            if ($shift && $shift->jam_masuk && $shift->jam_keluar) {
+                if ($shift->jam_masuk <= $shift->jam_keluar) {
+                    if ($timeStr >= $shift->jam_masuk && $timeStr <= $shift->jam_keluar) {
+                        return $pfDetail->pegawai;
+                    }
+                } else {
+                    if ($timeStr >= $shift->jam_masuk || $timeStr <= $shift->jam_keluar) {
+                        return $pfDetail->pegawai;
+                    }
+                }
+            } else {
+                // If PF has no explicit hours set, PF is responsible for all morning forecast/pibal tasks
+                return $pfDetail->pegawai;
+            }
+        }
+
+        // 2. Check overnight PF shift starting on previous date
+        $prevPfDetail = JadwalDetail::with(['pegawai', 'shift'])
+            ->where('tanggal', $previousDateStr)
+            ->whereHas('shift', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->where('kode_shift', 'PF')
+                        ->orWhere('kode_shift', 'LIKE', 'PF%')
+                        ->orWhere('nama_shift', 'LIKE', '%FORECAST%')
+                        ->orWhere('nama_shift', 'LIKE', '%FOD%');
+                })->where('is_tidak_masuk_kerja', false);
+            })
+            ->first();
+
+        if ($prevPfDetail && $prevPfDetail->pegawai && $prevPfDetail->shift) {
+            $shift = $prevPfDetail->shift;
+            if ($shift->jam_masuk && $shift->jam_keluar && $shift->jam_masuk > $shift->jam_keluar) {
+                if ($timeStr <= $shift->jam_keluar) {
+                    return $prevPfDetail->pegawai;
+                }
+            }
+        }
+
+        // 3. Fallback: Check if P (PAGI / PAGI OBS) is scheduled on this date
+        $pDetail = JadwalDetail::with(['pegawai', 'shift'])
+            ->where('tanggal', $currentDateStr)
+            ->whereHas('shift', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->where('kode_shift', 'P')
+                        ->orWhere('kode_shift', 'P1')
+                        ->orWhere('kode_shift', 'PO')
+                        ->orWhere('nama_shift', 'LIKE', '%PAGI OBS%')
+                        ->orWhere('nama_shift', 'LIKE', '%PAGI%');
+                })
+                ->where('kode_shift', '!=', 'A') // exclude A (Pagi TU)
+                ->where('is_tidak_masuk_kerja', false);
+            })
+            ->first();
+
+        if ($pDetail && $pDetail->pegawai) {
+            return $pDetail->pegawai;
+        }
+
+        // 4. Fallback to standard duty observer resolver for this timestamp
+        return $this->getObserverByTimestamp($dateTimeString, $fromTz);
     }
 
     /**

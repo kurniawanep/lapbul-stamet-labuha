@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { useForm, router } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { router } from '@inertiajs/react';
 import {
     Dialog,
     DialogContent,
     DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
@@ -19,10 +20,10 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Edit2, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
-import InputError from '@/components/input-error';
+import { AlertCircle, Clock, Plus, RotateCcw, Save, Sparkles, Trash2 } from 'lucide-react';
+import SyncingScheduleModal from '@/components/Jadwal/SyncingScheduleModal';
 
-interface MasterShift {
+export interface MasterShift {
     id: number;
     category?: string;
     kode_shift: string;
@@ -37,90 +38,183 @@ interface MasterShiftModalProps {
     onOpenChange: (open: boolean) => void;
     category: 'operasional' | 'teknisi' | 'ppnpn';
     shifts: MasterShift[];
+    bulan?: number;
+    tahun?: number;
+    jadwalBulananId?: number;
 }
+
+const NAMA_BULAN = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
 
 export default function MasterShiftModal({
     open,
     onOpenChange,
     category,
-    shifts,
+    shifts: serverShifts,
+    bulan = 8,
+    tahun = 2026,
+    jadwalBulananId,
 }: MasterShiftModalProps) {
-    const [editingShift, setEditingShift] = useState<MasterShift | null>(null);
+    const [localShifts, setLocalShifts] = useState<MasterShift[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
     const [isAddMode, setIsAddMode] = useState(false);
-
-    const { data, setData, post, patch, processing, errors, reset, clearErrors } = useForm({
-        category: category,
+    const [newShift, setNewShift] = useState({
         kode_shift: '',
         nama_shift: '',
         jam_masuk: '',
         jam_keluar: '',
         is_tidak_masuk_kerja: false,
     });
+    const [addError, setAddError] = useState<string | null>(null);
 
-    const openAddForm = () => {
-        setEditingShift(null);
-        reset();
-        clearErrors();
-        setData({
-            category: category,
-            kode_shift: '',
-            nama_shift: '',
-            jam_masuk: '',
-            jam_keluar: '',
-            is_tidak_masuk_kerja: false,
-        });
-        setIsAddMode(true);
-    };
-
-    const openEditForm = (shift: MasterShift) => {
-        setIsAddMode(false);
-        setEditingShift(shift);
-        clearErrors();
-        setData({
-            category: category,
-            kode_shift: shift.kode_shift,
-            nama_shift: shift.nama_shift,
-            jam_masuk: shift.jam_masuk || '',
-            jam_keluar: shift.jam_keluar || '',
-            is_tidak_masuk_kerja: Boolean(shift.is_tidak_masuk_kerja),
-        });
-    };
-
-    const handleCancelForm = () => {
-        setIsAddMode(false);
-        setEditingShift(null);
-        reset();
-        clearErrors();
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (editingShift) {
-            patch(`/jadwal/shifts/${editingShift.id}`, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    handleCancelForm();
-                },
-            });
-        } else {
-            post('/jadwal/shifts', {
-                preserveScroll: true,
-                onSuccess: () => {
-                    handleCancelForm();
-                },
-            });
+    // Synchronize local state with server props when modal opens or shifts change
+    useEffect(() => {
+        if (open) {
+            setLocalShifts(
+                serverShifts.map((s) => ({
+                    ...s,
+                    jam_masuk: s.jam_masuk ? s.jam_masuk.slice(0, 8) : '',
+                    jam_keluar: s.jam_keluar ? s.jam_keluar.slice(0, 8) : '',
+                    is_tidak_masuk_kerja: Boolean(s.is_tidak_masuk_kerja),
+                }))
+            );
+            setIsAddMode(false);
+            setAddError(null);
         }
+    }, [open, serverShifts]);
+
+    const handleFieldChange = (id: number, field: keyof MasterShift, value: any) => {
+        setLocalShifts((prev) =>
+            prev.map((s) => (s.id === id ? { ...s, [field]: value } : s))
+        );
+    };
+
+    const handleResetToDefault = () => {
+        setLocalShifts(
+            serverShifts.map((s) => ({
+                ...s,
+                jam_masuk: s.jam_masuk ? s.jam_masuk.slice(0, 8) : '',
+                jam_keluar: s.jam_keluar ? s.jam_keluar.slice(0, 8) : '',
+                is_tidak_masuk_kerja: Boolean(s.is_tidak_masuk_kerja),
+            }))
+        );
+    };
+
+    const hasChanges = () => {
+        if (localShifts.length !== serverShifts.length) return true;
+        return localShifts.some((local) => {
+            const server = serverShifts.find((s) => s.id === local.id);
+            if (!server) return true;
+            const sMasuk = (server.jam_masuk || '').slice(0, 5);
+            const lMasuk = (local.jam_masuk || '').slice(0, 5);
+            const sKeluar = (server.jam_keluar || '').slice(0, 5);
+            const lKeluar = (local.jam_keluar || '').slice(0, 5);
+
+            return (
+                server.kode_shift !== local.kode_shift ||
+                server.nama_shift !== local.nama_shift ||
+                sMasuk !== lMasuk ||
+                sKeluar !== lKeluar ||
+                Boolean(server.is_tidak_masuk_kerja) !== Boolean(local.is_tidak_masuk_kerja)
+            );
+        });
+    };
+
+    const handleSaveAll = () => {
+        setIsSaving(true);
+        router.post(
+            '/jadwal/shifts/batch-update',
+            {
+                category,
+                jadwal_bulanan_id: jadwalBulananId,
+                bulan,
+                tahun,
+                shifts: localShifts.map((s) => ({
+                    id: s.id,
+                    kode_shift: s.kode_shift.trim().toUpperCase(),
+                    nama_shift: s.nama_shift.trim(),
+                    jam_masuk: s.jam_masuk || null,
+                    jam_keluar: s.jam_keluar || null,
+                    is_tidak_masuk_kerja: Boolean(s.is_tidak_masuk_kerja),
+                })),
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsSaving(false);
+                    onOpenChange(false);
+                },
+                onError: () => {
+                    setIsSaving(false);
+                },
+            }
+        );
+    };
+
+    const handleCreateNewShift = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newShift.kode_shift.trim()) {
+            setAddError('Kode shift wajib diisi.');
+            return;
+        }
+        if (!newShift.nama_shift.trim()) {
+            setAddError('Nama shift wajib diisi.');
+            return;
+        }
+
+        setIsSaving(true);
+        router.post(
+            '/jadwal/shifts',
+            {
+                category,
+                jadwal_bulanan_id: jadwalBulananId,
+                bulan,
+                tahun,
+                kode_shift: newShift.kode_shift.trim().toUpperCase(),
+                nama_shift: newShift.nama_shift.trim(),
+                jam_masuk: newShift.jam_masuk || null,
+                jam_keluar: newShift.jam_keluar || null,
+                is_tidak_masuk_kerja: newShift.is_tidak_masuk_kerja,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsSaving(false);
+                    setIsAddMode(false);
+                    setNewShift({
+                        kode_shift: '',
+                        nama_shift: '',
+                        jam_masuk: '',
+                        jam_keluar: '',
+                        is_tidak_masuk_kerja: false,
+                    });
+                    setAddError(null);
+                },
+                onError: (err) => {
+                    setIsSaving(false);
+                    setAddError(Object.values(err)[0] as string);
+                },
+            }
+        );
     };
 
     const handleDelete = (shift: MasterShift) => {
-        if (confirm(`Yakin ingin menghapus shift ${shift.kode_shift} (${shift.nama_shift})?`)) {
+        if (confirm(`Yakin ingin menghapus shift ${shift.kode_shift} (${shift.nama_shift})? Semua data pengamatan yang terkait akan diselaraskan.`)) {
+            setIsSaving(true);
             router.delete(`/jadwal/shifts/${shift.id}`, {
+                data: {
+                    bulan,
+                    tahun,
+                    jadwal_bulanan_id: jadwalBulananId,
+                },
                 preserveScroll: true,
                 onSuccess: () => {
-                    if (editingShift?.id === shift.id) {
-                        handleCancelForm();
-                    }
+                    setIsSaving(false);
+                },
+                onError: () => {
+                    setIsSaving(false);
                 },
             });
         }
@@ -132,211 +226,305 @@ export default function MasterShiftModal({
         ppnpn: 'PPNPN',
     };
 
+    const isDirty = hasChanges();
+
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <div className="flex items-center gap-2">
-                        <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                            <Sparkles className="h-3 w-3 mr-1" /> Master Shift {categoryLabels[category]}
-                        </Badge>
-                    </div>
-                    <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2 mt-1">
-                        <Clock className="h-5 w-5 text-blue-600" />
-                        Pengaturan Master Shift ({categoryLabels[category]})
-                    </DialogTitle>
-                    <DialogDescription className="text-xs text-slate-500">
-                        Kelola kode, nama, jam kerja, dan opsi "Tidak Masuk Kerja" khusus untuk kelompok {categoryLabels[category]}.
-                    </DialogDescription>
-                </DialogHeader>
-
-                {/* Form Section (Add or Edit) */}
-                {(isAddMode || editingShift) && (
-                    <form onSubmit={handleSubmit} className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4 mb-4">
-                        <div className="flex items-center justify-between border-b pb-2">
-                            <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                                {editingShift ? <Edit2 className="h-4 w-4 text-blue-600" /> : <Plus className="h-4 w-4 text-emerald-600" />}
-                                {editingShift ? `Edit Shift: ${editingShift.kode_shift}` : 'Tambah Shift Baru'}
-                            </h4>
-                            <Button type="button" variant="ghost" size="sm" onClick={handleCancelForm} className="h-7 w-7 p-0">
-                                <X className="h-4 w-4" />
-                            </Button>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                            <div>
-                                <Label htmlFor="kode_shift" className="text-xs font-semibold">
-                                    Kode Shift <span className="text-red-500">*</span>
-                                </Label>
-                                <Input
-                                    id="kode_shift"
-                                    value={data.kode_shift}
-                                    onChange={(e) => setData('kode_shift', e.target.value.toUpperCase())}
-                                    placeholder="mis. P1, S, M"
-                                    className="h-8 text-xs uppercase"
-                                    required
-                                />
-                                <InputError message={errors.kode_shift} />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="nama_shift" className="text-xs font-semibold">
-                                    Nama Shift <span className="text-red-500">*</span>
-                                </Label>
-                                <Input
-                                    id="nama_shift"
-                                    value={data.nama_shift}
-                                    onChange={(e) => setData('nama_shift', e.target.value)}
-                                    placeholder="mis. PAGI TEKNISI"
-                                    className="h-8 text-xs"
-                                    required
-                                />
-                                <InputError message={errors.nama_shift} />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="jam_masuk" className="text-xs font-semibold">
-                                    Jam Masuk
-                                </Label>
-                                <Input
-                                    id="jam_masuk"
-                                    type="time"
-                                    step="1"
-                                    value={data.jam_masuk}
-                                    onChange={(e) => setData('jam_masuk', e.target.value)}
-                                    className="h-8 text-xs"
-                                />
-                                <InputError message={errors.jam_masuk} />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="jam_keluar" className="text-xs font-semibold">
-                                    Jam Keluar
-                                </Label>
-                                <Input
-                                    id="jam_keluar"
-                                    type="time"
-                                    step="1"
-                                    value={data.jam_keluar}
-                                    onChange={(e) => setData('jam_keluar', e.target.value)}
-                                    className="h-8 text-xs"
-                                />
-                                <InputError message={errors.jam_keluar} />
+        <>
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent
+                    style={{ width: '96vw', maxWidth: '96vw' }}
+                    className="w-[96vw] max-w-[96vw] max-h-[94vh] flex flex-col p-0 overflow-hidden rounded-2xl border border-slate-700 shadow-2xl"
+                >
+                    <DialogHeader className="p-6 pb-4 border-b bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Badge className="bg-blue-500/20 text-blue-200 border-blue-400/30 text-xs">
+                                    <Sparkles className="h-3.5 w-3.5 mr-1" /> Master Shift {categoryLabels[category]}
+                                </Badge>
+                                <Badge className="bg-emerald-500/20 text-emerald-200 border-emerald-400/30 text-xs">
+                                    Periode: {NAMA_BULAN[bulan - 1]} {tahun}
+                                </Badge>
                             </div>
                         </div>
+                        <DialogTitle className="text-2xl font-bold flex items-center gap-2.5 text-white mt-2">
+                            <Clock className="h-6 w-6 text-blue-400" />
+                            Pengaturan Master Shift ({categoryLabels[category]})
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-blue-200/80">
+                            Kelola kode shift, deskripsi, batasan jam masuk dan keluar operasional kerja.
+                        </DialogDescription>
+                    </DialogHeader>
 
-                        {/* Checkbox Tidak Masuk Kerja */}
-                        <div className="flex items-center space-x-2 bg-white p-2.5 rounded-lg border border-slate-200">
-                            <input
-                                type="checkbox"
-                                id="is_tidak_masuk_kerja"
-                                checked={data.is_tidak_masuk_kerja}
-                                onChange={(e) => setData('is_tidak_masuk_kerja', e.target.checked)}
-                                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                            />
-                            <Label htmlFor="is_tidak_masuk_kerja" className="text-xs font-semibold cursor-pointer text-slate-800">
-                                Shift Tidak Masuk Kerja (Libur / Cuti / Tidak Dihitung Hari Kerja)
-                            </Label>
-                        </div>
-
-                        <div className="flex justify-end gap-2 pt-2 border-t">
-                            <Button type="button" variant="outline" size="sm" onClick={handleCancelForm} className="h-8 text-xs">
-                                Batal
-                            </Button>
-                            <Button type="submit" disabled={processing} size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1">
-                                <Save className="h-3.5 w-3.5" />
-                                {editingShift ? 'Simpan Perubahan' : 'Tambah Shift'}
-                            </Button>
-                        </div>
-                    </form>
-                )}
-
-                {/* Header Actions */}
-                {!isAddMode && !editingShift && (
-                    <div className="flex justify-end mb-2">
-                        <Button size="sm" onClick={openAddForm} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-xs gap-1.5 shadow-sm">
-                            <Plus className="h-3.5 w-3.5" /> Tambah Master Shift Baru
-                        </Button>
-                    </div>
-                )}
-
-                {/* Table of Master Shifts */}
-                <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
-                    <Table className="text-xs">
-                        <TableHeader>
-                            <TableRow className="bg-slate-100/80">
-                                <TableHead className="font-bold text-slate-700 w-12 text-center">No</TableHead>
-                                <TableHead className="font-bold text-slate-700 w-24">Kode Shift</TableHead>
-                                <TableHead className="font-bold text-slate-700">Nama Shift</TableHead>
-                                <TableHead className="font-bold text-slate-700 text-center w-24">Jam Masuk</TableHead>
-                                <TableHead className="font-bold text-slate-700 text-center w-24">Jam Keluar</TableHead>
-                                <TableHead className="font-bold text-slate-700 text-center w-36">Kategori Kerja</TableHead>
-                                <TableHead className="font-bold text-slate-700 text-center w-24">Aksi</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {shifts.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="text-center py-6 text-slate-400">
-                                        Belum ada master shift untuk kategori {categoryLabels[category]}.
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                shifts.map((shift, idx) => (
-                                    <TableRow key={shift.id} className="hover:bg-slate-50">
-                                        <TableCell className="text-center text-slate-500">{idx + 1}</TableCell>
-                                        <TableCell className="font-bold text-slate-900">
-                                            <Badge variant="outline" className="bg-slate-100 font-mono text-xs">
-                                                {shift.kode_shift}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="font-semibold text-slate-800">{shift.nama_shift}</TableCell>
-                                        <TableCell className="text-center font-mono text-slate-600">
-                                            {shift.jam_masuk ? shift.jam_masuk.slice(0, 5) : '-'}
-                                        </TableCell>
-                                        <TableCell className="text-center font-mono text-slate-600">
-                                            {shift.jam_keluar ? shift.jam_keluar.slice(0, 5) : '-'}
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            {shift.is_tidak_masuk_kerja ? (
-                                                <Badge className="bg-red-100 text-red-800 border-red-200 font-medium text-[10px]">
-                                                    Tidak Masuk Kerja
-                                                </Badge>
-                                            ) : (
-                                                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 font-medium text-[10px]">
-                                                    Hari Kerja
-                                                </Badge>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <div className="flex items-center justify-center gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => openEditForm(shift)}
-                                                    className="h-7 w-7 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                                                    title="Edit Shift"
-                                                >
-                                                    <Edit2 className="h-3.5 w-3.5" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(shift)}
-                                                    className="h-7 w-7 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
-                                                    title="Hapus Shift"
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                        {/* Header Actions & Title */}
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-bold text-slate-700">
+                                Daftar Master Shift ({localShifts.length} Shift Terdaftar)
+                            </span>
+                            {!isAddMode && (
+                                <Button
+                                    type="button"
+                                    onClick={() => setIsAddMode(true)}
+                                    size="sm"
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-xs gap-1.5 shadow-sm font-semibold"
+                                >
+                                    <Plus className="h-4 w-4" /> Tambah Shift Baru
+                                </Button>
                             )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </DialogContent>
-        </Dialog>
+                        </div>
+
+                        {/* Add New Shift Form */}
+                        {isAddMode && (
+                            <form onSubmit={handleCreateNewShift} className="bg-slate-50 p-4 rounded-xl border border-slate-300 space-y-3">
+                                <div className="flex items-center justify-between border-b pb-2">
+                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                                        <Plus className="h-4 w-4 text-emerald-600" /> Tambah Shift Baru
+                                    </h4>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                            setIsAddMode(false);
+                                            setAddError(null);
+                                        }}
+                                        className="h-7 text-xs"
+                                    >
+                                        Batal
+                                    </Button>
+                                </div>
+
+                                {addError && (
+                                    <div className="bg-red-50 text-red-700 text-xs p-2 rounded border border-red-200 flex items-center gap-1.5">
+                                        <AlertCircle className="h-4 w-4 shrink-0" />
+                                        <span>{addError}</span>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div>
+                                        <Label className="text-xs font-semibold">
+                                            Kode Shift <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                            value={newShift.kode_shift}
+                                            onChange={(e) => setNewShift({ ...newShift, kode_shift: e.target.value.toUpperCase() })}
+                                            placeholder="mis. P1, S, M"
+                                            className="h-9 text-xs uppercase font-bold"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-semibold">
+                                            Nama Shift <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                            value={newShift.nama_shift}
+                                            onChange={(e) => setNewShift({ ...newShift, nama_shift: e.target.value })}
+                                            placeholder="mis. PAGI 1"
+                                            className="h-9 text-xs"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-semibold">Jam Masuk (WIT)</Label>
+                                        <Input
+                                            type="time"
+                                            step="1"
+                                            value={newShift.jam_masuk}
+                                            onChange={(e) => setNewShift({ ...newShift, jam_masuk: e.target.value })}
+                                            className="h-9 text-xs font-mono"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-semibold">Jam Keluar (WIT)</Label>
+                                        <Input
+                                            type="time"
+                                            step="1"
+                                            value={newShift.jam_keluar}
+                                            onChange={(e) => setNewShift({ ...newShift, jam_keluar: e.target.value })}
+                                            className="h-9 text-xs font-mono"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                                    <label className="flex items-center space-x-2 cursor-pointer text-xs">
+                                        <input
+                                            type="checkbox"
+                                            checked={newShift.is_tidak_masuk_kerja}
+                                            onChange={(e) => setNewShift({ ...newShift, is_tidak_masuk_kerja: e.target.checked })}
+                                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <span className="font-semibold text-slate-800">
+                                            Shift Tidak Masuk Kerja (Libur / Cuti / Bebas Tugas)
+                                        </span>
+                                    </label>
+
+                                    <Button
+                                        type="submit"
+                                        disabled={isSaving}
+                                        size="sm"
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 text-xs gap-1.5"
+                                    >
+                                        <Plus className="h-3.5 w-3.5" /> Simpan Shift Baru
+                                    </Button>
+                                </div>
+                            </form>
+                        )}
+
+                        {/* Full Width Shifts Table */}
+                        <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                            <Table className="w-full text-xs">
+                                <TableHeader>
+                                    <TableRow className="bg-slate-100 hover:bg-slate-100">
+                                        <TableHead className="w-14 text-center font-bold text-slate-700">No</TableHead>
+                                        <TableHead className="w-36 font-bold text-slate-700">Kode Shift</TableHead>
+                                        <TableHead className="min-w-[280px] font-bold text-slate-700">Nama Shift</TableHead>
+                                        <TableHead className="w-44 font-bold text-slate-700 text-center">Jam Masuk (WIT)</TableHead>
+                                        <TableHead className="w-44 font-bold text-slate-700 text-center">Jam Keluar (WIT)</TableHead>
+                                        <TableHead className="w-48 font-bold text-slate-700 text-center">Jenis Shift</TableHead>
+                                        <TableHead className="w-20 font-bold text-slate-700 text-center">Hapus</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {localShifts.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="text-center py-10 text-slate-400">
+                                                Belum ada master shift untuk kategori {categoryLabels[category]}.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        localShifts.map((shift, idx) => (
+                                            <TableRow key={shift.id} className="hover:bg-blue-50/40 transition-colors">
+                                                <TableCell className="text-center text-slate-500 font-medium">
+                                                    {idx + 1}
+                                                </TableCell>
+
+                                                {/* Kode Shift */}
+                                                <TableCell>
+                                                    <Input
+                                                        value={shift.kode_shift}
+                                                        onChange={(e) => handleFieldChange(shift.id, 'kode_shift', e.target.value.toUpperCase())}
+                                                        className="h-9 text-xs uppercase font-extrabold text-blue-900 bg-slate-50 focus:bg-white"
+                                                    />
+                                                </TableCell>
+
+                                                {/* Nama Shift */}
+                                                <TableCell>
+                                                    <Input
+                                                        value={shift.nama_shift}
+                                                        onChange={(e) => handleFieldChange(shift.id, 'nama_shift', e.target.value)}
+                                                        className="h-9 text-xs font-semibold text-slate-800 bg-slate-50 focus:bg-white"
+                                                    />
+                                                </TableCell>
+
+                                                {/* Jam Masuk */}
+                                                <TableCell>
+                                                    <Input
+                                                        type="time"
+                                                        step="1"
+                                                        value={shift.jam_masuk || ''}
+                                                        onChange={(e) => handleFieldChange(shift.id, 'jam_masuk', e.target.value)}
+                                                        className="h-9 text-xs font-mono text-center bg-slate-50 focus:bg-white"
+                                                    />
+                                                </TableCell>
+
+                                                {/* Jam Keluar */}
+                                                <TableCell>
+                                                    <Input
+                                                        type="time"
+                                                        step="1"
+                                                        value={shift.jam_keluar || ''}
+                                                        onChange={(e) => handleFieldChange(shift.id, 'jam_keluar', e.target.value)}
+                                                        className="h-9 text-xs font-mono text-center bg-slate-50 focus:bg-white"
+                                                    />
+                                                </TableCell>
+
+                                                {/* Shift Tidak Masuk Kerja */}
+                                                <TableCell className="text-center">
+                                                    <label className="inline-flex items-center gap-2 cursor-pointer bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={shift.is_tidak_masuk_kerja}
+                                                            onChange={(e) => handleFieldChange(shift.id, 'is_tidak_masuk_kerja', e.target.checked)}
+                                                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                        />
+                                                        <span className={`text-xs font-semibold ${shift.is_tidak_masuk_kerja ? 'text-red-600' : 'text-emerald-700'}`}>
+                                                            {shift.is_tidak_masuk_kerja ? 'Libur / Lepas' : 'Hari Kerja'}
+                                                        </span>
+                                                    </label>
+                                                </TableCell>
+
+                                                {/* Delete Action */}
+                                                <TableCell className="text-center">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleDelete(shift)}
+                                                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                        title="Hapus Shift"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="p-4 px-6 border-t bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            {isDirty && (
+                                <Badge className="bg-amber-100 text-amber-900 border-amber-300 gap-1.5 text-xs py-1 px-3">
+                                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                                    Terdapat perubahan yang belum disimpan
+                                </Badge>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                            {isDirty && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleResetToDefault}
+                                    disabled={isSaving}
+                                    className="h-9 text-xs"
+                                >
+                                    <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset
+                                </Button>
+                            )}
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onOpenChange(false)}
+                                disabled={isSaving}
+                                className="h-9 text-xs px-4"
+                            >
+                                Tutup
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={handleSaveAll}
+                                disabled={isSaving || localShifts.length === 0}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-9 text-xs px-5 gap-2 shadow-md shadow-blue-900/20"
+                            >
+                                <Save className="h-4 w-4" />
+                                {isSaving ? 'Menyimpan & Menyelaraskan...' : 'Simpan Master Shift & Selaraskan Data'}
+                            </Button>
+                        </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Syncing Progress Animation Modal */}
+            <SyncingScheduleModal open={isSaving} bulan={bulan} tahun={tahun} />
+        </>
     );
 }

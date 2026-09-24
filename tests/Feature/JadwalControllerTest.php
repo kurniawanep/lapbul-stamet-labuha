@@ -6,7 +6,7 @@ use App\Models\Pegawai;
 use App\Models\User;
 
 test('authenticated user can view operational schedule matrix page', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['is_superadmin' => true, 'role' => 'Super Admin']);
 
     $response = $this->actingAs($user)->get('/jadwal/operasional?bulan=8&tahun=2026');
 
@@ -14,7 +14,7 @@ test('authenticated user can view operational schedule matrix page', function ()
 });
 
 test('authenticated user can view teknisi schedule matrix page', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['is_superadmin' => true, 'role' => 'Super Admin']);
 
     $response = $this->actingAs($user)->get('/jadwal/teknisi?bulan=8&tahun=2026');
 
@@ -22,7 +22,7 @@ test('authenticated user can view teknisi schedule matrix page', function () {
 });
 
 test('authenticated user can view ppnpn schedule matrix page', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['is_superadmin' => true, 'role' => 'Super Admin']);
 
     $response = $this->actingAs($user)->get('/jadwal/ppnpn?bulan=8&tahun=2026');
 
@@ -30,7 +30,7 @@ test('authenticated user can view ppnpn schedule matrix page', function () {
 });
 
 test('authenticated user can update single cell shift', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['is_superadmin' => true, 'role' => 'Super Admin']);
     $pegawai = Pegawai::create(['nama' => 'BEN ARTHER MOLLE']);
     $jadwalBulanan = JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
     $shift = \App\Models\JadwalBulananShift::create(['jadwal_bulanan_id' => $jadwalBulanan->id, 'category' => 'operasional', 'kode_shift' => 'S', 'nama_shift' => 'SIANG OBS']);
@@ -51,7 +51,7 @@ test('authenticated user can update single cell shift', function () {
 });
 
 test('authenticated user can batch update multiple matrix cells', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['is_superadmin' => true, 'role' => 'Super Admin']);
     $p1 = Pegawai::create(['nama' => 'BEN ARTHER MOLLE']);
     $p2 = Pegawai::create(['nama' => 'ANGGI FERINA']);
     $jadwalBulanan = JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
@@ -80,7 +80,7 @@ test('authenticated user can batch update multiple matrix cells', function () {
 });
 
 test('authenticated user can bulk update shifts', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['is_superadmin' => true, 'role' => 'Super Admin']);
     $p1 = Pegawai::create(['nama' => 'PEG 1']);
     $p2 = Pegawai::create(['nama' => 'PEG 2']);
     $jadwalBulanan = JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
@@ -108,7 +108,7 @@ test('authenticated user can bulk update shifts', function () {
 });
 
 test('authenticated user can store new master shift per category', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['is_superadmin' => true, 'role' => 'Super Admin']);
 
     $response = $this->actingAs($user)->post('/jadwal/shifts', [
         'category' => 'teknisi',
@@ -129,7 +129,7 @@ test('authenticated user can store new master shift per category', function () {
 });
 
 test('authenticated user can update existing master shift including category and kode_shift', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['is_superadmin' => true, 'role' => 'Super Admin']);
     $shift = MasterShift::create([
         'category' => 'ppnpn',
         'kode_shift' => 'PAGI_OLD',
@@ -158,7 +158,7 @@ test('authenticated user can update existing master shift including category and
 });
 
 test('authenticated user can export pdf schedule per category', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['is_superadmin' => true, 'role' => 'Super Admin']);
     JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
 
     $response = $this->actingAs($user)->get('/jadwal/pdf?bulan=8&tahun=2026&category=operasional');
@@ -172,8 +172,78 @@ test('authenticated user can export pdf schedule per category', function () {
     $responsePpnpn->assertStatus(200);
 });
 
+test('authenticated user can view master shifts catalog page', function () {
+    $user = User::factory()->create(['is_superadmin' => true, 'role' => 'Super Admin']);
+
+    $response = $this->actingAs($user)->get('/jadwal/shifts?bulan=8&tahun=2026&category=operasional');
+
+    $response->assertStatus(200);
+});
+
+test('authenticated user can batch update master shifts and trigger operational sync', function () {
+    $user = User::factory()->create(['is_superadmin' => true, 'role' => 'Super Admin']);
+    $jadwalBulanan = JadwalBulanan::create(['bulan' => 8, 'tahun' => 2026]);
+    $shift1 = \App\Models\JadwalBulananShift::create([
+        'jadwal_bulanan_id' => $jadwalBulanan->id,
+        'category' => 'operasional',
+        'kode_shift' => 'P1',
+        'nama_shift' => 'PAGI 1',
+        'jam_masuk' => '07:00:00',
+        'jam_keluar' => '13:30:00',
+    ]);
+    $shift2 = \App\Models\JadwalBulananShift::create([
+        'jadwal_bulanan_id' => $jadwalBulanan->id,
+        'category' => 'operasional',
+        'kode_shift' => 'S1',
+        'nama_shift' => 'SIANG 1',
+        'jam_masuk' => '13:30:00',
+        'jam_keluar' => '19:30:00',
+    ]);
+
+    $response = $this->actingAs($user)->post('/jadwal/shifts/batch-update', [
+        'category' => 'operasional',
+        'jadwal_bulanan_id' => $jadwalBulanan->id,
+        'bulan' => 8,
+        'tahun' => 2026,
+        'shifts' => [
+            [
+                'id' => $shift1->id,
+                'kode_shift' => 'P1_EDITED',
+                'nama_shift' => 'PAGI 1 BARU',
+                'jam_masuk' => '06:30:00',
+                'jam_keluar' => '13:00:00',
+                'is_tidak_masuk_kerja' => false,
+            ],
+            [
+                'id' => $shift2->id,
+                'kode_shift' => 'S1_EDITED',
+                'nama_shift' => 'SIANG 1 BARU',
+                'jam_masuk' => '13:00:00',
+                'jam_keluar' => '19:00:00',
+                'is_tidak_masuk_kerja' => false,
+            ],
+        ],
+    ]);
+
+    $response->assertRedirect();
+    $this->assertDatabaseHas('jadwal_bulanan_shifts', [
+        'id' => $shift1->id,
+        'kode_shift' => 'P1_EDITED',
+        'nama_shift' => 'PAGI 1 BARU',
+        'jam_masuk' => '06:30:00',
+        'jam_keluar' => '13:00:00',
+    ]);
+    $this->assertDatabaseHas('jadwal_bulanan_shifts', [
+        'id' => $shift2->id,
+        'kode_shift' => 'S1_EDITED',
+        'nama_shift' => 'SIANG 1 BARU',
+        'jam_masuk' => '13:00:00',
+        'jam_keluar' => '19:00:00',
+    ]);
+});
+
 test('authenticated user can delete a shift', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['is_superadmin' => true, 'role' => 'Super Admin']);
     $shift = MasterShift::create([
         'category' => 'operasional',
         'kode_shift' => 'DEL',

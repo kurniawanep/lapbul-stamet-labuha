@@ -378,12 +378,39 @@ class JadwalController extends Controller
     }
 
     /**
+     * Display Master Shift catalog management page.
+     */
+    public function shiftsIndex(Request $request): Response
+    {
+        $category = $request->input('category', 'operasional');
+        $bulan = (int) $request->input('bulan', Carbon::now('Asia/Jayapura')->month);
+        $tahun = (int) $request->input('tahun', Carbon::now('Asia/Jayapura')->year);
+
+        $jadwalBulanan = $this->getJadwalBulanan($bulan, $tahun);
+        $shifts = $this->getShiftsForJadwal($jadwalBulanan, $category);
+        $allMasterShifts = MasterShift::all();
+
+        return Inertia::render('Jadwal/MasterShift', [
+            'shifts' => $shifts,
+            'allMasterShifts' => $allMasterShifts,
+            'category' => $category,
+            'bulan' => $bulan,
+            'tahun' => $tahun,
+            'jadwalBulanan' => $jadwalBulanan,
+        ]);
+    }
+
+    /**
      * Store new shift for specific category.
      */
     public function storeShift(Request $request): RedirectResponse
     {
         $category = $request->input('category', 'operasional');
         $jadwalBulananId = $request->input('jadwal_bulanan_id');
+        $bulan = $request->input('bulan');
+        $tahun = $request->input('tahun');
+
+        $this->authorizeScheduleEdit($request, null, $category);
 
         $request->validate([
             'category' => ['required', 'string', Rule::in(['operasional', 'teknisi', 'ppnpn'])],
@@ -424,7 +451,17 @@ class JadwalController extends Controller
             }
         });
 
-        return redirect()->back()->with('success', 'Master Shift baru berhasil ditambahkan.');
+        // Trigger synchronization of operational observation data for the month
+        if ($jadwalBulananId) {
+            $jb = JadwalBulanan::find($jadwalBulananId);
+            if ($jb) {
+                $this->dutySyncService->syncObservationsForPeriod($jb->bulan, $jb->tahun);
+            }
+        } elseif ($bulan && $tahun) {
+            $this->dutySyncService->syncObservationsForPeriod((int) $bulan, (int) $tahun);
+        }
+
+        return redirect()->back()->with('success', 'Master Shift baru berhasil ditambahkan dan data operasional telah diselaraskan.');
     }
 
     /**
@@ -433,6 +470,11 @@ class JadwalController extends Controller
     public function updateShift(Request $request, int $shiftId): RedirectResponse
     {
         $category = $request->input('category', 'operasional');
+        $jadwalBulananId = $request->input('jadwal_bulanan_id');
+        $bulan = $request->input('bulan');
+        $tahun = $request->input('tahun');
+
+        $this->authorizeScheduleEdit($request, $shiftId, $category);
 
         $request->validate([
             'category' => ['required', 'string', Rule::in(['operasional', 'teknisi', 'ppnpn'])],
@@ -449,10 +491,18 @@ class JadwalController extends Controller
         $jamKeluar = $request->input('jam_keluar') ?: null;
         $isTidakMasuk = (bool) $request->input('is_tidak_masuk_kerja', false);
 
-        DB::transaction(function () use ($shiftId, $category, $kodeShift, $namaShift, $jamMasuk, $jamKeluar, $isTidakMasuk) {
+        $targetBulan = $bulan;
+        $targetTahun = $tahun;
+
+        DB::transaction(function () use ($shiftId, $category, $kodeShift, $namaShift, $jamMasuk, $jamKeluar, $isTidakMasuk, &$targetBulan, &$targetTahun) {
             $monthlyShift = JadwalBulananShift::find($shiftId);
 
             if ($monthlyShift) {
+                if (!$targetBulan && $monthlyShift->jadwalBulanan) {
+                    $targetBulan = $monthlyShift->jadwalBulanan->bulan;
+                    $targetTahun = $monthlyShift->jadwalBulanan->tahun;
+                }
+
                 $monthlyShift->update([
                     'category' => $category,
                     'kode_shift' => $kodeShift,
@@ -475,6 +525,7 @@ class JadwalController extends Controller
             } else {
                 $masterShift = MasterShift::find($shiftId);
                 if ($masterShift) {
+                    $oldKode = $masterShift->kode_shift;
                     $masterShift->update([
                         'category' => $category,
                         'kode_shift' => $kodeShift,
@@ -483,25 +534,152 @@ class JadwalController extends Controller
                         'jam_keluar' => $jamKeluar,
                         'is_tidak_masuk_kerja' => $isTidakMasuk,
                     ]);
+
+                    JadwalBulananShift::where('master_shift_id', $masterShift->id)
+                        ->orWhere(function ($q) use ($masterShift, $oldKode) {
+                            $q->where('category', $masterShift->category)
+                              ->where('kode_shift', $oldKode);
+                        })
+                        ->update([
+                            'category' => $category,
+                            'kode_shift' => $kodeShift,
+                            'nama_shift' => $namaShift,
+                            'jam_masuk' => $jamMasuk,
+                            'jam_keluar' => $jamKeluar,
+                            'is_tidak_masuk_kerja' => $isTidakMasuk,
+                        ]);
                 }
             }
         });
 
-        return redirect()->back()->with('success', 'Master Shift berhasil diperbarui.');
+        if ($jadwalBulananId && (!$targetBulan || !$targetTahun)) {
+            $jb = JadwalBulanan::find($jadwalBulananId);
+            if ($jb) {
+                $targetBulan = $jb->bulan;
+                $targetTahun = $jb->tahun;
+            }
+        }
+
+        if ($targetBulan && $targetTahun) {
+            $this->dutySyncService->syncObservationsForPeriod((int) $targetBulan, (int) $targetTahun);
+        }
+
+        return redirect()->back()->with('success', 'Master Shift berhasil diperbarui dan seluruh data operasional bulan ' . ($targetBulan ?? '') . '/' . ($targetTahun ?? '') . ' telah diselaraskan.');
+    }
+
+    /**
+     * Save all Master Shift changes in batch and resynchronize operational observation data for the month.
+     */
+    public function batchUpdateShifts(Request $request): RedirectResponse
+    {
+        $category = $request->input('category', 'operasional');
+        $jadwalBulananId = $request->input('jadwal_bulanan_id');
+        $bulan = (int) $request->input('bulan', Carbon::now('Asia/Jayapura')->month);
+        $tahun = (int) $request->input('tahun', Carbon::now('Asia/Jayapura')->year);
+
+        $this->authorizeScheduleEdit($request, null, $category);
+
+        $request->validate([
+            'category' => ['required', 'string', Rule::in(['operasional', 'teknisi', 'ppnpn'])],
+            'shifts' => ['required', 'array'],
+            'shifts.*.id' => ['required'],
+            'shifts.*.kode_shift' => ['required', 'string', 'max:20'],
+            'shifts.*.nama_shift' => ['required', 'string', 'max:255'],
+            'shifts.*.jam_masuk' => ['nullable', 'string'],
+            'shifts.*.jam_keluar' => ['nullable', 'string'],
+            'shifts.*.is_tidak_masuk_kerja' => ['nullable', 'boolean'],
+        ]);
+
+        $shiftsInput = $request->input('shifts');
+
+        DB::transaction(function () use ($shiftsInput, $category) {
+            foreach ($shiftsInput as $item) {
+                $shiftId = $item['id'];
+                $kodeShift = strtoupper(trim($item['kode_shift']));
+                $namaShift = $item['nama_shift'];
+                $jamMasuk = $item['jam_masuk'] ?: null;
+                $jamKeluar = $item['jam_keluar'] ?: null;
+                $isTidakMasuk = (bool) ($item['is_tidak_masuk_kerja'] ?? false);
+
+                $monthlyShift = JadwalBulananShift::find($shiftId);
+
+                if ($monthlyShift) {
+                    $monthlyShift->update([
+                        'category' => $category,
+                        'kode_shift' => $kodeShift,
+                        'nama_shift' => $namaShift,
+                        'jam_masuk' => $jamMasuk,
+                        'jam_keluar' => $jamKeluar,
+                        'is_tidak_masuk_kerja' => $isTidakMasuk,
+                    ]);
+
+                    if ($monthlyShift->master_shift_id) {
+                        MasterShift::where('id', $monthlyShift->master_shift_id)->update([
+                            'category' => $category,
+                            'kode_shift' => $kodeShift,
+                            'nama_shift' => $namaShift,
+                            'jam_masuk' => $jamMasuk,
+                            'jam_keluar' => $jamKeluar,
+                            'is_tidak_masuk_kerja' => $isTidakMasuk,
+                        ]);
+                    }
+                } else {
+                    $masterShift = MasterShift::find($shiftId);
+                    if ($masterShift) {
+                        $oldKode = $masterShift->kode_shift;
+                        $masterShift->update([
+                            'category' => $category,
+                            'kode_shift' => $kodeShift,
+                            'nama_shift' => $namaShift,
+                            'jam_masuk' => $jamMasuk,
+                            'jam_keluar' => $jamKeluar,
+                            'is_tidak_masuk_kerja' => $isTidakMasuk,
+                        ]);
+
+                        JadwalBulananShift::where('master_shift_id', $masterShift->id)
+                            ->orWhere(function ($q) use ($masterShift, $oldKode) {
+                                $q->where('category', $masterShift->category)
+                              ->where('kode_shift', $oldKode);
+                            })
+                            ->update([
+                                'category' => $category,
+                                'kode_shift' => $kodeShift,
+                                'nama_shift' => $namaShift,
+                                'jam_masuk' => $jamMasuk,
+                                'jam_keluar' => $jamKeluar,
+                                'is_tidak_masuk_kerja' => $isTidakMasuk,
+                            ]);
+                    }
+                }
+            }
+        });
+
+        // Sync observations for this month
+        $this->dutySyncService->syncObservationsForPeriod($bulan, $tahun);
+
+        return redirect()->back()->with('success', 'Perubahan Master Shift berhasil disimpan dan seluruh data operasional bulan ' . $bulan . '/' . $tahun . ' telah diselaraskan.');
     }
 
     /**
      * Delete shift item (both monthly clone and master catalog if linked).
      */
-    public function destroyShift(int $shiftId): RedirectResponse
+    public function destroyShift(Request $request, int $shiftId): RedirectResponse
     {
-        DB::transaction(function () use ($shiftId) {
+        $bulan = $request->input('bulan');
+        $tahun = $request->input('tahun');
+
+        DB::transaction(function () use ($shiftId, &$bulan, &$tahun) {
             $monthlyShift = JadwalBulananShift::find($shiftId);
 
             if ($monthlyShift) {
                 $category = $monthlyShift->category;
                 $kodeShift = $monthlyShift->kode_shift;
                 $masterShiftId = $monthlyShift->master_shift_id;
+
+                if (!$bulan && $monthlyShift->jadwalBulanan) {
+                    $bulan = $monthlyShift->jadwalBulanan->bulan;
+                    $tahun = $monthlyShift->jadwalBulanan->tahun;
+                }
 
                 JadwalDetail::where('shift_id', $monthlyShift->id)->delete();
                 $monthlyShift->delete();
@@ -529,6 +707,10 @@ class JadwalController extends Controller
                 }
             }
         });
+
+        if ($bulan && $tahun) {
+            $this->dutySyncService->syncObservationsForPeriod((int) $bulan, (int) $tahun);
+        }
 
         return redirect()->back()->with('success', 'Master Shift berhasil dihapus.');
     }
