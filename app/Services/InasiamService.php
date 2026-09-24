@@ -165,7 +165,7 @@ class InasiamService
             $airlineName = $item['airlines']['name'] ?? ($norm['callsign'] ?: 'Wings Air');
             $forecasterName = $item['authorized_info']['forecaster_name'] ?? null;
 
-            $pegawai = $this->observerResolver->resolvePegawai($departureKey, $forecasterName, 'UTC');
+            $pegawai = $this->observerResolver->resolveForecastPegawai($departureKey, $forecasterName, 'UTC');
             $teknisi = $this->observerResolver->getTeknisiByTimestamp($departureKey, 'UTC');
             $ppnpn = $this->observerResolver->getPpnpnByTimestamp($departureKey, 'UTC');
 

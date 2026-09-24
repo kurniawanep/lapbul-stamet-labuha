@@ -68,6 +68,25 @@ class ObserverResolverService
     }
 
     /**
+     * Resolve Pegawai model for Forecaster products (Flight Document, etc.).
+     */
+    public function resolveForecastPegawai(?string $timestamp, ?string $forecasterName = null, ?string $fromTz = null): ?Pegawai
+    {
+        if (!empty($timestamp)) {
+            $scheduledPegawai = $this->getForecastOrObserverDutyOfficer($timestamp, $fromTz);
+            if ($scheduledPegawai) {
+                return $scheduledPegawai;
+            }
+        }
+
+        if (!empty($forecasterName)) {
+            return $this->resolvePegawaiByName($forecasterName);
+        }
+
+        return null;
+    }
+
+    /**
      * Intelligent multi-stage matching of observer name with Pegawai records.
      */
     public function resolvePegawaiByName(string $observerName): ?Pegawai

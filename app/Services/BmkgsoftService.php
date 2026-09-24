@@ -199,7 +199,7 @@ class BmkgsoftService
                 continue;
             }
 
-            $pegawai = $this->observerResolver->resolvePegawai($timestamp, $observerName, 'UTC');
+            $pegawai = $this->observerResolver->resolvePibalPegawai($timestamp, $observerName, 'UTC');
             $teknisi = $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC');
             $ppnpn = $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC');
 
@@ -482,7 +482,7 @@ class BmkgsoftService
                     continue;
                 }
 
-                $pegawai = $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC');
+                $pegawai = $this->observerResolver->resolveTaforPegawai($timestamp, $observerName, 'UTC');
                 $teknisi = $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC');
                 $ppnpn = $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC');
 

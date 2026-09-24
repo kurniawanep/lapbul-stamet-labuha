@@ -135,3 +135,94 @@ test('pibal timeliness logic evaluates -15 to +45 minutes window correctly', fun
             ->and($item0046['monitoring_status'])->toBe('terlambat');
     });
 });
+
+test('pibal sync assigns duty to PF when scheduled and falls back to P when absent', function () {
+    $forecaster = Pegawai::create([
+        'nama' => 'FORECASTER LABUHA',
+        'email' => 'fc@bmkg.go.id',
+        'password' => Hash::make('password'),
+        'jenis_pegawai' => 'PNS',
+    ]);
+
+    $pagiObs = Pegawai::create([
+        'nama' => 'PAGI OBSERVER',
+        'email' => 'obs@bmkg.go.id',
+        'password' => Hash::make('password'),
+        'jenis_pegawai' => 'PNS',
+    ]);
+
+    $jadwal = \App\Models\JadwalBulanan::firstOrCreate(
+        ['bulan' => 8, 'tahun' => 2026],
+        ['stasiun' => 'Stasiun Meteorologi Oesman Sadik']
+    );
+
+    $shiftPF = \App\Models\JadwalBulananShift::firstOrCreate(
+        ['jadwal_bulanan_id' => $jadwal->id, 'kode_shift' => 'PF'],
+        [
+            'category' => 'operasional',
+            'nama_shift' => 'PAGI FORECAST',
+            'jam_masuk' => '07:30:00',
+            'jam_keluar' => '15:30:00',
+            'is_tidak_masuk_kerja' => false,
+        ]
+    );
+
+    $shiftP = \App\Models\JadwalBulananShift::firstOrCreate(
+        ['jadwal_bulanan_id' => $jadwal->id, 'kode_shift' => 'P'],
+        [
+            'category' => 'operasional',
+            'nama_shift' => 'PAGI OBS',
+            'jam_masuk' => '07:30:00',
+            'jam_keluar' => '15:30:00',
+            'is_tidak_masuk_kerja' => false,
+        ]
+    );
+
+    // 2026-08-20: HAS both PF and P
+    \App\Models\JadwalDetail::updateOrCreate(
+        ['pegawai_id' => $forecaster->id, 'tanggal' => '2026-08-20'],
+        ['jadwal_bulanan_id' => $jadwal->id, 'shift_id' => $shiftPF->id]
+    );
+    \App\Models\JadwalDetail::updateOrCreate(
+        ['pegawai_id' => $pagiObs->id, 'tanggal' => '2026-08-20'],
+        ['jadwal_bulanan_id' => $jadwal->id, 'shift_id' => $shiftP->id]
+    );
+
+    // 2026-08-21: ONLY has P (no PF scheduled)
+    \App\Models\JadwalDetail::updateOrCreate(
+        ['pegawai_id' => $pagiObs->id, 'tanggal' => '2026-08-21'],
+        ['jadwal_bulanan_id' => $jadwal->id, 'shift_id' => $shiftP->id]
+    );
+
+    Http::fake([
+        '*/api/v21/user/session/login' => Http::response(['data' => ['token' => 'fake_token']], 200),
+        '*/db/bmkgsatu/@export_data*' => Http::response([
+            'data' => [
+                [
+                    'station_id' => 138,
+                    'data_timestamp' => '2026-08-20T00:00:00', // 09:00 WIT -> has PF
+                    'observer_name' => 'Unknown',
+                    'sandi_pibal' => 'PPAA 60001 97460',
+                ],
+                [
+                    'station_id' => 138,
+                    'data_timestamp' => '2026-08-21T00:00:00', // 09:00 WIT -> only P
+                    'observer_name' => 'Unknown',
+                    'sandi_pibal' => 'PPAA 61001 97460',
+                ],
+            ],
+        ], 200),
+    ]);
+
+    $service = new BmkgsoftService();
+    $result = $service->syncPibalData('2026-08-20T00:00', '2026-08-21T23:59', 138);
+
+    expect($result['synced_count'])->toBe(2);
+
+    $pibal1 = DataPibal::where('data_timestamp', '2026-08-20 00:00:00')->first();
+    expect($pibal1->pegawai_id)->toBe($forecaster->id);
+
+    $pibal2 = DataPibal::where('data_timestamp', '2026-08-21 00:00:00')->first();
+    expect($pibal2->pegawai_id)->toBe($pagiObs->id);
+});
+

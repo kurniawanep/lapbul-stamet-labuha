@@ -12,6 +12,8 @@ test('authenticated user can export verifikasi tafor excel spreadsheet', functio
         'email' => 'admin@bmkg.go.id',
         'password' => Hash::make('password'),
         'jenis_pegawai' => 'PNS',
+        'is_superadmin' => true,
+        'role' => 'Super Admin',
     ]);
 
     DataTafor::create([

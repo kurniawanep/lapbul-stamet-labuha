@@ -12,6 +12,8 @@ test('authenticated user can view tafor monthly report page with pagination', fu
         'email' => 'admin@bmkg.go.id',
         'password' => Hash::make('password'),
         'jenis_pegawai' => 'PNS',
+        'is_superadmin' => true,
+        'role' => 'Super Admin',
     ]);
 
     DataTafor::create([
@@ -47,6 +49,8 @@ test('tafor sync fetches and stores data into data_tafor table using 10-day chun
         'email' => 'rezky@bmkg.go.id',
         'password' => Hash::make('password'),
         'jenis_pegawai' => 'PNS',
+        'is_superadmin' => true,
+        'role' => 'Super Admin',
         'role' => 'Observer & Forecaster',
     ]);
 
@@ -103,3 +107,105 @@ test('tafor sync fetches and stores data into data_tafor table using 10-day chun
         'status' => 'sent',
     ]);
 });
+
+test('tafor sync assigns duty to PF when scheduled and falls back to P when absent', function () {
+    $forecaster = Pegawai::create([
+        'nama' => 'FORECASTER TAFOR',
+        'email' => 'fc_taf@bmkg.go.id',
+        'password' => Hash::make('password'),
+        'jenis_pegawai' => 'PNS',
+    ]);
+
+    $pagiObs = Pegawai::create([
+        'nama' => 'PAGI OBS TAFOR',
+        'email' => 'obs_taf@bmkg.go.id',
+        'password' => Hash::make('password'),
+        'jenis_pegawai' => 'PNS',
+    ]);
+
+    $jadwal = \App\Models\JadwalBulanan::create(['bulan' => 9, 'tahun' => 2026]);
+
+    $shiftPF = \App\Models\JadwalBulananShift::create([
+        'jadwal_bulanan_id' => $jadwal->id,
+        'kode_shift' => 'PF',
+        'nama_shift' => 'PAGI FORECAST',
+        'jam_masuk' => '07:30:00',
+        'jam_keluar' => '15:30:00',
+        'is_tidak_masuk_kerja' => false,
+    ]);
+
+    $shiftP = \App\Models\JadwalBulananShift::create([
+        'jadwal_bulanan_id' => $jadwal->id,
+        'kode_shift' => 'P',
+        'nama_shift' => 'PAGI OBS',
+        'jam_masuk' => '07:30:00',
+        'jam_keluar' => '15:30:00',
+        'is_tidak_masuk_kerja' => false,
+    ]);
+
+    // Day 1 (2026-09-01): HAS both PF and P
+    \App\Models\JadwalDetail::create([
+        'jadwal_bulanan_id' => $jadwal->id,
+        'pegawai_id' => $forecaster->id,
+        'tanggal' => '2026-09-01',
+        'shift_id' => $shiftPF->id,
+    ]);
+    \App\Models\JadwalDetail::create([
+        'jadwal_bulanan_id' => $jadwal->id,
+        'pegawai_id' => $pagiObs->id,
+        'tanggal' => '2026-09-01',
+        'shift_id' => $shiftP->id,
+    ]);
+
+    // Day 2 (2026-09-02): ONLY has P
+    \App\Models\JadwalDetail::create([
+        'jadwal_bulanan_id' => $jadwal->id,
+        'pegawai_id' => $pagiObs->id,
+        'tanggal' => '2026-09-02',
+        'shift_id' => $shiftP->id,
+    ]);
+
+    Http::fake([
+        '*/api/v21/user/session/login' => Http::response(['data' => ['token' => 'fake_jwt_token']], 200),
+        '*/api/v21/gts/entry*' => Http::response([
+            'status' => 'success',
+            'code' => 200,
+            'data' => [
+                [
+                    'id' => 101,
+                    'bmkgsoft_id' => 138,
+                    'station_name' => 'Stasiun Meteorologi Oesman Sadik',
+                    'data_timestamp' => '2026-09-01T05:00:00Z', // 14:00 WIT -> Day 1 (has PF)
+                    'type_message' => 'taf',
+                    'ttaaii' => 'FTID40',
+                    'cccc' => 'WAEL',
+                    'status' => 'sent',
+                    'sender_username' => 'Unknown',
+                ],
+                [
+                    'id' => 102,
+                    'bmkgsoft_id' => 138,
+                    'station_name' => 'Stasiun Meteorologi Oesman Sadik',
+                    'data_timestamp' => '2026-09-02T05:00:00Z', // 14:00 WIT -> Day 2 (only P)
+                    'type_message' => 'taf',
+                    'ttaaii' => 'FTID40',
+                    'cccc' => 'WAEL',
+                    'status' => 'sent',
+                    'sender_username' => 'Unknown',
+                ],
+            ],
+        ], 200),
+    ]);
+
+    $service = new BmkgsoftService();
+    $result = $service->syncTaforData('2026-09-01T00:00:00Z', '2026-09-02T23:59:59Z', 138);
+
+    expect($result['synced_count'])->toBe(2);
+
+    $tafor1 = DataTafor::where('data_timestamp', '2026-09-01 05:00:00')->first();
+    expect($tafor1->pegawai_id)->toBe($forecaster->id);
+
+    $tafor2 = DataTafor::where('data_timestamp', '2026-09-02 05:00:00')->first();
+    expect($tafor2->pegawai_id)->toBe($pagiObs->id);
+});
+
