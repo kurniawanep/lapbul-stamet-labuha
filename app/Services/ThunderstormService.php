@@ -80,8 +80,14 @@ class ThunderstormService
         $startDate = Carbon::createFromDate($tahun, 1, 1)->startOfYear();
         $endDate = Carbon::createFromDate($tahun, 12, 31)->endOfYear();
 
-        $records = DataSinoptik::with('pegawai')
+        $records = DataSinoptik::query()
             ->whereBetween('data_timestamp', [$startDate, $endDate])
+            ->where(function ($q) {
+                $q->whereIn('present_weather_ww', ['17', '29', '91', '92', '93', '94', '95', '96', '98', '99', 17, 29, 91, 92, 93, 94, 95, 96, 98, 99])
+                  ->orWhereIn('past_weather_w1', ['9', 9])
+                  ->orWhereIn('past_weather_w2', ['9', 9]);
+            })
+            ->select(['id', 'data_timestamp', 'present_weather_ww', 'past_weather_w1', 'past_weather_w2'])
             ->get();
 
         // Group records by month (1..12) and day (1..31)
@@ -172,14 +178,24 @@ class ThunderstormService
     /**
      * Compute statistics for Dashboard.
      */
-    public function getDashboardStats(int $bulan, int $tahun): array
+    public function getDashboardStats(int $bulan, int $tahun, ?array $yearlyInfo = null): array
     {
-        $yearlyInfo = $this->getYearlyMatrix($tahun);
+        if ($yearlyInfo === null) {
+            $yearlyInfo = $this->getYearlyMatrix($tahun);
+        }
 
         $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
 
-        $monthRecords = DataSinoptik::whereBetween('data_timestamp', [$startDate, $endDate])->get();
+        $monthRecords = DataSinoptik::query()
+            ->whereBetween('data_timestamp', [$startDate, $endDate])
+            ->where(function ($q) {
+                $q->whereIn('present_weather_ww', ['17', '29', '91', '92', '93', '94', '95', '96', '98', '99', 17, 29, 91, 92, 93, 94, 95, 96, 98, 99])
+                  ->orWhereIn('past_weather_w1', ['9', 9])
+                  ->orWhereIn('past_weather_w2', ['9', 9]);
+            })
+            ->select(['id', 'data_timestamp', 'present_weather_ww', 'past_weather_w1', 'past_weather_w2'])
+            ->get();
 
         $monthlyTsSlots = 0;
         $activeTsCount = 0; // ww in 17,29,91..96,98..99
