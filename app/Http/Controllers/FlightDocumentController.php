@@ -206,6 +206,7 @@ class FlightDocumentController extends Controller
 
             if ($doc) {
                 $doc->update([
+                    'departure_at' => $timestamp ? Carbon::parse($timestamp)->format('Y-m-d H:i:s') : $doc->departure_at,
                     'status' => 'Selesai',
                     'is_wa_dispatched' => true,
                     'wa_dispatched_at' => $timestamp ? Carbon::parse($timestamp)->format('Y-m-d H:i:s') : Carbon::now(),

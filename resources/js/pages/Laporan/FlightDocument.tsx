@@ -92,6 +92,63 @@ const namaBulan = [
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
 ];
 
+const bulanIndoShort = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+const formatFlightDocTime = (timestampStr: string | null) => {
+    if (!timestampStr) {
+        return {
+            wit: '-',
+            utc: '-',
+            timeWit: '-',
+            timeUtc: '-',
+            dateWit: '-',
+            fullWit: '-',
+            fullUtc: '-',
+        };
+    }
+
+    const d = new Date(timestampStr);
+    if (isNaN(d.getTime())) {
+        return {
+            wit: timestampStr,
+            utc: '-',
+            timeWit: '-',
+            timeUtc: '-',
+            dateWit: '-',
+            fullWit: timestampStr,
+            fullUtc: '-',
+        };
+    }
+
+    // WIT is UTC + 9 hours
+    const witMs = d.getTime() + (9 * 60 * 60 * 1000);
+    const witDate = new Date(witMs);
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+
+    const yearWit = witDate.getUTCFullYear();
+    const monthWitIdx = witDate.getUTCMonth();
+    const dayWit = pad(witDate.getUTCDate());
+    const hoursWit = pad(witDate.getUTCHours());
+    const minsWit = pad(witDate.getUTCMinutes());
+
+    const yearUtc = d.getUTCFullYear();
+    const monthUtcIdx = d.getUTCMonth();
+    const dayUtc = pad(d.getUTCDate());
+    const hoursUtc = pad(d.getUTCHours());
+    const minsUtc = pad(d.getUTCMinutes());
+
+    return {
+        wit: `${dayWit} ${bulanIndoShort[monthWitIdx]} ${yearWit}, ${hoursWit}:${minsWit} WIT`,
+        utc: `${dayUtc} ${bulanIndoShort[monthUtcIdx]} ${yearUtc}, ${hoursUtc}:${minsUtc} UTC`,
+        timeWit: `${hoursWit}:${minsWit} WIT`,
+        timeUtc: `${hoursUtc}:${minsUtc} UTC`,
+        dateWit: `${dayWit} ${bulanIndoShort[monthWitIdx]} ${yearWit}`,
+        fullWit: `${dayWit} ${namaBulan[monthWitIdx]} ${yearWit} pukul ${hoursWit}:${minsWit} WIT`,
+        fullUtc: `${dayUtc} ${namaBulan[monthUtcIdx]} ${yearUtc} pukul ${hoursUtc}:${minsUtc} UTC`,
+    };
+};
+
 export default function FlightDocument({ records, filters, stats, daily_matrix, inasiam_config }: Props) {
     const [selectedBulan, setSelectedBulan] = useState(filters.bulan);
     const [selectedTahun, setSelectedTahun] = useState(filters.tahun);
@@ -401,7 +458,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                     <TableHead className="w-[180px]">No. FD</TableHead>
                                     <TableHead>Penerbangan & Maskapai</TableHead>
                                     <TableHead>Rute</TableHead>
-                                    <TableHead>Waktu Keberangkatan (UTC)</TableHead>
+                                    <TableHead className="w-[190px]">Waktu Kirim (WIT)</TableHead>
                                     <TableHead>Status Dokumen</TableHead>
                                     <TableHead>Petugas Piket (Jadwal Dinas)</TableHead>
                                     <TableHead className="text-right">Aksi</TableHead>
@@ -416,7 +473,10 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    records.data.map((item) => (
+                                    records.data.map((item) => {
+                                        const dt = formatFlightDocTime(item.wa_dispatched_at || item.departure_at);
+
+                                        return (
                                         <TableRow key={item.id} className="hover:bg-slate-50/50">
                                             <TableCell className="font-mono text-xs font-semibold text-indigo-600">
                                                 {item.no_fd || item.inasiam_fd_id || 'FD-DOC'}
@@ -433,8 +493,11 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                                 </Badge>
                                             </TableCell>
 
-                                            <TableCell className="text-xs font-mono text-slate-700">
-                                                {item.departure_at ? `${item.departure_at} UTC` : '-'}
+                                            <TableCell className="whitespace-nowrap">
+                                                <div className="flex flex-col text-xs">
+                                                    <span className="font-bold text-slate-900">{dt.wit}</span>
+                                                    <span className="text-[11px] font-mono text-slate-500">{dt.utc}</span>
+                                                </div>
                                             </TableCell>
 
                                             <TableCell>
@@ -496,7 +559,8 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                                 </div>
                                             </TableCell>
                                         </TableRow>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </TableBody>
                         </Table>
@@ -557,9 +621,15 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                             </div>
 
                             <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                                <div className="text-slate-500">Waktu Keberangkatan (UTC):</div>
-                                <div className="font-medium text-slate-800">
-                                    {selectedFd.departure_at ? new Date(selectedFd.departure_at).toUTCString() : '-'}
+                                <div className="text-slate-500 font-semibold mb-1">Waktu Kirim:</div>
+                                <div className="space-y-1">
+                                    <div className="font-bold text-indigo-700 flex items-center gap-1.5">
+                                        <Clock className="h-3.5 w-3.5 text-indigo-500" />
+                                        <span>{formatFlightDocTime(selectedFd.wa_dispatched_at || selectedFd.departure_at).fullWit}</span>
+                                    </div>
+                                    <div className="text-xs text-slate-500 font-mono">
+                                        {formatFlightDocTime(selectedFd.wa_dispatched_at || selectedFd.departure_at).fullUtc}
+                                    </div>
                                 </div>
                             </div>
 
