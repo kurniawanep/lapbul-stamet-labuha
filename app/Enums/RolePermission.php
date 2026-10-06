@@ -26,6 +26,7 @@ class RolePermission
     public const LAPORAN_THUNDERSTORM = 'laporan.thunderstorm';
     public const LAPORAN_MET_REPORT = 'laporan.met_report';
     public const LAPORAN_FLIGHT_DOCUMENT = 'laporan.flight_document';
+    public const LAPORAN_PRODUK_BULANAN = 'laporan.produk_bulanan';
 
     public const WHATSAPP_MANAGE = 'whatsapp.manage';
 
@@ -60,6 +61,7 @@ class RolePermission
                 self::LAPORAN_THUNDERSTORM => 'Kelola Data Thunderstorm (Export)',
                 self::LAPORAN_MET_REPORT => 'Kelola MET REPORT QAM (Input / Kirim WA)',
                 self::LAPORAN_FLIGHT_DOCUMENT => 'Kelola Flight Document (Sync / Input / Delete)',
+                self::LAPORAN_PRODUK_BULANAN => 'Kelola Produk Bulanan (Export Excel)',
             ],
             'Pengaturan Sistem' => [
                 self::WHATSAPP_MANAGE => 'Pengaturan WhatsApp Gateway',
@@ -98,6 +100,7 @@ class RolePermission
             self::LAPORAN_THUNDERSTORM,
             self::LAPORAN_MET_REPORT,
             self::LAPORAN_FLIGHT_DOCUMENT,
+            self::LAPORAN_PRODUK_BULANAN,
         ];
 
         return match ($role) {

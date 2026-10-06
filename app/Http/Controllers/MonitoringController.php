@@ -26,6 +26,7 @@ class MonitoringController extends Controller
         $tahun = (int) $request->input('tahun', Carbon::now()->year);
 
         $performanceData = $this->monitoringService->getMonthlyPerformance($bulan, $tahun);
+        $trend12Months = $this->monitoringService->get12MonthsTrend($bulan, $tahun);
 
         return Inertia::render('Monitoring/Index', [
             'filters' => [
@@ -36,6 +37,7 @@ class MonitoringController extends Controller
             'awos_summary' => $performanceData['awos_summary'] ?? [],
             'hourly_delays' => $performanceData['hourly_delays'],
             'staff_rankings' => $performanceData['staff_rankings'],
+            'trend_12_months' => $trend12Months,
         ]);
     }
 }

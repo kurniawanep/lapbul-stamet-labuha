@@ -22,6 +22,7 @@ import {
     Wind,
     Radio
 } from 'lucide-react';
+import Performance12MonthChart, { Trend12MonthsData } from '@/components/monitoring/Performance12MonthChart';
 
 interface StaffDetailItem {
     type: string;
@@ -79,6 +80,7 @@ interface Props {
     };
     hourly_delays: number[];
     staff_rankings: StaffPerformance[];
+    trend_12_months?: Trend12MonthsData;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -91,7 +93,7 @@ const namaBulan = [
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
 ];
 
-export default function MonitoringIndex({ filters, summary, awos_summary, hourly_delays, staff_rankings }: Props) {
+export default function MonitoringIndex({ filters, summary, awos_summary, hourly_delays, staff_rankings, trend_12_months }: Props) {
     const [selectedBulan, setSelectedBulan] = useState(filters.bulan);
     const [selectedTahun, setSelectedTahun] = useState(filters.tahun);
     const [selectedStaff, setSelectedStaff] = useState<StaffPerformance | null>(null);
@@ -200,6 +202,11 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* 12-Month Performance Trend Chart */}
+                {trend_12_months && (
+                    <Performance12MonthChart data={trend_12_months} initialStaffId={selectedStaff?.pegawai.id} />
+                )}
 
                 {/* Hourly Delay Heatmap */}
                 <Card className="p-4 border-slate-200">

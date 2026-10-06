@@ -8,6 +8,7 @@ use App\Models\DataSinoptik;
 use App\Models\Pegawai;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class PerformanceMonitoringService
 {
@@ -71,6 +72,9 @@ class PerformanceMonitoringService
         $startDate = Carbon::createFromDate($tahun, $bulan, 1, 'UTC')->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
         $daysInMonth = $startDate->daysInMonth;
+
+        // Pre-warm observer resolver schedules for maximum in-memory speed
+        $this->observerResolver->prewarm($startDate->copy()->subDay(), $endDate->copy()->addDay());
 
         $allPegawai = Pegawai::where('role', 'LIKE', '%Observer%')
             ->orWhereHas('jadwalDetails', function ($q) use ($startDate, $endDate) {
@@ -585,6 +589,163 @@ class PerformanceMonitoringService
             'awos_summary' => $awosStats,
             'hourly_delays' => $hourlyDelays,
             'staff_rankings' => $formattedStaff,
+        ];
+    }
+
+    /**
+     * Retrieve 12-month historical performance trends per employee and for the entire station.
+     */
+    public function get12MonthsTrend(int $bulan, int $tahun): array
+    {
+        $endCarbon = Carbon::createFromDate($tahun, $bulan, 1, 'UTC')->startOfMonth();
+        $startCarbon = $endCarbon->copy()->subMonths(11)->startOfMonth();
+
+        // Pre-warm the entire 12-month period in memory
+        $this->observerResolver->prewarm($startCarbon->copy()->subDay(), $endCarbon->copy()->endOfMonth()->addDay());
+
+        $allPegawai = Pegawai::where('role', 'LIKE', '%Observer%')
+            ->orWhere('role', 'LIKE', '%Forecaster%')
+            ->orWhere('role', 'LIKE', '%Teknisi%')
+            ->get();
+
+        if ($allPegawai->isEmpty()) {
+            $allPegawai = Pegawai::all();
+        }
+
+        $monthsList = [];
+        $currentDate = $startCarbon->copy();
+        $now = Carbon::now('UTC');
+
+        while ($currentDate->lte($endCarbon)) {
+            $y = (int) $currentDate->year;
+            $m = (int) $currentDate->month;
+            $monthKey = sprintf('%04d-%02d', $y, $m);
+            $monthLabel = $currentDate->translatedFormat('M Y');
+
+            $isPastMonth = ($y < $now->year) || ($y === $now->year && $m < $now->month);
+
+            if ($isPastMonth) {
+                $monthPerf = Cache::remember(
+                    "perf_monthly_summary_{$y}_{$m}",
+                    now()->addDays(30),
+                    fn () => $this->getMonthlyPerformance($m, $y)
+                );
+            } else {
+                $monthPerf = $this->getMonthlyPerformance($m, $y);
+            }
+
+            $stationSum = $monthPerf['station_summary'] ?? [];
+            $totalSlots = $stationSum['total_slots'] ?? 0;
+            $timely = $stationSum['total_timely'] ?? 0;
+            $late = $stationSum['total_late'] ?? 0;
+            $missing = $stationSum['total_missing'] ?? 0;
+
+            $timelyPct = $totalSlots > 0 ? round(($timely / $totalSlots) * 100, 1) : 0.0;
+            $availPct = $totalSlots > 0 ? round((($timely + $late) / $totalSlots) * 100, 1) : 0.0;
+
+            $staffMonthMap = [];
+            foreach ($monthPerf['staff_rankings'] ?? [] as $st) {
+                $pId = $st['pegawai']['id'];
+                $stAssigned = $st['total_assigned'] ?? 0;
+                $stTimely = $st['timely_count'] ?? 0;
+                $stLate = $st['late_count'] ?? 0;
+                $stMissing = $st['missing_count'] ?? 0;
+
+                $stTimelyPct = $stAssigned > 0 ? round(($stTimely / $stAssigned) * 100, 1) : 0.0;
+                $stAvailPct = $stAssigned > 0 ? round((($stTimely + $stLate) / $stAssigned) * 100, 1) : 0.0;
+
+                $staffMonthMap[$pId] = [
+                    'assigned' => $stAssigned,
+                    'timely_count' => $stTimely,
+                    'late_count' => $stLate,
+                    'missing_count' => $stMissing,
+                    'timely_pct' => $stTimelyPct,
+                    'availability_pct' => $stAvailPct,
+                    'avg_delay_minutes' => $st['avg_delay_minutes'] ?? 0,
+                ];
+            }
+
+            $monthsList[] = [
+                'key' => $monthKey,
+                'label' => $monthLabel,
+                'year' => $y,
+                'month' => $m,
+                'station_timely_pct' => $timelyPct,
+                'station_availability_pct' => $availPct,
+                'total_slots' => $totalSlots,
+                'timely_count' => $timely,
+                'late_count' => $late,
+                'missing_count' => $missing,
+                'staff_map' => $staffMonthMap,
+            ];
+
+            $currentDate->addMonth();
+        }
+
+        $staffTrends = [];
+        foreach ($allPegawai as $p) {
+            $pId = $p->id;
+            $history = [];
+            $hasAnyAssignment = false;
+
+            foreach ($monthsList as $mItem) {
+                $mKey = $mItem['key'];
+                $mLabel = $mItem['label'];
+                $stData = $mItem['staff_map'][$pId] ?? null;
+
+                if ($stData && $stData['assigned'] > 0) {
+                    $hasAnyAssignment = true;
+                    $history[] = [
+                        'key' => $mKey,
+                        'label' => $mLabel,
+                        'year' => $mItem['year'],
+                        'month' => $mItem['month'],
+                        'assigned' => $stData['assigned'],
+                        'timely_count' => $stData['timely_count'],
+                        'late_count' => $stData['late_count'],
+                        'missing_count' => $stData['missing_count'],
+                        'timely_pct' => $stData['timely_pct'],
+                        'availability_pct' => $stData['availability_pct'],
+                        'avg_delay_minutes' => $stData['avg_delay_minutes'],
+                    ];
+                } else {
+                    $history[] = [
+                        'key' => $mKey,
+                        'label' => $mLabel,
+                        'year' => $mItem['year'],
+                        'month' => $mItem['month'],
+                        'assigned' => 0,
+                        'timely_count' => 0,
+                        'late_count' => 0,
+                        'missing_count' => 0,
+                        'timely_pct' => null,
+                        'availability_pct' => null,
+                        'avg_delay_minutes' => 0,
+                    ];
+                }
+            }
+
+            if ($hasAnyAssignment) {
+                $staffTrends[] = [
+                    'pegawai' => [
+                        'id' => $p->id,
+                        'nama' => $p->nama,
+                        'nip' => $p->nip,
+                        'jabatan' => $p->jabatan,
+                    ],
+                    'history' => $history,
+                ];
+            }
+        }
+
+        $cleanMonths = array_map(function ($m) {
+            unset($m['staff_map']);
+            return $m;
+        }, $monthsList);
+
+        return [
+            'months' => $cleanMonths,
+            'staff_trends' => $staffTrends,
         ];
     }
 }

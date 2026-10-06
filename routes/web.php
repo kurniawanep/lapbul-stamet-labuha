@@ -12,6 +12,7 @@ use App\Http\Controllers\PegawaiController;
 use App\Http\Controllers\PenguapanController;
 use App\Http\Controllers\PerawananController;
 use App\Http\Controllers\PibalController;
+use App\Http\Controllers\ProdukBulananController;
 use App\Http\Controllers\SinoptikController;
 use App\Http\Controllers\TaforController;
 use App\Http\Controllers\ThunderstormController;
@@ -198,6 +199,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/laporan/flight-document/{id}', [FlightDocumentController::class, 'destroy'])
         ->middleware('permission:laporan.flight_document')
         ->name('laporan.flight-document.destroy');
+
+    // Laporan Bulanan - Produk Bulanan Routes
+    Route::get('/laporan/produk-bulanan', [ProdukBulananController::class, 'index'])
+        ->middleware('permission:laporan.view')
+        ->name('laporan.produk-bulanan');
+    Route::get('/laporan/produk-bulanan/export-excel', [ProdukBulananController::class, 'exportExcel'])
+        ->middleware('permission:laporan.view')
+        ->name('laporan.produk-bulanan.export-excel');
 
     // Pengaturan WhatsApp Gateway Routes (Teknisi / Super Admin)
     Route::get('/pengaturan/whatsapp', [WhatsAppManagementController::class, 'index'])

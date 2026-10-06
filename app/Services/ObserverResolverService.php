@@ -5,9 +5,67 @@ namespace App\Services;
 use App\Models\JadwalDetail;
 use App\Models\Pegawai;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class ObserverResolverService
 {
+    protected ?Collection $cachedAllPegawai = null;
+
+    /**
+     * @var array<string, Collection>
+     */
+    protected array $cachedJadwalDetailsByDate = [];
+
+    /**
+     * Get or cache all Pegawai.
+     */
+    public function getAllPegawai(): Collection
+    {
+        return $this->cachedAllPegawai ??= Pegawai::all();
+    }
+
+    /**
+     * Reset internal in-memory caches.
+     */
+    public function resetCache(): void
+    {
+        $this->cachedAllPegawai = null;
+        $this->cachedJadwalDetailsByDate = [];
+    }
+
+    /**
+     * Pre-warm schedule and employee data for a given date range.
+     */
+    public function prewarm(Carbon $startDate, Carbon $endDate): void
+    {
+        $this->getAllPegawai();
+
+        $details = JadwalDetail::with(['pegawai', 'shift'])
+            ->whereBetween('tanggal', [$startDate->toDateString(), $endDate->toDateString()])
+            ->get();
+
+        foreach ($details->groupBy('tanggal') as $date => $group) {
+            $this->cachedJadwalDetailsByDate[(string) $date] = $group;
+        }
+    }
+
+    /**
+     * Get schedule details for a specific date (from in-memory cache or single query).
+     */
+    public function getDetailsForDate(string $dateStr): Collection
+    {
+        if (isset($this->cachedJadwalDetailsByDate[$dateStr])) {
+            return $this->cachedJadwalDetailsByDate[$dateStr];
+        }
+
+        $details = JadwalDetail::with(['pegawai', 'shift'])
+            ->where('tanggal', $dateStr)
+            ->get();
+
+        $this->cachedJadwalDetailsByDate[$dateStr] = $details;
+        return $details;
+    }
+
     /**
      * Resolve Pegawai model by observer name or duty schedule timestamp.
      */
@@ -96,7 +154,7 @@ class ObserverResolverService
             return null;
         }
 
-        $allPegawai = Pegawai::all();
+        $allPegawai = $this->getAllPegawai();
 
         // Stage 1: Exact Normalized Match (without academic titles & punctuation)
         foreach ($allPegawai as $pegawai) {
@@ -228,16 +286,13 @@ class ObserverResolverService
         $previousDateStr = $dt->copy()->subDay()->toDateString();
 
         // 1. Check details starting on the current date
-        $currentDetails = JadwalDetail::with(['pegawai', 'shift'])
-            ->where('tanggal', $currentDateStr)
-            ->whereHas('shift', function ($q) {
-                $q->where('kode_shift', '!=', 'A')
-                  ->where('is_tidak_masuk_kerja', false);
-            })
-            ->whereHas('pegawai', function ($q) {
-                $q->where('role', 'LIKE', '%Observer%');
-            })
-            ->get();
+        $currentDetails = $this->getDetailsForDate($currentDateStr)->filter(function ($detail) {
+            return $detail->shift
+                && $detail->shift->kode_shift !== 'A'
+                && !$detail->shift->is_tidak_masuk_kerja
+                && $detail->pegawai
+                && str_contains($detail->pegawai->role ?? '', 'Observer');
+        });
 
         foreach ($currentDetails as $detail) {
             $shift = $detail->shift;
@@ -258,16 +313,13 @@ class ObserverResolverService
         }
 
         // 2. Check overnight details starting on the previous date (e.g., 00:00:00 to 01:45:00)
-        $previousDetails = JadwalDetail::with(['pegawai', 'shift'])
-            ->where('tanggal', $previousDateStr)
-            ->whereHas('shift', function ($q) {
-                $q->where('kode_shift', '!=', 'A')
-                  ->where('is_tidak_masuk_kerja', false);
-            })
-            ->whereHas('pegawai', function ($q) {
-                $q->where('role', 'LIKE', '%Observer%');
-            })
-            ->get();
+        $previousDetails = $this->getDetailsForDate($previousDateStr)->filter(function ($detail) {
+            return $detail->shift
+                && $detail->shift->kode_shift !== 'A'
+                && !$detail->shift->is_tidak_masuk_kerja
+                && $detail->pegawai
+                && str_contains($detail->pegawai->role ?? '', 'Observer');
+        });
 
         foreach ($previousDetails as $detail) {
             $shift = $detail->shift;
@@ -323,17 +375,14 @@ class ObserverResolverService
         $previousDateStr = $dt->copy()->subDay()->toDateString();
 
         // 1. Check if PF (Pagi Forecast / Forecast) is scheduled on this date
-        $pfDetail = JadwalDetail::with(['pegawai', 'shift'])
-            ->where('tanggal', $currentDateStr)
-            ->whereHas('shift', function ($q) {
-                $q->where(function ($sub) {
-                    $sub->where('kode_shift', 'PF')
-                        ->orWhere('kode_shift', 'LIKE', 'PF%')
-                        ->orWhere('nama_shift', 'LIKE', '%FORECAST%')
-                        ->orWhere('nama_shift', 'LIKE', '%FOD%');
-                })->where('is_tidak_masuk_kerja', false);
-            })
-            ->first();
+        $pfDetail = $this->getDetailsForDate($currentDateStr)->first(function ($detail) {
+            if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja) {
+                return false;
+            }
+            $kode = $detail->shift->kode_shift ?? '';
+            $nama = strtoupper($detail->shift->nama_shift ?? '');
+            return ($kode === 'PF' || str_starts_with($kode, 'PF') || str_contains($nama, 'FORECAST') || str_contains($nama, 'FOD'));
+        });
 
         if ($pfDetail && $pfDetail->pegawai) {
             $shift = $pfDetail->shift;
@@ -355,17 +404,14 @@ class ObserverResolverService
         }
 
         // 2. Check overnight PF shift starting on previous date
-        $prevPfDetail = JadwalDetail::with(['pegawai', 'shift'])
-            ->where('tanggal', $previousDateStr)
-            ->whereHas('shift', function ($q) {
-                $q->where(function ($sub) {
-                    $sub->where('kode_shift', 'PF')
-                        ->orWhere('kode_shift', 'LIKE', 'PF%')
-                        ->orWhere('nama_shift', 'LIKE', '%FORECAST%')
-                        ->orWhere('nama_shift', 'LIKE', '%FOD%');
-                })->where('is_tidak_masuk_kerja', false);
-            })
-            ->first();
+        $prevPfDetail = $this->getDetailsForDate($previousDateStr)->first(function ($detail) {
+            if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja) {
+                return false;
+            }
+            $kode = $detail->shift->kode_shift ?? '';
+            $nama = strtoupper($detail->shift->nama_shift ?? '');
+            return ($kode === 'PF' || str_starts_with($kode, 'PF') || str_contains($nama, 'FORECAST') || str_contains($nama, 'FOD'));
+        });
 
         if ($prevPfDetail && $prevPfDetail->pegawai && $prevPfDetail->shift) {
             $shift = $prevPfDetail->shift;
@@ -377,20 +423,17 @@ class ObserverResolverService
         }
 
         // 3. Fallback: Check if P (PAGI / PAGI OBS) is scheduled on this date
-        $pDetail = JadwalDetail::with(['pegawai', 'shift'])
-            ->where('tanggal', $currentDateStr)
-            ->whereHas('shift', function ($q) {
-                $q->where(function ($sub) {
-                    $sub->where('kode_shift', 'P')
-                        ->orWhere('kode_shift', 'P1')
-                        ->orWhere('kode_shift', 'PO')
-                        ->orWhere('nama_shift', 'LIKE', '%PAGI OBS%')
-                        ->orWhere('nama_shift', 'LIKE', '%PAGI%');
-                })
-                ->where('kode_shift', '!=', 'A') // exclude A (Pagi TU)
-                ->where('is_tidak_masuk_kerja', false);
-            })
-            ->first();
+        $pDetail = $this->getDetailsForDate($currentDateStr)->first(function ($detail) {
+            if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja) {
+                return false;
+            }
+            $kode = $detail->shift->kode_shift ?? '';
+            $nama = strtoupper($detail->shift->nama_shift ?? '');
+            if ($kode === 'A') {
+                return false;
+            }
+            return in_array($kode, ['P', 'P1', 'PO']) || str_contains($nama, 'PAGI OBS') || str_contains($nama, 'PAGI');
+        });
 
         if ($pDetail && $pDetail->pegawai) {
             return $pDetail->pegawai;
@@ -415,17 +458,15 @@ class ObserverResolverService
 
         $currentDateStr = $dt->toDateString();
 
-        $detail = JadwalDetail::with(['pegawai', 'shift'])
-            ->where('tanggal', $currentDateStr)
-            ->whereHas('shift', function ($q) {
-                $q->where('is_tidak_masuk_kerja', false);
-            })
-            ->whereHas('pegawai', function ($q) {
-                $q->where('role', 'LIKE', '%Teknisi%')
-                  ->orWhere('role', 'LIKE', '%Peralatan%')
-                  ->orWhere('role', 'LIKE', '%Komunikasi%');
-            })
-            ->first();
+        $detail = $this->getDetailsForDate($currentDateStr)->first(function ($detail) {
+            if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja || !$detail->pegawai) {
+                return false;
+            }
+            $role = $detail->pegawai->role ?? '';
+            return str_contains($role, 'Teknisi')
+                || str_contains($role, 'Peralatan')
+                || str_contains($role, 'Komunikasi');
+        });
 
         return $detail ? $detail->pegawai : null;
     }
@@ -449,17 +490,12 @@ class ObserverResolverService
         $previousDateStr = $dt->copy()->subDay()->toDateString();
 
         // 1. Check details starting on current date (excluding shift A & L)
-        $details = JadwalDetail::with(['pegawai', 'shift'])
-            ->where('tanggal', $currentDateStr)
-            ->whereHas('shift', function ($q) {
-                $q->whereNotIn('kode_shift', ['L', 'A'])
-                  ->where('is_tidak_masuk_kerja', false);
-            })
-            ->whereHas('pegawai', function ($q) {
-                $q->where('jenis_pegawai', 'PPNPN')
-                  ->orWhere('role', 'LIKE', '%PPNPN%');
-            })
-            ->get();
+        $details = $this->getDetailsForDate($currentDateStr)->filter(function ($detail) {
+            if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja || in_array($detail->shift->kode_shift, ['L', 'A']) || !$detail->pegawai) {
+                return false;
+            }
+            return ($detail->pegawai->jenis_pegawai === 'PPNPN') || str_contains($detail->pegawai->role ?? '', 'PPNPN');
+        });
 
         foreach ($details as $detail) {
             $shift = $detail->shift;
@@ -479,17 +515,12 @@ class ObserverResolverService
         }
 
         // 2. Check overnight details starting on previous date (e.g., 20:00 to 08:00 next day)
-        $previousDetails = JadwalDetail::with(['pegawai', 'shift'])
-            ->where('tanggal', $previousDateStr)
-            ->whereHas('shift', function ($q) {
-                $q->whereNotIn('kode_shift', ['L', 'A'])
-                  ->where('is_tidak_masuk_kerja', false);
-            })
-            ->whereHas('pegawai', function ($q) {
-                $q->where('jenis_pegawai', 'PPNPN')
-                  ->orWhere('role', 'LIKE', '%PPNPN%');
-            })
-            ->get();
+        $previousDetails = $this->getDetailsForDate($previousDateStr)->filter(function ($detail) {
+            if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja || in_array($detail->shift->kode_shift, ['L', 'A']) || !$detail->pegawai) {
+                return false;
+            }
+            return ($detail->pegawai->jenis_pegawai === 'PPNPN') || str_contains($detail->pegawai->role ?? '', 'PPNPN');
+        });
 
         foreach ($previousDetails as $detail) {
             $shift = $detail->shift;

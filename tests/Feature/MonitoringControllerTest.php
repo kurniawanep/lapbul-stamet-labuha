@@ -54,3 +54,14 @@ test('performance monitoring service evaluates timely late and missing data', fu
     expect($result['station_summary'])->toHaveKeys(['total_slots', 'total_timely', 'total_late', 'overall_compliance_pct'])
         ->and($result['staff_rankings'])->not()->toBeEmpty();
 });
+
+test('performance monitoring service retrieves 12-month historical trends', function () {
+    $service = app(PerformanceMonitoringService::class);
+    $trend = $service->get12MonthsTrend(8, 2026);
+
+    expect($trend)->toHaveKeys(['months', 'staff_trends'])
+        ->and($trend['months'])->toHaveCount(12)
+        ->and($trend['months'][11]['month'])->toBe(8)
+        ->and($trend['months'][11]['year'])->toBe(2026);
+});
+
