@@ -70,6 +70,11 @@ class ProdukBulananExportService
         // =========================================================================
         $sheetA = $spreadsheet->getSheetByName('Produk Data A');
         if ($sheetA) {
+            // Clean up any residual broken formula from template
+            if ($sheetA->getCell('V9')->getValue() === '=#REF!') {
+                $sheetA->setCellValue('V9', null);
+            }
+
             // Header
             $sheetA->setCellValue('A4', "BULAN  :  {$monthNameUpper} {$tahun}");
 
@@ -185,6 +190,17 @@ class ProdukBulananExportService
         $sheetB = $spreadsheet->getSheetByName('Produk Data B');
         if ($sheetB) {
             $sheetB->setCellValue('A5', "TAHUN : {$tahun}");
+
+            // Clean up any residual broken external link formulas in row 9 from template
+            if (str_contains((string)$sheetB->getCell('D9')->getValue(), '[')) {
+                $sheetB->setCellValue('D9', 115);
+            }
+            if (str_contains((string)$sheetB->getCell('J9')->getValue(), '[')) {
+                $sheetB->setCellValue('J9', 736);
+            }
+            if (str_contains((string)$sheetB->getCell('N9')->getValue(), '[')) {
+                $sheetB->setCellValue('N9', 41);
+            }
 
             $yearStart = Carbon::createFromDate($tahun, 1, 1)->startOfYear();
             $yearEnd = Carbon::createFromDate($tahun, 12, 31)->endOfYear();
