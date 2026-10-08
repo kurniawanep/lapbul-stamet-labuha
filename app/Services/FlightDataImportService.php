@@ -123,11 +123,6 @@ class FlightDataImportService
                         continue;
                     }
 
-                    if ($detectedMonth === null) {
-                        $detectedMonth = $parsedDate->month;
-                        $detectedYear = $parsedDate->year;
-                    }
-
                     $flightNumber = trim((string)$rawFlightNumber);
                     if (empty($flightNumber)) {
                         $skipped++;
@@ -143,6 +138,31 @@ class FlightDataImportService
                     $stdUtc = isset($colMap['std_utc']) && isset($row[$colMap['std_utc']]) ? $this->parseTime($row[$colMap['std_utc']]) : null;
                     $ataUtc = isset($colMap['ata_utc']) && isset($row[$colMap['ata_utc']]) ? $this->parseTime($row[$colMap['ata_utc']]) : null;
                     $atdUtc = isset($colMap['atd_utc']) && isset($row[$colMap['atd_utc']]) ? $this->parseTime($row[$colMap['atd_utc']]) : null;
+
+                    // Convert UTC date & time to local WIT date (Asia/Jayapura, UTC+9)
+                    $effectiveTime = null;
+                    if ($dep === 'LAH' || $dep === 'WAEL') {
+                        $effectiveTime = $stdUtc ?: ($atdUtc ?: ($staUtc ?: $ataUtc));
+                    } elseif ($arr === 'LAH' || $arr === 'WAEL') {
+                        $effectiveTime = $staUtc ?: ($ataUtc ?: ($stdUtc ?: $atdUtc));
+                    } else {
+                        $effectiveTime = $stdUtc ?: ($staUtc ?: ($atdUtc ?: $ataUtc));
+                    }
+
+                    $localDate = $parsedDate->copy();
+                    if ($effectiveTime && preg_match('/^(\d{1,2}):(\d{2})$/', $effectiveTime, $tMatch)) {
+                        $utcDt = Carbon::createFromFormat(
+                            'Y-m-d H:i',
+                            $parsedDate->format('Y-m-d') . ' ' . sprintf('%02d:%02d', (int)$tMatch[1], (int)$tMatch[2]),
+                            'UTC'
+                        );
+                        $localDate = $utcDt->setTimezone('Asia/Jayapura');
+                    }
+
+                    if ($detectedMonth === null) {
+                        $detectedMonth = $localDate->month;
+                        $detectedYear = $localDate->year;
+                    }
                     
                     $rowMaskapai = isset($colMap['maskapai']) && !empty($row[$colMap['maskapai']]) 
                         ? trim((string)$row[$colMap['maskapai']]) 
@@ -153,10 +173,10 @@ class FlightDataImportService
 
                     $maskapai = $overrideMaskapai ?: ($rowMaskapai ?: DataFlight::detectMaskapai($flightNumber));
 
-                    // Save or update flight record
+                    // Save or update flight record using local WIT date
                     DataFlight::updateOrCreate(
                         [
-                            'tanggal' => $parsedDate->format('Y-m-d'),
+                            'tanggal' => $localDate->format('Y-m-d'),
                             'flight_number' => $flightNumber,
                             'dep' => $dep,
                             'arr' => $arr,
