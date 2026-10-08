@@ -13,9 +13,10 @@ class WhatsAppService
 
     public function __construct()
     {
-        $this->gatewayUrl = config('services.whatsapp.gateway_url', env('WHATSAPP_GATEWAY_URL', 'http://localhost:3000'));
-        $this->apiKey = config('services.whatsapp.api_key', env('WHATSAPP_API_KEY', null));
-        $this->defaultSession = config('services.whatsapp.session', env('WHATSAPP_SESSION', 'default'));
+        $gatewayUrl = config('services.whatsapp.gateway_url', env('WHATSAPP_GATEWAY_URL', 'http://localhost:3000'));
+        $this->gatewayUrl = rtrim((string) ($gatewayUrl ?: ''), '/');
+        $this->apiKey = config('services.whatsapp.api_key', env('WHATSAPP_API_KEY'));
+        $this->defaultSession = config('services.whatsapp.session', env('WHATSAPP_SESSION', 'default')) ?: 'default';
     }
 
     /**

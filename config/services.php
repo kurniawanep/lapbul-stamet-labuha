@@ -49,4 +49,10 @@ return [
         'refresh_token' => env('INASIAM_REFRESH_TOKEN', ''),
     ],
 
+    'whatsapp' => [
+        'gateway_url' => env('WHATSAPP_GATEWAY_URL', 'http://localhost:3000'),
+        'api_key' => env('WHATSAPP_API_KEY'),
+        'session' => env('WHATSAPP_SESSION', 'default'),
+    ],
+
 ];

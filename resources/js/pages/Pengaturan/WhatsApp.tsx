@@ -255,7 +255,7 @@ export default function WhatsAppManagement({ status }: Props) {
                                                 Memuat QR Code dari Gateway...
                                             </span>
                                             <span className="text-[11px] text-slate-500 mt-1">
-                                                Pastikan service WA Gateway pada port 3000 sedang berjalan.
+                                                Pastikan service WA Gateway ({status.gateway_url}) sedang berjalan.
                                             </span>
                                         </div>
                                     )}
