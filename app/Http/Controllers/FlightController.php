@@ -32,6 +32,7 @@ class FlightController extends Controller
         $bulan = (int) $request->input('bulan', $now->month);
         $tahun = (int) $request->input('tahun', $now->year);
         $maskapaiFilter = $request->input('maskapai', 'all');
+        $typeFilter = $request->input('type', 'all'); // 'all', 'departure', 'landing'
         $search = $request->input('search');
 
         $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
@@ -100,6 +101,17 @@ class FlightController extends Controller
             $query->where('maskapai', $maskapaiFilter);
         }
 
+        // Filter by Flight Direction (Departure / Landing)
+        if ($typeFilter === 'departure') {
+            $query->where(function ($q) {
+                $q->where('dep', 'LAH')->orWhere('dep', 'WAEL');
+            });
+        } elseif ($typeFilter === 'landing' || $typeFilter === 'arrival') {
+            $query->where(function ($q) {
+                $q->where('arr', 'LAH')->orWhere('arr', 'WAEL');
+            });
+        }
+
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('flight_number', 'like', "%{$search}%")
@@ -125,6 +137,7 @@ class FlightController extends Controller
                 'bulan' => $bulan,
                 'tahun' => $tahun,
                 'maskapai' => $maskapaiFilter,
+                'type' => $typeFilter,
                 'search' => $search,
             ],
             'stats' => [
@@ -278,8 +291,9 @@ class FlightController extends Controller
         $bulan = (int) $request->input('bulan', $now->month);
         $tahun = (int) $request->input('tahun', $now->year);
         $maskapai = $request->input('maskapai', 'all');
+        $type = $request->input('type', 'all');
 
-        return $this->importService->export($bulan, $tahun, $maskapai);
+        return $this->importService->export($bulan, $tahun, $maskapai, $type);
     }
 
     /**

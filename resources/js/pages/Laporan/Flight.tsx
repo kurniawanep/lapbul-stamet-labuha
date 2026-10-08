@@ -84,6 +84,7 @@ interface Props {
         bulan: number;
         tahun: number;
         maskapai: string;
+        type?: string;
         search?: string;
     };
     stats: {
@@ -121,6 +122,7 @@ export default function FlightIndex({
     const [selectedMonth, setSelectedMonth] = useState<number>(filters.bulan);
     const [selectedYear, setSelectedYear] = useState<number>(filters.tahun);
     const [selectedMaskapai, setSelectedMaskapai] = useState<string>(filters.maskapai || 'all');
+    const [selectedType, setSelectedType] = useState<string>(filters.type || 'all');
     const [searchQuery, setSearchQuery] = useState<string>(filters.search || '');
 
     // Modal States
@@ -157,11 +159,18 @@ export default function FlightIndex({
     });
 
     // Apply Filters
-    const applyFilters = (newMonth = selectedMonth, newYear = selectedYear, newMaskapai = selectedMaskapai, newSearch = searchQuery) => {
+    const applyFilters = (
+        newMonth = selectedMonth,
+        newYear = selectedYear,
+        newMaskapai = selectedMaskapai,
+        newType = selectedType,
+        newSearch = searchQuery
+    ) => {
         router.get('/laporan/flight', {
             bulan: newMonth,
             tahun: newYear,
             maskapai: newMaskapai,
+            type: newType,
             search: newSearch,
         }, {
             preserveState: true,
@@ -171,7 +180,7 @@ export default function FlightIndex({
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        applyFilters(selectedMonth, selectedYear, selectedMaskapai, searchQuery);
+        applyFilters(selectedMonth, selectedYear, selectedMaskapai, selectedType, searchQuery);
     };
 
     const handleOpenCreateModal = () => {
@@ -283,7 +292,7 @@ export default function FlightIndex({
     };
 
     const handleExportExcel = () => {
-        window.location.href = `/laporan/flight/export?bulan=${selectedMonth}&tahun=${selectedYear}&maskapai=${selectedMaskapai}`;
+        window.location.href = `/laporan/flight/export?bulan=${selectedMonth}&tahun=${selectedYear}&maskapai=${selectedMaskapai}&type=${selectedType}`;
     };
 
     const handleDownloadTemplate = () => {
@@ -335,59 +344,123 @@ export default function FlightIndex({
                         </p>
                     </div>
 
-                    {/* Action Buttons in Hero */}
-                    <div className="flex flex-wrap items-center gap-2 z-10 w-full md:w-auto">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleDownloadTemplate}
-                            className="text-xs bg-slate-800/80 border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white rounded-xl"
-                        >
-                            <Download className="h-3.5 w-3.5 mr-1.5" />
-                            Template Excel
-                        </Button>
+                    {/* ACTION & FILTER CONTROLS IN HEADER */}
+                    <div className="flex flex-wrap items-center gap-3 z-10 w-full md:w-auto">
+                        <div className="flex items-center gap-2 bg-slate-800/90 p-1.5 rounded-2xl border border-slate-700/60 shadow-inner">
+                            <Select
+                                value={String(selectedMonth)}
+                                onValueChange={(val) => {
+                                    const newMonth = Number(val);
+                                    setSelectedMonth(newMonth);
+                                    applyFilters(newMonth, selectedYear, selectedMaskapai, selectedType, searchQuery);
+                                }}
+                            >
+                                <SelectTrigger className="w-[125px] h-9 text-xs font-semibold bg-slate-900/90 text-white border-slate-700">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-slate-900 text-white border-slate-800 text-xs font-semibold">
+                                    {namaBulan.map((bln, idx) => (
+                                        <SelectItem key={idx + 1} value={String(idx + 1)}>
+                                            {bln}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
 
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleExportExcel}
-                            className="text-xs bg-emerald-950/60 border-emerald-700/60 text-emerald-300 hover:bg-emerald-900/80 hover:text-emerald-100 rounded-xl"
-                        >
-                            <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5 text-emerald-400" />
-                            Export Excel
-                        </Button>
+                            <Select
+                                value={String(selectedYear)}
+                                onValueChange={(val) => {
+                                    const newYear = Number(val);
+                                    setSelectedYear(newYear);
+                                    applyFilters(selectedMonth, newYear, selectedMaskapai, selectedType, searchQuery);
+                                }}
+                            >
+                                <SelectTrigger className="w-[90px] h-9 text-xs font-semibold bg-slate-900/90 text-white border-slate-700">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-slate-900 text-white border-slate-800 text-xs font-semibold">
+                                    {[2024, 2025, 2026, 2027, 2028].map((yr) => (
+                                        <SelectItem key={yr} value={String(yr)}>
+                                            {yr}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-                        <Button
-                            onClick={() => {
-                                importForm.reset();
-                                setIsImportOpen(true);
-                            }}
-                            size="sm"
-                            className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md"
-                        >
-                            <Upload className="h-3.5 w-3.5 mr-1.5" />
-                            Import Excel
-                        </Button>
+                        {/* Action Buttons in Hero */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleDownloadTemplate}
+                                className="text-xs bg-slate-800/80 border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white rounded-xl"
+                            >
+                                <Download className="h-3.5 w-3.5 mr-1.5" />
+                                Template Excel
+                            </Button>
 
-                        <Button
-                            onClick={handleOpenCreateModal}
-                            size="sm"
-                            className="text-xs bg-sky-500 hover:bg-sky-600 text-slate-950 font-bold rounded-xl shadow-md"
-                        >
-                            <Plus className="h-3.5 w-3.5 mr-1.5" />
-                            Tambah Data
-                        </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleExportExcel}
+                                className="text-xs bg-emerald-950/60 border-emerald-700/60 text-emerald-300 hover:bg-emerald-900/80 hover:text-emerald-100 rounded-xl"
+                            >
+                                <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5 text-emerald-400" />
+                                Export Excel
+                            </Button>
+
+                            <Button
+                                onClick={() => {
+                                    importForm.reset();
+                                    setIsImportOpen(true);
+                                }}
+                                size="sm"
+                                className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md"
+                            >
+                                <Upload className="h-3.5 w-3.5 mr-1.5" />
+                                Import Excel
+                            </Button>
+
+                            <Button
+                                onClick={handleOpenCreateModal}
+                                size="sm"
+                                className="text-xs bg-sky-500 hover:bg-sky-600 text-slate-950 font-bold rounded-xl shadow-md"
+                            >
+                                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                                Tambah Data
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
                 {/* 2. STATS SUMMARY CARDS */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card className="border-border/60 hover:border-blue-500/40 transition-all shadow-sm">
+                    <Card
+                        onClick={() => {
+                            if (selectedType !== 'all') {
+                                setSelectedType('all');
+                                applyFilters(selectedMonth, selectedYear, selectedMaskapai, 'all', searchQuery);
+                            }
+                        }}
+                        className={`cursor-pointer transition-all shadow-sm ${
+                            selectedType === 'all'
+                                ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md'
+                                : 'border-border/60 hover:border-blue-500/40'
+                        }`}
+                    >
                         <CardContent className="p-5 flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                    Total Penerbangan
-                                </p>
+                                <div className="flex items-center gap-1.5">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                        Total Penerbangan
+                                    </p>
+                                    {selectedType === 'all' && (
+                                        <Badge variant="secondary" className="text-[10px] py-0 px-1.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold">
+                                            Aktif
+                                        </Badge>
+                                    )}
+                                </div>
                                 <h3 className="text-2xl font-black text-foreground mt-1">
                                     {stats.total_flights} <span className="text-xs font-normal text-muted-foreground">Flight</span>
                                 </h3>
@@ -401,12 +474,30 @@ export default function FlightIndex({
                         </CardContent>
                     </Card>
 
-                    <Card className="border-border/60 hover:border-amber-500/40 transition-all shadow-sm">
+                    <Card
+                        onClick={() => {
+                            const nextType = selectedType === 'departure' ? 'all' : 'departure';
+                            setSelectedType(nextType);
+                            applyFilters(selectedMonth, selectedYear, selectedMaskapai, nextType, searchQuery);
+                        }}
+                        className={`cursor-pointer transition-all shadow-sm ${
+                            selectedType === 'departure'
+                                ? 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-500/5 shadow-md'
+                                : 'border-border/60 hover:border-amber-500/40'
+                        }`}
+                    >
                         <CardContent className="p-5 flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                    Keberangkatan (Dep LAH)
-                                </p>
+                                <div className="flex items-center gap-1.5">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                        Keberangkatan (Dep LAH)
+                                    </p>
+                                    {selectedType === 'departure' && (
+                                        <Badge variant="secondary" className="text-[10px] py-0 px-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold">
+                                            Aktif
+                                        </Badge>
+                                    )}
+                                </div>
                                 <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
                                     {stats.total_departures} <span className="text-xs font-normal text-muted-foreground">Flight</span>
                                 </h3>
@@ -420,12 +511,30 @@ export default function FlightIndex({
                         </CardContent>
                     </Card>
 
-                    <Card className="border-border/60 hover:border-emerald-500/40 transition-all shadow-sm">
+                    <Card
+                        onClick={() => {
+                            const nextType = selectedType === 'landing' ? 'all' : 'landing';
+                            setSelectedType(nextType);
+                            applyFilters(selectedMonth, selectedYear, selectedMaskapai, nextType, searchQuery);
+                        }}
+                        className={`cursor-pointer transition-all shadow-sm ${
+                            selectedType === 'landing'
+                                ? 'border-emerald-500 ring-2 ring-emerald-500/30 bg-emerald-500/5 shadow-md'
+                                : 'border-border/60 hover:border-emerald-500/40'
+                        }`}
+                    >
                         <CardContent className="p-5 flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                    Kedatangan (Arr LAH)
-                                </p>
+                                <div className="flex items-center gap-1.5">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                        Kedatangan (Arr LAH)
+                                    </p>
+                                    {selectedType === 'landing' && (
+                                        <Badge variant="secondary" className="text-[10px] py-0 px-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
+                                            Aktif
+                                        </Badge>
+                                    )}
+                                </div>
                                 <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
                                     {stats.total_arrivals} <span className="text-xs font-normal text-muted-foreground">Flight</span>
                                 </h3>
@@ -487,7 +596,7 @@ export default function FlightIndex({
                                         onClick={() => {
                                             const nextMaskapai = isSelected ? 'all' : g.maskapai;
                                             setSelectedMaskapai(nextMaskapai);
-                                            applyFilters(selectedMonth, selectedYear, nextMaskapai, searchQuery);
+                                            applyFilters(selectedMonth, selectedYear, nextMaskapai, selectedType, searchQuery);
                                         }}
                                         className={`cursor-pointer transition-all duration-200 rounded-2xl p-5 border ${
                                             isSelected
@@ -608,45 +717,36 @@ export default function FlightIndex({
                                 <span>Filter:</span>
                             </div>
 
-                            {/* Month Selector */}
+                            {/* Flight Direction / Type Selector (Departure & Landing) */}
                             <Select
-                                value={String(selectedMonth)}
+                                value={selectedType}
                                 onValueChange={(val) => {
-                                    const newMonth = Number(val);
-                                    setSelectedMonth(newMonth);
-                                    applyFilters(newMonth, selectedYear, selectedMaskapai, searchQuery);
+                                    setSelectedType(val);
+                                    applyFilters(selectedMonth, selectedYear, selectedMaskapai, val, searchQuery);
                                 }}
                             >
-                                <SelectTrigger className="w-[130px] h-9 text-xs font-semibold">
+                                <SelectTrigger className="w-[195px] h-9 text-xs font-semibold">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="text-xs font-semibold">
-                                    {namaBulan.map((bln, idx) => (
-                                        <SelectItem key={idx + 1} value={String(idx + 1)}>
-                                            {bln}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-
-                            {/* Year Selector */}
-                            <Select
-                                value={String(selectedYear)}
-                                onValueChange={(val) => {
-                                    const newYear = Number(val);
-                                    setSelectedYear(newYear);
-                                    applyFilters(selectedMonth, newYear, selectedMaskapai, searchQuery);
-                                }}
-                            >
-                                <SelectTrigger className="w-[95px] h-9 text-xs font-semibold">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="text-xs font-semibold">
-                                    {[2024, 2025, 2026, 2027, 2028].map((yr) => (
-                                        <SelectItem key={yr} value={String(yr)}>
-                                            {yr}
-                                        </SelectItem>
-                                    ))}
+                                    <SelectItem value="all">
+                                        <div className="flex items-center gap-2">
+                                            <Plane className="h-3.5 w-3.5 text-blue-500" />
+                                            <span>Semua Pergerakan</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="departure">
+                                        <div className="flex items-center gap-2">
+                                            <ArrowUpRight className="h-3.5 w-3.5 text-amber-500" />
+                                            <span>Keberangkatan (Dep)</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="landing">
+                                        <div className="flex items-center gap-2">
+                                            <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-500" />
+                                            <span>Pendaratan / Landing (Arr)</span>
+                                        </div>
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
 
@@ -655,7 +755,7 @@ export default function FlightIndex({
                                 value={selectedMaskapai}
                                 onValueChange={(val) => {
                                     setSelectedMaskapai(val);
-                                    applyFilters(selectedMonth, selectedYear, val, searchQuery);
+                                    applyFilters(selectedMonth, selectedYear, val, selectedType, searchQuery);
                                 }}
                             >
                                 <SelectTrigger className="w-[160px] h-9 text-xs font-semibold">
@@ -670,6 +770,23 @@ export default function FlightIndex({
                                     ))}
                                 </SelectContent>
                             </Select>
+
+                            {/* Reset Filter Button */}
+                            {(selectedType !== 'all' || selectedMaskapai !== 'all' || searchQuery) && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                        setSelectedType('all');
+                                        setSelectedMaskapai('all');
+                                        setSearchQuery('');
+                                        applyFilters(selectedMonth, selectedYear, 'all', 'all', '');
+                                    }}
+                                    className="text-xs h-9 text-muted-foreground hover:text-foreground rounded-xl"
+                                >
+                                    Reset Filter
+                                </Button>
+                            )}
                         </div>
 
                         {/* Search & Bulk Delete */}

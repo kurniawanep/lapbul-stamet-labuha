@@ -298,7 +298,7 @@ class FlightDataImportService
     /**
      * Export flight data to a formatted Excel file.
      */
-    public function export(int $bulan, int $tahun, ?string $maskapai = null): StreamedResponse
+    public function export(int $bulan, int $tahun, ?string $maskapai = null, string $type = 'all'): StreamedResponse
     {
         $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
@@ -307,6 +307,16 @@ class FlightDataImportService
 
         if ($maskapai && $maskapai !== 'all') {
             $query->where('maskapai', $maskapai);
+        }
+
+        if ($type === 'departure') {
+            $query->where(function ($q) {
+                $q->where('dep', 'LAH')->orWhere('dep', 'WAEL');
+            });
+        } elseif ($type === 'landing' || $type === 'arrival') {
+            $query->where(function ($q) {
+                $q->where('arr', 'LAH')->orWhere('arr', 'WAEL');
+            });
         }
 
         $flights = $query->orderBy('tanggal', 'asc')->orderBy('flight_number', 'asc')->get();
