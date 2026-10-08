@@ -250,12 +250,24 @@ class ProdukBulananExportService
 
             // Populate rows 9 to 20 (Januari = Row 9, Desember = Row 20)
             for ($m = 1; $m <= 12; $m++) {
+                $row = 8 + $m;
+
+                // If month is after selected month ($m > $bulan), do not fill data
+                if ($m > $bulan) {
+                    $sheetB->setCellValue("C{$row}", null);
+                    $sheetB->setCellValue("D{$row}", null);
+                    $sheetB->setCellValue("J{$row}", null);
+                    $sheetB->setCellValue("K{$row}", '-');
+                    $sheetB->setCellValue("L{$row}", null);
+                    $sheetB->setCellValue("N{$row}", null);
+                    continue;
+                }
+
                 // Special case for Jan - Aug 2026: leave it, don't change anything from the template
                 if ($tahun === 2026 && $m <= 8) {
                     continue;
                 }
 
-                $row = 8 + $m;
                 $sheetB->setCellValue("A{$row}", $this->namaBulanIndo[$m]);
                 $sheetB->setCellValue("B{$row}", '-');
 
@@ -266,22 +278,12 @@ class ProdukBulananExportService
                 $metReport = $monthlyMetReport[$m] > 0 ? $monthlyMetReport[$m] : 0;
                 $freq = $monthlyFlightCount[$m] > 0 ? $monthlyFlightCount[$m] : ($monthlyFd[$m] > 0 ? $monthlyFd[$m] : 0);
 
-                if ($m > $bulan && $tahun === 2026 && $ffDn === 0 && $taf === 0 && $metar === 0) {
-                    // Future months with no data: leave null as in template
-                    $sheetB->setCellValue("C{$row}", null);
-                    $sheetB->setCellValue("D{$row}", null);
-                    $sheetB->setCellValue("J{$row}", null);
-                    $sheetB->setCellValue("K{$row}", '-');
-                    $sheetB->setCellValue("L{$row}", null);
-                    $sheetB->setCellValue("N{$row}", null);
-                } else {
-                    $sheetB->setCellValue("C{$row}", $ffDn);
-                    $sheetB->setCellValue("D{$row}", $taf);
-                    $sheetB->setCellValue("J{$row}", $metar);
-                    $sheetB->setCellValue("K{$row}", $speci);
-                    $sheetB->setCellValue("L{$row}", $metReport);
-                    $sheetB->setCellValue("N{$row}", $freq);
-                }
+                $sheetB->setCellValue("C{$row}", $ffDn);
+                $sheetB->setCellValue("D{$row}", $taf);
+                $sheetB->setCellValue("J{$row}", $metar);
+                $sheetB->setCellValue("K{$row}", $speci);
+                $sheetB->setCellValue("L{$row}", $metReport);
+                $sheetB->setCellValue("N{$row}", $freq);
 
                 $sheetB->setCellValue("E{$row}", '-');
                 $sheetB->setCellValue("F{$row}", '-');

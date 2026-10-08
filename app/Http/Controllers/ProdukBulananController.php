@@ -207,6 +207,28 @@ class ProdukBulananController extends Controller
 
         $bulananData = [];
         for ($m = 1; $m <= 12; $m++) {
+            // Only fill data until selected month; future months are left null
+            if ($m > $bulan) {
+                $bulananData[] = [
+                    'month' => $m,
+                    'month_name' => $namaBulanIndo[$m],
+                    'ff_ln' => 0,
+                    'ff_dn' => null,
+                    'taf' => null,
+                    'rofor' => 0,
+                    'arfor' => 0,
+                    'sigmet' => 0,
+                    'aerodrome_warning' => 0,
+                    'publik' => 0,
+                    'metar' => null,
+                    'speci' => null,
+                    'met_report' => null,
+                    'special' => 0,
+                    'frekuensi_penerbangan' => null,
+                ];
+                continue;
+            }
+
             $ffDn = $monthlyFd[$m];
             $taf = $monthlyTafor[$m];
             $metar = $monthlyMetar[$m];

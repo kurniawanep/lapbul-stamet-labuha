@@ -549,36 +549,48 @@ export default function ProdukBulanan({
                                                     </TableCell>
                                                     <TableCell className="text-center text-muted-foreground/60">-</TableCell>
                                                     <TableCell className="text-center font-bold text-blue-600 dark:text-blue-400">
-                                                        {row.ff_dn > 0 ? (
-                                                            <span className="bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-md">
-                                                                {row.ff_dn}
-                                                            </span>
+                                                        {row.ff_dn !== null ? (
+                                                            row.ff_dn > 0 ? (
+                                                                <span className="bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-md">
+                                                                    {row.ff_dn}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-muted-foreground/60">0</span>
+                                                            )
                                                         ) : (
-                                                            <span className="text-muted-foreground/60">0</span>
+                                                            <span className="text-muted-foreground/40">-</span>
                                                         )}
                                                     </TableCell>
                                                     <TableCell className="text-center font-bold text-amber-600 dark:text-amber-400">
-                                                        {row.taf > 0 ? (
-                                                            <span className="bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-md">
-                                                                {row.taf}
-                                                            </span>
+                                                        {row.taf !== null ? (
+                                                            row.taf > 0 ? (
+                                                                <span className="bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-md">
+                                                                    {row.taf}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-muted-foreground/60">0</span>
+                                                            )
                                                         ) : (
-                                                            <span className="text-muted-foreground/60">0</span>
+                                                            <span className="text-muted-foreground/40">-</span>
                                                         )}
                                                     </TableCell>
                                                     <TableCell className="text-center text-muted-foreground/60">-</TableCell>
                                                     <TableCell className="text-center text-muted-foreground/60">-</TableCell>
                                                     <TableCell className="text-center font-bold text-purple-600 dark:text-purple-400">
-                                                        {row.metar > 0 ? (
-                                                            <span className="bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-md">
-                                                                {row.metar}
-                                                            </span>
+                                                        {row.metar !== null ? (
+                                                            row.metar > 0 ? (
+                                                                <span className="bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-md">
+                                                                    {row.metar}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-muted-foreground/60">0</span>
+                                                            )
                                                         ) : (
-                                                            <span className="text-muted-foreground/60">0</span>
+                                                            <span className="text-muted-foreground/40">-</span>
                                                         )}
                                                     </TableCell>
                                                     <TableCell className="text-center font-semibold text-sky-600 dark:text-sky-400">
-                                                        {row.speci > 0 ? (
+                                                        {row.speci !== null && row.speci > 0 ? (
                                                             <span className="bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-md">
                                                                 {row.speci}
                                                             </span>
@@ -587,22 +599,30 @@ export default function ProdukBulanan({
                                                         )}
                                                     </TableCell>
                                                     <TableCell className="text-center font-bold text-teal-600 dark:text-teal-400">
-                                                        {row.met_report > 0 ? (
-                                                            <span className="bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 px-2 py-0.5 rounded-md">
-                                                                {row.met_report}
-                                                            </span>
+                                                        {row.met_report !== null ? (
+                                                            row.met_report > 0 ? (
+                                                                <span className="bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 px-2 py-0.5 rounded-md">
+                                                                    {row.met_report}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-muted-foreground/60">0</span>
+                                                            )
                                                         ) : (
-                                                            <span className="text-muted-foreground/60">0</span>
+                                                            <span className="text-muted-foreground/40">-</span>
                                                         )}
                                                     </TableCell>
                                                     <TableCell className="text-center text-muted-foreground/60">-</TableCell>
                                                     <TableCell className="text-center font-bold text-emerald-600 dark:text-emerald-400">
-                                                        {row.frekuensi_penerbangan > 0 ? (
-                                                            <span className="bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-md">
-                                                                {row.frekuensi_penerbangan}
-                                                            </span>
+                                                        {row.frekuensi_penerbangan !== null ? (
+                                                            row.frekuensi_penerbangan > 0 ? (
+                                                                <span className="bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-md">
+                                                                    {row.frekuensi_penerbangan}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-muted-foreground/60">0</span>
+                                                            )
                                                         ) : (
-                                                            <span className="text-muted-foreground/60">0</span>
+                                                            <span className="text-muted-foreground/40">-</span>
                                                         )}
                                                     </TableCell>
                                                 </TableRow>
@@ -738,7 +758,7 @@ export default function ProdukBulanan({
                         </CardContent>
                     </Card>
                 )}
-            </div >
+            </div>
         </>
     );
 }
