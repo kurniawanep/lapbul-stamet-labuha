@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\DataFlight;
 use App\Models\DataFlightDocument;
 use App\Models\DataFklim;
 use App\Models\DataMetar;
@@ -46,14 +47,23 @@ class ProdukBulananExportService
         $endDate = $startDate->copy()->endOfMonth();
         $daysInMonth = $startDate->daysInMonth;
 
+        // Current download date for signature
+        $now = Carbon::now();
+        $downloadDay = $now->day;
+        $downloadMonthName = $this->namaBulanIndo[$now->month] ?? 'JANUARI';
+        $downloadMonthCapitalized = ucfirst(strtolower($downloadMonthName));
+        $downloadYear = $now->year;
+        $tanggalDownload = "Halmahera Selatan, {$downloadDay} {$downloadMonthCapitalized} {$downloadYear}";
+
         // Fetch Staff Signatures
-        $kepalaStasiun = Pegawai::where('jabatan', 'like', '%Kepala Stasiun%')
-            ->orWhere('role', 'Kepala Stasiun')
+        $kepalaStasiun = Pegawai::where('role', 'Kepala Stasiun')
+            ->orWhere('jabatan', 'like', '%Kepala Stasiun%')
+            ->orWhere('role', 'like', '%Kepala%')
             ->first();
-        $namaKepala = $kepalaStasiun ? $kepalaStasiun->nama_lengkap : 'Ben Arther Molle, S.Tr., M.Si';
+        $namaKepala = $kepalaStasiun ? $kepalaStasiun->nama : 'BEN ARTHER MOLLE, S. Tr., M. Si';
 
         $currentUser = Auth::user();
-        $pembuatLaporan = $currentUser ? ($currentUser->nama_lengkap ?? $currentUser->name) : 'Observer Stamet Labuha';
+        $pembuatLaporan = $currentUser ? ($currentUser->nama ?? $currentUser->name) : 'Observer Stamet Labuha';
 
         // =========================================================================
         // 1. SHEET: Produk Data A (Harian)
@@ -65,6 +75,7 @@ class ProdukBulananExportService
 
             // Query Daily Data for Target Month
             $fdRecords = DataFlightDocument::whereBetween('departure_at', [$startDate, $endDate])->get();
+            $flightRecords = DataFlight::whereBetween('tanggal', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])->get();
             $taforRecords = DataTafor::whereBetween('data_timestamp', [$startDate, $endDate])->get();
             $metarRecords = DataMetar::whereBetween('data_timestamp', [$startDate, $endDate])->get();
             $metReportRecords = DataMetReport::whereBetween('data_timestamp', [$startDate, $endDate])->get();
@@ -75,6 +86,17 @@ class ProdukBulananExportService
                 if ($r->departure_at) {
                     $d = Carbon::parse($r->departure_at)->day;
                     if ($d >= 1 && $d <= 31) $dailyFd[$d]++;
+                }
+            }
+
+            $dailyFlightCount = array_fill(1, 31, 0);
+            foreach ($flightRecords as $r) {
+                if ($r->tanggal) {
+                    $dep = strtoupper(trim((string)$r->dep));
+                    if ($dep === 'LAH' || $dep === 'WAEL') {
+                        $d = Carbon::parse($r->tanggal)->day;
+                        if ($d >= 1 && $d <= 31) $dailyFlightCount[$d]++;
+                    }
                 }
             }
 
@@ -90,13 +112,17 @@ class ProdukBulananExportService
             $dailySpeci = array_fill(1, 31, 0);
             foreach ($metarRecords as $r) {
                 if ($r->data_timestamp) {
-                    $d = Carbon::parse($r->data_timestamp)->day;
+                    $dt = Carbon::parse($r->data_timestamp);
+                    $d = $dt->day;
                     if ($d >= 1 && $d <= 31) {
                         $type = strtolower((string)$r->type_message);
                         if ($type === 'speci') {
                             $dailySpeci[$d]++;
                         } else {
-                            $dailyMetar[$d]++;
+                            // Only count METAR at minute 00 (ignore minute 30)
+                            if ((int) $dt->minute === 0) {
+                                $dailyMetar[$d]++;
+                            }
                         }
                     }
                 }
@@ -146,7 +172,7 @@ class ProdukBulananExportService
             $sheetA->setCellValue('L39', "=SUM(L8:L{$lastRow})");
 
             // Signatures
-            $sheetA->setCellValue('K42', "Halmahera Selatan, {$daysInMonth} {$monthNameCapitalized} {$tahun}");
+            $sheetA->setCellValue('K42', $tanggalDownload);
             $sheetA->setCellValue('E43', 'Pembuat Laporan,');
             $sheetA->setCellValue('K43', 'Kepala,');
             $sheetA->setCellValue('E47', $pembuatLaporan);
@@ -164,6 +190,7 @@ class ProdukBulananExportService
             $yearEnd = Carbon::createFromDate($tahun, 12, 31)->endOfYear();
 
             $yearFd = DataFlightDocument::whereBetween('departure_at', [$yearStart, $yearEnd])->get();
+            $yearFlight = DataFlight::whereBetween('tanggal', [$yearStart->format('Y-m-d'), $yearEnd->format('Y-m-d')])->get();
             $yearTafor = DataTafor::whereBetween('data_timestamp', [$yearStart, $yearEnd])->get();
             $yearMetar = DataMetar::whereBetween('data_timestamp', [$yearStart, $yearEnd])->get();
             $yearMetReport = DataMetReport::whereBetween('data_timestamp', [$yearStart, $yearEnd])->get();
@@ -173,6 +200,17 @@ class ProdukBulananExportService
                 if ($r->departure_at) {
                     $m = Carbon::parse($r->departure_at)->month;
                     $monthlyFd[$m]++;
+                }
+            }
+
+            $monthlyFlightCount = array_fill(1, 12, 0);
+            foreach ($yearFlight as $r) {
+                if ($r->tanggal) {
+                    $dep = strtoupper(trim((string)$r->dep));
+                    if ($dep === 'LAH' || $dep === 'WAEL') {
+                        $m = Carbon::parse($r->tanggal)->month;
+                        $monthlyFlightCount[$m]++;
+                    }
                 }
             }
 
@@ -188,12 +226,16 @@ class ProdukBulananExportService
             $monthlySpeci = array_fill(1, 12, 0);
             foreach ($yearMetar as $r) {
                 if ($r->data_timestamp) {
-                    $m = Carbon::parse($r->data_timestamp)->month;
+                    $dt = Carbon::parse($r->data_timestamp);
+                    $m = $dt->month;
                     $type = strtolower((string)$r->type_message);
                     if ($type === 'speci') {
                         $monthlySpeci[$m]++;
                     } else {
-                        $monthlyMetar[$m]++;
+                        // Only count METAR at minute 00 (ignore minute 30)
+                        if ((int) $dt->minute === 0) {
+                            $monthlyMetar[$m]++;
+                        }
                     }
                 }
             }
@@ -208,21 +250,45 @@ class ProdukBulananExportService
 
             // Populate rows 9 to 20 (Januari = Row 9, Desember = Row 20)
             for ($m = 1; $m <= 12; $m++) {
+                // Special case for Jan - Aug 2026: leave it, don't change anything from the template
+                if ($tahun === 2026 && $m <= 8) {
+                    continue;
+                }
+
                 $row = 8 + $m;
                 $sheetB->setCellValue("A{$row}", $this->namaBulanIndo[$m]);
                 $sheetB->setCellValue("B{$row}", '-');
-                $sheetB->setCellValue("C{$row}", $monthlyFd[$m] > 0 ? $monthlyFd[$m] : 0);
-                $sheetB->setCellValue("D{$row}", $monthlyTafor[$m] > 0 ? $monthlyTafor[$m] : 0);
+
+                $ffDn = $monthlyFd[$m] > 0 ? $monthlyFd[$m] : 0;
+                $taf = $monthlyTafor[$m] > 0 ? $monthlyTafor[$m] : 0;
+                $metar = $monthlyMetar[$m] > 0 ? $monthlyMetar[$m] : 0;
+                $speci = $monthlySpeci[$m] > 0 ? $monthlySpeci[$m] : '-';
+                $metReport = $monthlyMetReport[$m] > 0 ? $monthlyMetReport[$m] : 0;
+                $freq = $monthlyFlightCount[$m] > 0 ? $monthlyFlightCount[$m] : ($monthlyFd[$m] > 0 ? $monthlyFd[$m] : 0);
+
+                if ($m > $bulan && $tahun === 2026 && $ffDn === 0 && $taf === 0 && $metar === 0) {
+                    // Future months with no data: leave null as in template
+                    $sheetB->setCellValue("C{$row}", null);
+                    $sheetB->setCellValue("D{$row}", null);
+                    $sheetB->setCellValue("J{$row}", null);
+                    $sheetB->setCellValue("K{$row}", '-');
+                    $sheetB->setCellValue("L{$row}", null);
+                    $sheetB->setCellValue("N{$row}", null);
+                } else {
+                    $sheetB->setCellValue("C{$row}", $ffDn);
+                    $sheetB->setCellValue("D{$row}", $taf);
+                    $sheetB->setCellValue("J{$row}", $metar);
+                    $sheetB->setCellValue("K{$row}", $speci);
+                    $sheetB->setCellValue("L{$row}", $metReport);
+                    $sheetB->setCellValue("N{$row}", $freq);
+                }
+
                 $sheetB->setCellValue("E{$row}", '-');
                 $sheetB->setCellValue("F{$row}", '-');
                 $sheetB->setCellValue("G{$row}", '-');
                 $sheetB->setCellValue("H{$row}", '-');
                 $sheetB->setCellValue("I{$row}", '-');
-                $sheetB->setCellValue("J{$row}", $monthlyMetar[$m] > 0 ? $monthlyMetar[$m] : 0);
-                $sheetB->setCellValue("K{$row}", $monthlySpeci[$m] > 0 ? $monthlySpeci[$m] : '-');
-                $sheetB->setCellValue("L{$row}", $monthlyMetReport[$m] > 0 ? $monthlyMetReport[$m] : 0);
                 $sheetB->setCellValue("M{$row}", '-');
-                $sheetB->setCellValue("N{$row}", $monthlyFd[$m] > 0 ? $monthlyFd[$m] : 0); // Frekuensi Penerbangan
             }
 
             // JUMLAH row 21
@@ -233,7 +299,7 @@ class ProdukBulananExportService
             $sheetB->setCellValue('N21', '=SUM(N9:N20)');
 
             // Signatures
-            $sheetB->setCellValue('K24', "Halmahera Selatan, {$daysInMonth} {$monthNameCapitalized} {$tahun}");
+            $sheetB->setCellValue('K24', $tanggalDownload);
             $sheetB->setCellValue('E25', 'Pembuat Laporan,');
             $sheetB->setCellValue('K25', 'Kepala,');
             $sheetB->setCellValue('E30', $pembuatLaporan);
@@ -247,31 +313,68 @@ class ProdukBulananExportService
         if ($sheetFreq) {
             $sheetFreq->setCellValue('A3', "BULAN  :  {$monthNameUpper} {$tahun}");
 
-            // Populate daily flights in column N & O (Day 1 = N12 / O12, Day 31 = N42 / O42)
-            $dailyFdFreq = array_fill(1, 31, 0);
-            if (isset($dailyFd)) {
-                $dailyFdFreq = $dailyFd;
-            }
+            $colMap = [1 => 'C', 2 => 'D', 3 => 'E', 4 => 'F', 5 => 'G', 6 => 'H', 7 => 'I'];
+            $weekRowMap = [1 => 8, 2 => 14, 3 => 20, 4 => 26, 5 => 32, 6 => 38];
 
-            for ($d = 1; $d <= 31; $d++) {
-                $row = 11 + $d;
-                $sheetFreq->setCellValue("N{$row}", $d <= $daysInMonth ? $d : null);
-                $sheetFreq->setCellValue("O{$row}", $d <= $daysInMonth ? ($dailyFdFreq[$d] > 0 ? $dailyFdFreq[$d] : 0) : null);
-                
-                if ($d <= $daysInMonth) {
-                    $dtDay = Carbon::createFromDate($tahun, $bulan, $d);
-                    $dayOfWeek = $dtDay->dayOfWeek; // 0 = Sunday, 1 = Monday
-                    $sheetFreq->setCellValue("P{$row}", $this->namaHariIndo[$dayOfWeek]);
-                } else {
-                    $sheetFreq->setCellValue("P{$row}", null);
+            $grid = [];
+            for ($w = 1; $w <= 6; $w++) {
+                for ($colIdx = 1; $colIdx <= 7; $colIdx++) {
+                    $grid[$w][$colIdx] = null;
                 }
             }
 
-            // Total formula
-            $sheetFreq->setCellValue('O50', "=SUM(O12:O" . (11 + $daysInMonth) . ")");
+            $rightList = [];
+            for ($slot = 1; $slot <= 42; $slot++) {
+                $rightList[$slot] = ['tgl' => null, 'flt' => null];
+            }
+
+            $startIsoWeekday = $startDate->isoWeekday(); // 1 (Mon) to 7 (Sun)
+            $currentWeek = 1;
+            $currentWeekday = $startIsoWeekday;
+
+            $dailyFreqData = (isset($dailyFlightCount) && array_sum($dailyFlightCount) > 0)
+                ? $dailyFlightCount
+                : ($dailyFd ?? array_fill(1, 31, 0));
+
+            for ($d = 1; $d <= $daysInMonth; $d++) {
+                $fltCount = $dailyFreqData[$d] > 0 ? $dailyFreqData[$d] : 0;
+                $grid[$currentWeek][$currentWeekday] = $fltCount;
+
+                $slotIndex = (($currentWeek - 1) * 7) + $currentWeekday;
+                $rightList[$slotIndex] = ['tgl' => $d, 'flt' => $fltCount];
+
+                if ($currentWeekday === 7) {
+                    $currentWeekday = 1;
+                    $currentWeek++;
+                } else {
+                    $currentWeekday++;
+                }
+            }
+
+            // 1. Populate Weekly Schedule Grid (Left Side: Rows 8, 14, 20, 26, 32, 38)
+            foreach ($weekRowMap as $w => $row) {
+                for ($colIdx = 1; $colIdx <= 7; $colIdx++) {
+                    $colLetter = $colMap[$colIdx];
+                    $val = $grid[$w][$colIdx];
+                    $sheetFreq->setCellValue("{$colLetter}{$row}", $val !== null ? $val : '-');
+                }
+                $sheetFreq->setCellValue("J{$row}", "=SUM(C{$row}:I{$row})");
+            }
+
+            // 2. Populate Daily List (Right Side: Rows 7 to 48)
+            for ($slot = 1; $slot <= 42; $slot++) {
+                $row = 6 + $slot;
+                $item = $rightList[$slot];
+                $sheetFreq->setCellValue("N{$row}", $item['tgl']);
+                $sheetFreq->setCellValue("O{$row}", $item['flt']);
+            }
+
+            // Total Formulas
+            $sheetFreq->setCellValue('O49', '=J8+J14+J20+J26+J32+J38');
+            $sheetFreq->setCellValue('O50', '=SUM(O7:O48)');
 
             // Signatures
-            $sheetFreq->setCellValue('F41', "Halmahera Selatan, {$daysInMonth} {$monthNameCapitalized} {$tahun}");
+            $sheetFreq->setCellValue('F41', $tanggalDownload);
             $sheetFreq->setCellValue('B42', 'Pembuat Laporan,');
             $sheetFreq->setCellValue('F42', 'Kepala,');
             $sheetFreq->setCellValue('B47', $pembuatLaporan);
@@ -286,7 +389,7 @@ class ProdukBulananExportService
             $sheetWx->setCellValue('A3', "BULAN  :  {$monthNameUpper} {$tahun}");
 
             // Signatures
-            $sheetWx->setCellValue('F42', "Halmahera Selatan, {$daysInMonth} {$monthNameCapitalized} {$tahun}");
+            $sheetWx->setCellValue('F42', $tanggalDownload);
             $sheetWx->setCellValue('B43', 'Pembuat Laporan,');
             $sheetWx->setCellValue('F43', 'Kepala,');
             $sheetWx->setCellValue('B47', $pembuatLaporan);

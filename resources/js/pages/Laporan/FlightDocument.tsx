@@ -670,3 +670,9 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
         </>
     );
 }
+
+FlightDocument.layout = (page: React.ReactNode) => (
+    <AppLayout breadcrumbs={breadcrumbs}>
+        {page}
+    </AppLayout>
+);

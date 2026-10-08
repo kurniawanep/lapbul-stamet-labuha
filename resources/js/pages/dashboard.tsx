@@ -19,6 +19,7 @@ import {
     Gauge,
     Layers,
     MessageSquare,
+    Plane,
     Radio,
     ShieldCheck,
     Sparkles,
@@ -29,6 +30,10 @@ import {
     Wind,
     Wrench,
     Zap,
+    Building2,
+    ArrowUpRight,
+    ArrowDownLeft,
+    Upload,
 } from 'lucide-react';
 import type { BreadcrumbItem, SharedData } from '@/types';
 
@@ -47,6 +52,15 @@ interface LaporanCounts {
     penguapan: number;
     met_report: number;
     flight_document: number;
+    flight?: number;
+}
+
+interface AirlineStat {
+    maskapai: string;
+    total: number;
+    departures: number;
+    arrivals: number;
+    aircraft_count: number;
 }
 
 interface PageProps {
@@ -58,6 +72,12 @@ interface PageProps {
         ppnpn: number;
     };
     laporanCounts?: LaporanCounts;
+    flightAirlineStats?: {
+        total: number;
+        departures: number;
+        arrivals: number;
+        airlines: AirlineStat[];
+    };
     stationInfo?: {
         nama: string;
         lokasi: string;
@@ -70,7 +90,7 @@ interface PageProps {
 
 export default function Dashboard() {
     const { auth } = usePage<SharedData>().props;
-    const { bulan = 7, tahun = 2026, pegawaiStats, laporanCounts, stationInfo } = usePage<PageProps>().props;
+    const { bulan = 7, tahun = 2026, pegawaiStats, laporanCounts, flightAirlineStats, stationInfo } = usePage<PageProps>().props;
     const user = auth.user;
 
     const currentMonthName = NAMA_BULAN[bulan - 1] || 'Juli';
@@ -600,7 +620,121 @@ export default function Dashboard() {
                                 </Link>
                             </CardContent>
                         </Card>
+
+                        {/* 11. DATA FLIGHT */}
+                        <Card className="border border-slate-200 shadow-sm hover:shadow-md transition-all bg-white rounded-2xl group">
+                            <CardHeader className="p-4 pb-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="p-2 bg-sky-50 text-sky-600 rounded-xl">
+                                        <Plane className="h-5 w-5" />
+                                    </div>
+                                    <Badge className="bg-sky-100 text-sky-800 border-none text-[10px] font-bold">
+                                        {laporanCounts?.flight ?? 0} Flight
+                                    </Badge>
+                                </div>
+                                <CardTitle className="text-sm font-bold text-slate-900 pt-2 group-hover:text-sky-600 transition-colors">
+                                    Data Flight (Maskapai)
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-1 space-y-3">
+                                <p className="text-[11px] text-slate-500 leading-relaxed">
+                                    Rekap data penerbangan bandara dikelompokkan per maskapai.
+                                </p>
+                                <Link href="/laporan/flight" className="inline-block w-full">
+                                    <Button variant="outline" size="sm" className="w-full justify-between text-xs font-semibold">
+                                        Lihat Data Flight <ArrowRight className="h-3 w-3" />
+                                    </Button>
+                                </Link>
+                            </CardContent>
+                        </Card>
                     </div>
+                </div>
+
+                {/* 5. SECTION: STATISTIK PENERBANGAN BERDASARKAN MASKAPAI */}
+                <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <Building2 className="h-5 w-5 text-indigo-600" />
+                                Pergerakan Penerbangan per Maskapai ({currentMonthName} {tahun})
+                            </h2>
+                            <p className="text-xs text-slate-500">
+                                Ringkasan data penerbangan (kedatangan, keberangkatan &amp; jumlah armada pesawat)
+                            </p>
+                        </div>
+                        <Link href="/laporan/flight">
+                            <Button size="sm" variant="outline" className="text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                                <Plane className="h-3.5 w-3.5 mr-1.5 text-indigo-600" />
+                                Buka Modul Data Flight
+                            </Button>
+                        </Link>
+                    </div>
+
+                    {flightAirlineStats && flightAirlineStats.airlines && flightAirlineStats.airlines.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {flightAirlineStats.airlines.map((airline) => (
+                                <Card key={airline.maskapai} className="border border-slate-200/90 shadow-sm bg-white rounded-2xl overflow-hidden hover:shadow-md transition-all">
+                                    <CardHeader className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-1.5 bg-white/10 rounded-lg">
+                                                    <Plane className="h-4 w-4 text-sky-300" />
+                                                </div>
+                                                <CardTitle className="text-sm font-bold text-white">
+                                                    {airline.maskapai}
+                                                </CardTitle>
+                                            </div>
+                                            <Badge className="bg-sky-400/20 text-sky-200 border-sky-300/30 text-xs font-mono font-bold">
+                                                {airline.total} Penerbangan
+                                            </Badge>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-4 space-y-3">
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                            <div className="p-2.5 bg-amber-50/70 border border-amber-100 rounded-xl">
+                                                <div className="flex items-center gap-1 text-amber-700 font-semibold mb-1">
+                                                    <ArrowUpRight className="h-3.5 w-3.5" />
+                                                    <span>Keberangkatan</span>
+                                                </div>
+                                                <p className="text-xl font-black text-amber-900">{airline.departures}</p>
+                                                <span className="text-[10px] text-amber-600">Dep LAH</span>
+                                            </div>
+
+                                            <div className="p-2.5 bg-emerald-50/70 border border-emerald-100 rounded-xl">
+                                                <div className="flex items-center gap-1 text-emerald-700 font-semibold mb-1">
+                                                    <ArrowDownLeft className="h-3.5 w-3.5" />
+                                                    <span>Kedatangan</span>
+                                                </div>
+                                                <p className="text-xl font-black text-emerald-900">{airline.arrivals}</p>
+                                                <span className="text-[10px] text-emerald-600">Arr LAH</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 text-slate-500">
+                                            <span>Armada Terdeteksi (Reg):</span>
+                                            <span className="font-bold text-slate-800">{airline.aircraft_count} Pesawat</span>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center text-slate-500 space-y-2">
+                            <Plane className="h-8 w-8 mx-auto text-slate-400" />
+                            <p className="text-sm font-medium">Belum ada data penerbangan bulan {currentMonthName} {tahun}.</p>
+                            <p className="text-xs text-slate-400">
+                                Anda dapat mengimpor file Excel seperti <code className="text-slate-600 font-mono bg-slate-100 px-1 py-0.5 rounded">data-flight-wings.xlsx</code> di modul Data Flight.
+                            </p>
+                            <div className="pt-2">
+                                <Link href="/laporan/flight">
+                                    <Button size="sm" className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white">
+                                        <Upload className="h-3.5 w-3.5 mr-1.5" />
+                                        Import Data Flight
+                                    </Button>
+                                </Link>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* 5. SECTION 3: SYSTEM INTEGRATION & WHATSAPP GATEWAY */}

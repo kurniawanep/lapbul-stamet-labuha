@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\HakAksesController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FlightController;
 use App\Http\Controllers\FlightDocumentController;
 use App\Http\Controllers\FklimController;
 use App\Http\Controllers\JadwalController;
@@ -199,6 +200,32 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/laporan/flight-document/{id}', [FlightDocumentController::class, 'destroy'])
         ->middleware('permission:laporan.flight_document')
         ->name('laporan.flight-document.destroy');
+
+    // Laporan Bulanan - Data Flight Routes
+    Route::get('/laporan/flight', [FlightController::class, 'index'])
+        ->middleware('permission:laporan.view')
+        ->name('laporan.flight');
+    Route::post('/laporan/flight', [FlightController::class, 'store'])
+        ->middleware('permission:laporan.flight')
+        ->name('laporan.flight.store');
+    Route::match(['put', 'patch'], '/laporan/flight/{flight}', [FlightController::class, 'update'])
+        ->middleware('permission:laporan.flight')
+        ->name('laporan.flight.update');
+    Route::delete('/laporan/flight/{flight}', [FlightController::class, 'destroy'])
+        ->middleware('permission:laporan.flight')
+        ->name('laporan.flight.destroy');
+    Route::post('/laporan/flight/bulk-delete', [FlightController::class, 'bulkDelete'])
+        ->middleware('permission:laporan.flight')
+        ->name('laporan.flight.bulk-delete');
+    Route::post('/laporan/flight/import', [FlightController::class, 'import'])
+        ->middleware('permission:laporan.flight')
+        ->name('laporan.flight.import');
+    Route::get('/laporan/flight/export', [FlightController::class, 'export'])
+        ->middleware('permission:laporan.view')
+        ->name('laporan.flight.export');
+    Route::get('/laporan/flight/template', [FlightController::class, 'downloadTemplate'])
+        ->middleware('permission:laporan.view')
+        ->name('laporan.flight.template');
 
     // Laporan Bulanan - Produk Bulanan Routes
     Route::get('/laporan/produk-bulanan', [ProdukBulananController::class, 'index'])

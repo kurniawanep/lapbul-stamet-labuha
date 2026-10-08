@@ -12,6 +12,7 @@ import {
     KeyRound,
     LayoutGrid,
     MessageSquare,
+    Plane,
     Radio,
     Settings,
     ShieldCheck,
@@ -138,6 +139,11 @@ const allNavItems: NavItem[] = [
                 title: 'Flight Document',
                 href: '/laporan/flight-document',
                 icon: FileCheck,
+            },
+            {
+                title: 'Data Flight',
+                href: '/laporan/flight',
+                icon: Plane,
             },
             {
                 title: 'Produk Bulanan',

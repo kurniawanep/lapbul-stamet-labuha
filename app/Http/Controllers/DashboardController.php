@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DataFklim;
+use App\Models\DataFlight;
 use App\Models\DataFlightDocument;
 use App\Models\DataMetReport;
 use App\Models\DataMetar;
@@ -52,7 +53,20 @@ class DashboardController extends Controller
                       $sub->whereNull('departure_at')->whereBetween('created_at', [$startDate, $endDate]);
                   });
             })->where('status', 'Selesai')->count(),
+            'flight' => DataFlight::whereBetween('tanggal', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])->count(),
         ];
+
+        // 3. Flight Stats Grouped by Maskapai
+        $monthFlights = DataFlight::whereBetween('tanggal', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])->get();
+        $flightAirlineStats = $monthFlights->groupBy('maskapai')->map(function ($items, $maskapaiName) {
+            return [
+                'maskapai' => $maskapaiName,
+                'total' => $items->count(),
+                'departures' => $items->filter(fn($f) => strtoupper((string)$f->dep) === 'LAH')->count(),
+                'arrivals' => $items->filter(fn($f) => strtoupper((string)$f->arr) === 'LAH')->count(),
+                'aircraft_count' => $items->pluck('reg')->filter()->unique()->count(),
+            ];
+        })->values()->all();
 
         return Inertia::render('dashboard', [
             'bulan' => $bulan,
@@ -63,6 +77,12 @@ class DashboardController extends Controller
                 'ppnpn' => $totalPpnpn,
             ],
             'laporanCounts' => $laporanCounts,
+            'flightAirlineStats' => [
+                'total' => $monthFlights->count(),
+                'departures' => $monthFlights->filter(fn($f) => strtoupper((string)$f->dep) === 'LAH')->count(),
+                'arrivals' => $monthFlights->filter(fn($f) => strtoupper((string)$f->arr) === 'LAH')->count(),
+                'airlines' => $flightAirlineStats,
+            ],
             'stationInfo' => [
                 'nama' => 'Stasiun Meteorologi Oesman Sadik',
                 'lokasi' => 'Halmahera Selatan, Maluku Utara',
