@@ -94,16 +94,26 @@ class ProdukBulananExportService
                 }
             }
 
-            $dailyFlightCount = array_fill(1, 31, 0);
+            $dailyFlightTO = array_fill(1, 31, 0);
+            $dailyFlightLD = array_fill(1, 31, 0);
+
             foreach ($flightRecords as $r) {
                 if ($r->tanggal) {
                     $dep = strtoupper(trim((string)$r->dep));
-                    if ($dep === 'LAH' || $dep === 'WAEL') {
-                        $d = Carbon::parse($r->tanggal)->day;
-                        if ($d >= 1 && $d <= 31) $dailyFlightCount[$d]++;
+                    $arr = strtoupper(trim((string)$r->arr));
+                    $d = (int) Carbon::parse($r->tanggal)->day;
+                    if ($d >= 1 && $d <= 31) {
+                        if ($dep === 'LAH' || $dep === 'WAEL') {
+                            $dailyFlightTO[$d]++;
+                        }
+                        if ($arr === 'LAH' || $arr === 'WAEL') {
+                            $dailyFlightLD[$d]++;
+                        }
                     }
                 }
             }
+
+            $dailyFlightCount = $dailyFlightTO;
 
             $dailyTafor = array_fill(1, 31, 0);
             foreach ($taforRecords as $r) {
@@ -331,65 +341,88 @@ class ProdukBulananExportService
         if ($sheetFreq) {
             $sheetFreq->setCellValue('A3', "BULAN  :  {$monthNameUpper} {$tahun}");
 
-            $colMap = [1 => 'C', 2 => 'D', 3 => 'E', 4 => 'F', 5 => 'G', 6 => 'H', 7 => 'I'];
-            $weekRowMap = [1 => 8, 2 => 14, 3 => 20, 4 => 26, 5 => 32, 6 => 38];
+            $isJanAgs2026 = ($tahun === 2026 && $bulan <= 8);
 
-            $grid = [];
-            for ($w = 1; $w <= 6; $w++) {
-                for ($colIdx = 1; $colIdx <= 7; $colIdx++) {
-                    $grid[$w][$colIdx] = null;
+            if (!$isJanAgs2026) {
+                $colMap = [1 => 'C', 2 => 'D', 3 => 'E', 4 => 'F', 5 => 'G', 6 => 'H', 7 => 'I'];
+                $weekRowMap = [1 => 8, 2 => 14, 3 => 20, 4 => 26, 5 => 32, 6 => 38];
+
+                $grid = [];
+                for ($w = 1; $w <= 6; $w++) {
+                    for ($colIdx = 1; $colIdx <= 7; $colIdx++) {
+                        $grid[$w][$colIdx] = null;
+                    }
                 }
-            }
 
-            $rightList = [];
-            for ($slot = 1; $slot <= 42; $slot++) {
-                $rightList[$slot] = ['tgl' => null, 'flt' => null];
-            }
-
-            $startIsoWeekday = $startDate->isoWeekday(); // 1 (Mon) to 7 (Sun)
-            $currentWeek = 1;
-            $currentWeekday = $startIsoWeekday;
-
-            $dailyFreqData = (isset($dailyFlightCount) && array_sum($dailyFlightCount) > 0)
-                ? $dailyFlightCount
-                : ($dailyFd ?? array_fill(1, 31, 0));
-
-            for ($d = 1; $d <= $daysInMonth; $d++) {
-                $fltCount = $dailyFreqData[$d] > 0 ? $dailyFreqData[$d] : 0;
-                $grid[$currentWeek][$currentWeekday] = $fltCount;
-
-                $slotIndex = (($currentWeek - 1) * 7) + $currentWeekday;
-                $rightList[$slotIndex] = ['tgl' => $d, 'flt' => $fltCount];
-
-                if ($currentWeekday === 7) {
-                    $currentWeekday = 1;
-                    $currentWeek++;
-                } else {
-                    $currentWeekday++;
+                $rightList = [];
+                for ($slot = 1; $slot <= 42; $slot++) {
+                    $rightList[$slot] = ['tgl' => null, 'flt' => null];
                 }
-            }
 
-            // 1. Populate Weekly Schedule Grid (Left Side: Rows 8, 14, 20, 26, 32, 38)
-            foreach ($weekRowMap as $w => $row) {
-                for ($colIdx = 1; $colIdx <= 7; $colIdx++) {
-                    $colLetter = $colMap[$colIdx];
-                    $val = $grid[$w][$colIdx];
-                    $sheetFreq->setCellValue("{$colLetter}{$row}", $val !== null ? $val : '-');
+                $startIsoWeekday = $startDate->isoWeekday(); // 1 (Mon) to 7 (Sun)
+                $currentWeek = 1;
+                $currentWeekday = $startIsoWeekday;
+
+                $dailyFreqData = (isset($dailyFlightCount) && array_sum($dailyFlightCount) > 0)
+                    ? $dailyFlightCount
+                    : ($dailyFd ?? array_fill(1, 31, 0));
+
+                for ($d = 1; $d <= $daysInMonth; $d++) {
+                    $fltCount = $dailyFreqData[$d] > 0 ? $dailyFreqData[$d] : 0;
+                    $grid[$currentWeek][$currentWeekday] = $fltCount;
+
+                    $slotIndex = (($currentWeek - 1) * 7) + $currentWeekday;
+                    $rightList[$slotIndex] = ['tgl' => $d, 'flt' => $fltCount];
+
+                    if ($currentWeekday === 7) {
+                        $currentWeekday = 1;
+                        $currentWeek++;
+                    } else {
+                        $currentWeekday++;
+                    }
                 }
-                $sheetFreq->setCellValue("J{$row}", "=SUM(C{$row}:I{$row})");
-            }
 
-            // 2. Populate Daily List (Right Side: Rows 7 to 48)
-            for ($slot = 1; $slot <= 42; $slot++) {
-                $row = 6 + $slot;
-                $item = $rightList[$slot];
-                $sheetFreq->setCellValue("N{$row}", $item['tgl']);
-                $sheetFreq->setCellValue("O{$row}", $item['flt']);
-            }
+                // 1. Populate Weekly Schedule Grid (Left Side: Rows 8, 14, 20, 26, 32, 38)
+                foreach ($weekRowMap as $w => $row) {
+                    for ($colIdx = 1; $colIdx <= 7; $colIdx++) {
+                        $colLetter = $colMap[$colIdx];
+                        $val = $grid[$w][$colIdx];
+                        $sheetFreq->setCellValue("{$colLetter}{$row}", $val !== null ? $val : '-');
+                    }
+                    $sheetFreq->setCellValue("J{$row}", "=SUM(C{$row}:I{$row})");
+                }
 
-            // Total Formulas
-            $sheetFreq->setCellValue('O49', '=J8+J14+J20+J26+J32+J38');
-            $sheetFreq->setCellValue('O50', '=SUM(O7:O48)');
+                // 2. Populate Daily List (Middle Side: Rows 7 to 48, Columns N & O)
+                for ($slot = 1; $slot <= 42; $slot++) {
+                    $row = 6 + $slot;
+                    $item = $rightList[$slot];
+                    $sheetFreq->setCellValue("N{$row}", $item['tgl']);
+                    $sheetFreq->setCellValue("O{$row}", $item['flt']);
+                }
+
+                // 3. Populate Daily TO / LD / OF Table (Right Side: Rows 7 to 37, Columns U - Y)
+                for ($d = 1; $d <= 31; $d++) {
+                    $row = 6 + $d;
+                    if ($d <= $daysInMonth) {
+                        $sheetFreq->setCellValue("U{$row}", $d);
+                        $sheetFreq->setCellValue("V{$row}", $d);
+                        $sheetFreq->setCellValue("W{$row}", $dailyFlightTO[$d]);
+                        $sheetFreq->setCellValue("X{$row}", $dailyFlightLD[$d]);
+                        $sheetFreq->setCellValue("Y{$row}", null);
+                    } else {
+                        // Clear dates beyond this month (e.g. day 31 for Sept, day 29-31 for Feb)
+                        $sheetFreq->setCellValue("U{$row}", null);
+                        $sheetFreq->setCellValue("V{$row}", null);
+                        $sheetFreq->setCellValue("W{$row}", null);
+                        $sheetFreq->setCellValue("X{$row}", null);
+                        $sheetFreq->setCellValue("Y{$row}", null);
+                    }
+                }
+
+                // Total Formulas
+                $sheetFreq->setCellValue('O49', '=J8+J14+J20+J26+J32+J38');
+                $sheetFreq->setCellValue('O50', '=SUM(O7:O48)');
+            }
 
             // Signatures
             $sheetFreq->setCellValue('F41', $tanggalDownload);
