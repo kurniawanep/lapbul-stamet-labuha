@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\DataDiseminasiMkg;
 use App\Models\DataMetar;
 use App\Models\DataPibal;
 use App\Models\DataSinoptik;
@@ -76,15 +77,10 @@ class PerformanceMonitoringService
         // Pre-warm observer resolver schedules for maximum in-memory speed
         $this->observerResolver->prewarm($startDate->copy()->subDay(), $endDate->copy()->addDay());
 
-        $allPegawai = Pegawai::where('role', 'LIKE', '%Observer%')
-            ->orWhereHas('jadwalDetails', function ($q) use ($startDate, $endDate) {
-                $q->whereBetween('tanggal', [$startDate->toDateString(), $endDate->toDateString()]);
-            })
-            ->get();
-
-        if ($allPegawai->isEmpty()) {
-            $allPegawai = Pegawai::all();
-        }
+        $allPegawai = Pegawai::where(function ($q) {
+            $q->where('role', 'LIKE', '%Observer%')
+              ->orWhere('role', 'LIKE', '%Forecaster%');
+        })->get();
 
         // Pre-fetch actual observation records for the month & build fast lookup maps
         $sinopRecords = DataSinoptik::whereBetween('data_timestamp', [$startDate->toDateTimeString(), $endDate->toDateTimeString()])->get();
@@ -129,6 +125,12 @@ class PerformanceMonitoringService
                 $taforMap[$key] = $t;
             }
         }
+
+        // Fetch weather dissemination records for this month
+        $startDissem = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
+        $endDissem = Carbon::createFromDate($tahun, $bulan, $daysInMonth)->endOfMonth();
+        $dissemRecords = DataDiseminasiMkg::whereBetween('dissemination_timestamp', [$startDissem, $endDissem])->get();
+        $dissemByPegawai = $dissemRecords->groupBy('pegawai_id');
 
         // Initialize per-pegawai tracking structure
         $staffMetrics = [];
@@ -521,7 +523,8 @@ class PerformanceMonitoringService
 
         foreach ($staffMetrics as $pId => $m) {
             $assigned = $m['total_assigned'];
-            if ($assigned === 0) {
+            $dissemCount = isset($dissemByPegawai[$pId]) ? $dissemByPegawai[$pId]->count() : 0;
+            if ($assigned === 0 && $dissemCount === 0) {
                 continue;
             }
 
@@ -529,9 +532,9 @@ class PerformanceMonitoringService
             $late = $m['late_count'];
             $missing = $m['missing_count'];
 
-            $timelyPct = round(($timely / $assigned) * 100, 1);
-            $latePct = round(($late / $assigned) * 100, 1);
-            $missingPct = round(($missing / $assigned) * 100, 1);
+            $timelyPct = $assigned > 0 ? round(($timely / $assigned) * 100, 1) : 0;
+            $latePct = $assigned > 0 ? round(($late / $assigned) * 100, 1) : 0;
+            $missingPct = $assigned > 0 ? round(($missing / $assigned) * 100, 1) : 0;
 
             $avgDelayMin = $late > 0 ? round($m['total_delay_minutes'] / $late, 1) : 0;
 
@@ -561,6 +564,7 @@ class PerformanceMonitoringService
                 'avg_delay_minutes' => $avgDelayMin,
                 'missing_count' => $missing,
                 'missing_rate_pct' => $missingPct,
+                'dissemination_count' => $dissemCount,
                 'breakdown' => $m['breakdown'],
                 'details' => $m['details'],
             ];
@@ -586,6 +590,10 @@ class PerformanceMonitoringService
                 'overall_compliance_pct' => $stationTimelyPct,
                 'top_observer' => $formattedStaff[0]['pegawai']['nama'] ?? '-',
             ],
+            'dissemination_summary' => [
+                'total' => $dissemRecords->count(),
+                'daily_avg' => round($dissemRecords->count() / max(1, $daysInMonth), 1),
+            ],
             'awos_summary' => $awosStats,
             'hourly_delays' => $hourlyDelays,
             'staff_rankings' => $formattedStaff,
@@ -603,14 +611,10 @@ class PerformanceMonitoringService
         // Pre-warm the entire 12-month period in memory
         $this->observerResolver->prewarm($startCarbon->copy()->subDay(), $endCarbon->copy()->endOfMonth()->addDay());
 
-        $allPegawai = Pegawai::where('role', 'LIKE', '%Observer%')
-            ->orWhere('role', 'LIKE', '%Forecaster%')
-            ->orWhere('role', 'LIKE', '%Teknisi%')
-            ->get();
-
-        if ($allPegawai->isEmpty()) {
-            $allPegawai = Pegawai::all();
-        }
+        $allPegawai = Pegawai::where(function ($q) {
+            $q->where('role', 'LIKE', '%Observer%')
+              ->orWhere('role', 'LIKE', '%Forecaster%');
+        })->get();
 
         $monthsList = [];
         $currentDate = $startCarbon->copy();

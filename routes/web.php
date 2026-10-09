@@ -14,6 +14,7 @@ use App\Http\Controllers\PenguapanController;
 use App\Http\Controllers\PerawananController;
 use App\Http\Controllers\PibalController;
 use App\Http\Controllers\ProdukBulananController;
+use App\Http\Controllers\SimpanMkgController;
 use App\Http\Controllers\SinoptikController;
 use App\Http\Controllers\TaforController;
 use App\Http\Controllers\ThunderstormController;
@@ -234,6 +235,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/laporan/produk-bulanan/export-excel', [ProdukBulananController::class, 'exportExcel'])
         ->middleware('permission:laporan.view')
         ->name('laporan.produk-bulanan.export-excel');
+
+    // Laporan Bulanan - SIMPAN-MKG Diseminasi Routes
+    Route::get('/laporan/simpan-mkg', [SimpanMkgController::class, 'index'])
+        ->middleware('permission:laporan.view')
+        ->name('laporan.simpan-mkg');
+    Route::post('/laporan/simpan-mkg/sync', [SimpanMkgController::class, 'sync'])
+        ->middleware('permission:laporan.view')
+        ->name('laporan.simpan-mkg.sync');
+    Route::get('/laporan/simpan-mkg/export-excel', [SimpanMkgController::class, 'exportExcel'])
+        ->middleware('permission:laporan.view')
+        ->name('laporan.simpan-mkg.export-excel');
+    Route::get('/laporan/simpan-mkg/export-csv', [SimpanMkgController::class, 'exportCsv'])
+        ->middleware('permission:laporan.view')
+        ->name('laporan.simpan-mkg.export-csv');
 
     // Pengaturan WhatsApp Gateway Routes (Teknisi / Super Admin)
     Route::get('/pengaturan/whatsapp', [WhatsAppManagementController::class, 'index'])

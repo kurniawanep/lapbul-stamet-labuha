@@ -34,6 +34,7 @@ class MonitoringController extends Controller
                 'tahun' => $tahun,
             ],
             'summary' => $performanceData['station_summary'],
+            'dissemination_summary' => $performanceData['dissemination_summary'] ?? ['total' => 0, 'daily_avg' => 0],
             'awos_summary' => $performanceData['awos_summary'] ?? [],
             'hourly_delays' => $performanceData['hourly_delays'],
             'staff_rankings' => $performanceData['staff_rankings'],

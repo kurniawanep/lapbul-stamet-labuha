@@ -55,4 +55,9 @@ return [
         'session' => env('WHATSAPP_SESSION', 'default'),
     ],
 
+    'simpan_mkg' => [
+        'supabase_url' => env('SIMPAN_MKG_SUPABASE_URL', 'https://mnflwzbkprudzhytptao.supabase.co'),
+        'supabase_key' => env('SIMPAN_MKG_SUPABASE_KEY', ''),
+    ],
+
 ];

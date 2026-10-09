@@ -20,7 +20,8 @@ import {
     TrendingUp, 
     UserCheck, 
     Wind,
-    Radio
+    Radio,
+    Share2
 } from 'lucide-react';
 import Performance12MonthChart, { Trend12MonthsData } from '@/components/monitoring/Performance12MonthChart';
 
@@ -48,6 +49,7 @@ interface StaffPerformance {
     avg_delay_minutes: number;
     missing_count: number;
     missing_rate_pct: number;
+    dissemination_count?: number;
     breakdown: {
         sinop: { total: number; timely: number; late: number; missing: number; timely_pct: number; avg_delay: number };
         metar: { total: number; timely: number; late: number; missing: number; timely_pct: number; avg_delay: number };
@@ -71,6 +73,10 @@ interface Props {
         overall_compliance_pct: number;
         top_observer: string;
     };
+    dissemination_summary?: {
+        total: number;
+        daily_avg: number;
+    };
     awos_summary?: {
         total_slots: number;
         timely: number;
@@ -93,7 +99,7 @@ const namaBulan = [
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
 ];
 
-export default function MonitoringIndex({ filters, summary, awos_summary, hourly_delays, staff_rankings, trend_12_months }: Props) {
+export default function MonitoringIndex({ filters, summary, dissemination_summary, awos_summary, hourly_delays, staff_rankings, trend_12_months }: Props) {
     const [selectedBulan, setSelectedBulan] = useState(filters.bulan);
     const [selectedTahun, setSelectedTahun] = useState(filters.tahun);
     const [selectedStaff, setSelectedStaff] = useState<StaffPerformance | null>(null);
@@ -157,7 +163,7 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                 </div>
 
                 {/* Station KPI Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                     <Card className="border-indigo-100 bg-gradient-to-br from-indigo-50/50 to-white">
                         <CardContent className="p-4">
                             <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Total Slot Manual Staf</p>
@@ -198,7 +204,21 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                             <h3 className="text-2xl font-bold text-sky-600 mt-1">
                                 {awos_summary ? `${awos_summary.availability_pct}%` : '100%'}
                             </h3>
-                            <p className="text-xs text-slate-500 mt-1">Status Sensor Otomatis (18:30-05:30 WIT)</p>
+                            <p className="text-xs text-slate-500 mt-1">Status Sensor Otomatis</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-cyan-100 bg-gradient-to-br from-cyan-50/50 to-white">
+                        <CardContent className="p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-cyan-600 flex items-center gap-1">
+                                <Share2 className="h-3.5 w-3.5" /> Diseminasi Cuaca
+                            </p>
+                            <h3 className="text-2xl font-bold text-cyan-700 mt-1">
+                                {dissemination_summary ? `${dissemination_summary.total} Kali` : '0 Kali'}
+                            </h3>
+                            <p className="text-xs text-slate-500 mt-1">
+                                {dissemination_summary?.daily_avg ?? 0} rilis / hari (SIMPAN-MKG)
+                            </p>
                         </CardContent>
                     </Card>
                 </div>
@@ -258,6 +278,7 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                                 <TableHead className="text-center">Total Slot</TableHead>
                                 <TableHead className="w-[180px]">Ketepatan Waktu (%)</TableHead>
                                 <TableHead className="text-center">Breakdown (Sinop / METAR / PPAA / PPBB / TAFOR)</TableHead>
+                                <TableHead className="text-center">Diseminasi Cuaca</TableHead>
                                 <TableHead className="text-center">Terlambat</TableHead>
                                 <TableHead className="text-center">Rata-rata Delay</TableHead>
                                 <TableHead className="text-center">Missing Data</TableHead>
@@ -268,7 +289,7 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                         <TableBody>
                             {staff_rankings.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="text-center py-10 text-slate-500">
+                                    <TableCell colSpan={10} className="text-center py-10 text-slate-500">
                                         Belum ada data pengamatan untuk periode ini.
                                     </TableCell>
                                 </TableRow>
@@ -328,6 +349,12 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                                         </TableCell>
 
                                         <TableCell className="text-center">
+                                            <Badge variant="secondary" className="bg-cyan-50 text-cyan-700 border-cyan-200 font-semibold">
+                                                {item.dissemination_count ?? 0} kali
+                                            </Badge>
+                                        </TableCell>
+
+                                        <TableCell className="text-center">
                                             {item.late_count > 0 ? (
                                                 <Badge className="bg-amber-100 text-amber-800">
                                                     {item.late_count}
@@ -384,10 +411,14 @@ export default function MonitoringIndex({ filters, summary, awos_summary, hourly
                             </DialogHeader>
 
                             <div className="py-3 space-y-4">
-                                <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3 rounded-lg border text-xs">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-lg border text-xs">
                                     <div>
                                         <span className="text-slate-500">Total Slot Manual:</span>
                                         <div className="font-bold text-sm text-slate-800">{selectedStaff.total_assigned}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-500">Diseminasi Cuaca:</span>
+                                        <div className="font-bold text-sm text-cyan-700">{selectedStaff.dissemination_count ?? 0} kali</div>
                                     </div>
                                     <div>
                                         <span className="text-slate-500">Total Terlambat:</span>
