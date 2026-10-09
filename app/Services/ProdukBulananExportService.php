@@ -9,6 +9,7 @@ use App\Models\DataMetar;
 use App\Models\DataMetReport;
 use App\Models\DataSinoptik;
 use App\Models\DataTafor;
+use App\Models\DataWxrev;
 use App\Models\Pegawai;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -439,12 +440,57 @@ class ProdukBulananExportService
         if ($sheetWx) {
             $sheetWx->setCellValue('A3', "BULAN  :  {$monthNameUpper} {$tahun}");
 
+            $wxrevRecords = DataWxrev::whereBetween('data_timestamp', [$startDate, $endDate])->get();
+            $wxrevMap = [];
+            foreach ($wxrevRecords as $r) {
+                $rawStr = is_string($r->data_timestamp) ? $r->data_timestamp : $r->data_timestamp->format('Y-m-d H:i:s');
+                $day = Carbon::parse($rawStr, 'UTC')->day;
+                $wxrevMap[$day] = $r;
+            }
+
+            for ($day = 1; $day <= 31; $day++) {
+                $row = 7 + $day;
+                if ($day <= $daysInMonth) {
+                    $sheetWx->setCellValue("A{$row}", $day);
+                    $rec = $wxrevMap[$day] ?? null;
+                    if ($rec) {
+                        $sheetWx->setCellValue("B{$row}", $rec->mmyygp ?? '-');
+                        $sheetWx->setCellValue("C{$row}", $rec->attxtxtntn ?? '-');
+                        $sheetWx->setCellValue("D{$row}", $rec->appxpxpnpn ?? '-');
+                        $sheetWx->setCellValue("E{$row}", $rec->auuxuxunun ?? '-');
+                        $sheetWx->setCellValue("F{$row}", $rec->arrrrr ?? '-');
+                        $sheetWx->setCellValue("G{$row}", $rec->rdrddfmfm1 ?? '-');
+                        $sheetWx->setCellValue("H{$row}", '-');
+                        $sheetWx->setCellValue("I{$row}", $rec->jam_kirim ?? '00,00Z VST');
+                    } else {
+                        $sheetWx->setCellValue("B{$row}", '-');
+                        $sheetWx->setCellValue("C{$row}", '-');
+                        $sheetWx->setCellValue("D{$row}", '-');
+                        $sheetWx->setCellValue("E{$row}", '-');
+                        $sheetWx->setCellValue("F{$row}", '-');
+                        $sheetWx->setCellValue("G{$row}", '-');
+                        $sheetWx->setCellValue("H{$row}", '-');
+                        $sheetWx->setCellValue("I{$row}", '-');
+                    }
+                } else {
+                    $sheetWx->setCellValue("A{$row}", null);
+                    $sheetWx->setCellValue("B{$row}", null);
+                    $sheetWx->setCellValue("C{$row}", null);
+                    $sheetWx->setCellValue("D{$row}", null);
+                    $sheetWx->setCellValue("E{$row}", null);
+                    $sheetWx->setCellValue("F{$row}", null);
+                    $sheetWx->setCellValue("G{$row}", null);
+                    $sheetWx->setCellValue("H{$row}", null);
+                    $sheetWx->setCellValue("I{$row}", null);
+                }
+            }
+
             // Signatures
-            $sheetWx->setCellValue('F42', $tanggalDownload);
-            $sheetWx->setCellValue('B43', 'Pembuat Laporan,');
-            $sheetWx->setCellValue('F43', 'Kepala,');
-            $sheetWx->setCellValue('B47', $pembuatLaporan);
-            $sheetWx->setCellValue('F47', $namaKepala);
+            $sheetWx->setCellValue('F41', $tanggalDownload);
+            $sheetWx->setCellValue('B42', 'Pembuat Laporan,');
+            $sheetWx->setCellValue('F42', 'Kepala,');
+            $sheetWx->setCellValue('B46', $pembuatLaporan);
+            $sheetWx->setCellValue('F46', $namaKepala);
         }
 
         return $spreadsheet;

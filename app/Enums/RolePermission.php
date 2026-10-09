@@ -28,6 +28,7 @@ class RolePermission
     public const LAPORAN_FLIGHT_DOCUMENT = 'laporan.flight_document';
     public const LAPORAN_FLIGHT = 'laporan.flight';
     public const LAPORAN_PRODUK_BULANAN = 'laporan.produk_bulanan';
+    public const LAPORAN_WXREV = 'laporan.wxrev';
 
     public const WHATSAPP_MANAGE = 'whatsapp.manage';
 
@@ -64,6 +65,7 @@ class RolePermission
                 self::LAPORAN_FLIGHT_DOCUMENT => 'Kelola Flight Document (Sync / Input / Delete)',
                 self::LAPORAN_FLIGHT => 'Kelola Data Flight (Import / Input / Export)',
                 self::LAPORAN_PRODUK_BULANAN => 'Kelola Produk Bulanan (Export Excel)',
+                self::LAPORAN_WXREV => 'Kelola Data WXREV (Sync / Export)',
             ],
             'Pengaturan Sistem' => [
                 self::WHATSAPP_MANAGE => 'Pengaturan WhatsApp Gateway',
@@ -104,6 +106,7 @@ class RolePermission
             self::LAPORAN_FLIGHT_DOCUMENT,
             self::LAPORAN_FLIGHT,
             self::LAPORAN_PRODUK_BULANAN,
+            self::LAPORAN_WXREV,
         ];
 
         return match ($role) {

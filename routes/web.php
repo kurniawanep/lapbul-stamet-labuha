@@ -19,6 +19,7 @@ use App\Http\Controllers\SinoptikController;
 use App\Http\Controllers\TaforController;
 use App\Http\Controllers\ThunderstormController;
 use App\Http\Controllers\WhatsAppManagementController;
+use App\Http\Controllers\WxrevController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -249,6 +250,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/laporan/simpan-mkg/export-csv', [SimpanMkgController::class, 'exportCsv'])
         ->middleware('permission:laporan.view')
         ->name('laporan.simpan-mkg.export-csv');
+
+    // Laporan Bulanan - Data WXREV Routes
+    Route::get('/laporan/wxrev', [WxrevController::class, 'index'])
+        ->middleware('permission:laporan.view')
+        ->name('laporan.wxrev');
+    Route::post('/laporan/wxrev/sync', [WxrevController::class, 'sync'])
+        ->middleware('permission:laporan.wxrev')
+        ->name('laporan.wxrev.sync');
+    Route::get('/laporan/wxrev/export-excel', [WxrevController::class, 'exportExcel'])
+        ->middleware('permission:laporan.view')
+        ->name('laporan.wxrev.export-excel');
 
     // Pengaturan WhatsApp Gateway Routes (Teknisi / Super Admin)
     Route::get('/pengaturan/whatsapp', [WhatsAppManagementController::class, 'index'])

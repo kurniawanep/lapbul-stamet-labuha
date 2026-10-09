@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
+    Activity,
     ArrowRight,
     Briefcase,
     Calendar,
@@ -53,6 +54,7 @@ interface LaporanCounts {
     met_report: number;
     flight_document: number;
     flight?: number;
+    wxrev?: number;
 }
 
 interface AirlineStat {
@@ -348,7 +350,7 @@ export default function Dashboard() {
                             <h2 className="text-lg font-bold text-slate-900">Otomasi &amp; Export Laporan Bulanan Meteorologi</h2>
                         </div>
                         <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 text-xs">
-                            10 Modul Meteorologi
+                            11 Modul Meteorologi
                         </Badge>
                     </div>
 
@@ -643,6 +645,33 @@ export default function Dashboard() {
                                 <Link href="/laporan/flight" className="inline-block w-full">
                                     <Button variant="outline" size="sm" className="w-full justify-between text-xs font-semibold">
                                         Lihat Data Flight <ArrowRight className="h-3 w-3" />
+                                    </Button>
+                                </Link>
+                            </CardContent>
+                        </Card>
+
+                        {/* 12. DATA WXREV */}
+                        <Card className="border border-slate-200 shadow-sm hover:shadow-md transition-all bg-white rounded-2xl group">
+                            <CardHeader className="p-4 pb-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                                        <Activity className="h-5 w-5" />
+                                    </div>
+                                    <Badge className="bg-indigo-100 text-indigo-800 border-none text-[10px] font-bold">
+                                        {laporanCounts?.wxrev ?? 0} Hari
+                                    </Badge>
+                                </div>
+                                <CardTitle className="text-sm font-bold text-slate-900 pt-2 group-hover:text-indigo-600 transition-colors">
+                                    Data WXREV
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-1 space-y-3">
+                                <p className="text-[11px] text-slate-500 leading-relaxed">
+                                    Kumpulan berita sandi WXREV, evaluasi parameter ekstrem &amp; template Lapbul.
+                                </p>
+                                <Link href="/laporan/wxrev" className="inline-block w-full">
+                                    <Button variant="outline" size="sm" className="w-full justify-between text-xs font-semibold">
+                                        Lihat WXREV <ArrowRight className="h-3 w-3" />
                                     </Button>
                                 </Link>
                             </CardContent>

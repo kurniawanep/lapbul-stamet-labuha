@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import {
+    Activity,
     Briefcase,
     Calendar,
     CloudRain,
@@ -155,6 +156,11 @@ const allNavItems: NavItem[] = [
                 title: 'SIMPAN-MKG (Diseminasi)',
                 href: '/laporan/simpan-mkg',
                 icon: Share2,
+            },
+            {
+                title: 'Data WXREV',
+                href: '/laporan/wxrev',
+                icon: Activity,
             },
         ],
     },

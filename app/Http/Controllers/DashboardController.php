@@ -12,6 +12,7 @@ use App\Models\DataPerawanan;
 use App\Models\DataPibal;
 use App\Models\DataSinoptik;
 use App\Models\DataTafor;
+use App\Models\DataWxrev;
 use App\Models\Pegawai;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -54,6 +55,7 @@ class DashboardController extends Controller
                   });
             })->where('status', 'Selesai')->count(),
             'flight' => DataFlight::whereBetween('tanggal', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])->count(),
+            'wxrev' => DataWxrev::whereBetween('data_timestamp', [$startDate, $endDate])->count(),
         ];
 
         // 3. Flight Stats Grouped by Maskapai

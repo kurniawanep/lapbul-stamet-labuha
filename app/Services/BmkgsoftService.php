@@ -9,6 +9,7 @@ use App\Models\DataPerawanan;
 use App\Models\DataPibal;
 use App\Models\DataSinoptik;
 use App\Models\DataTafor;
+use App\Models\DataWxrev;
 use Carbon\Carbon;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
@@ -1962,6 +1963,231 @@ class BmkgsoftService
             'failed_count' => $totalFailed,
             'total_fetched' => $totalFetched,
             'message' => "Berhasil menyinkronkan {$totalSynced} dari {$totalFetched} data Penguapan.",
+            'error_reason' => null,
+            'details' => $allDetails,
+        ];
+    }
+
+    /**
+     * Fetch WXREV observation data for a specific date from BMKGSoft API.
+     */
+    public function fetchWxrevDataForDate(string $date, int $stationId = 138): ?array
+    {
+        $token = $this->getToken();
+        if (! $token) {
+            return null;
+        }
+
+        try {
+            $url = "{$this->baseUrl}/api/v21/report/wxrev/station/{$stationId}/date/{$date}/sandi";
+            $response = Http::withoutVerifying()
+                ->timeout(15)
+                ->withHeaders([
+                    'accept' => 'application/json',
+                    'Authorization' => "Bearer {$token}",
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                ])
+                ->get($url);
+
+            if ($response->status() === 401) {
+                $token = $this->getToken(true);
+                if ($token) {
+                    $response = Http::withoutVerifying()
+                        ->timeout(15)
+                        ->withHeaders([
+                            'accept' => 'application/json',
+                            'Authorization' => "Bearer {$token}",
+                            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        ])
+                        ->get($url);
+                }
+            }
+
+            if ($response->successful()) {
+                $payload = $response->json();
+                if (($payload['status'] ?? '') === 'success' && isset($payload['data'])) {
+                    return $payload['data'];
+                }
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            Log::error("WXREV Fetch error for date {$date}: " . $e->getMessage());
+
+            return null;
+        }
+    }
+
+    /**
+     * Fetch WXREV observation data for an entire month using pooled requests.
+     */
+    public function fetchWxrevDataForMonth(int $bulan, int $tahun, int $stationId = 138): array
+    {
+        $token = $this->getToken();
+        if (! $token) {
+            return [
+                'success' => false,
+                'data' => [],
+                'error' => 'Gagal mendapatkan token otentikasi BMKGSoft.',
+            ];
+        }
+
+        $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
+        $daysInMonth = $startDate->daysInMonth;
+
+        $dates = [];
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $dates[] = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
+        }
+
+        $results = [];
+        $dateChunks = array_chunk($dates, 8);
+
+        foreach ($dateChunks as $chunk) {
+            $responses = Http::pool(function (Pool $pool) use ($chunk, $stationId, $token) {
+                $requests = [];
+                foreach ($chunk as $dateStr) {
+                    $requests[$dateStr] = $pool->withoutVerifying()
+                        ->timeout(15)
+                        ->withHeaders([
+                            'accept' => 'application/json',
+                            'Authorization' => "Bearer {$token}",
+                            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        ])
+                        ->get("{$this->baseUrl}/api/v21/report/wxrev/station/{$stationId}/date/{$dateStr}/sandi");
+                }
+
+                return $requests;
+            });
+
+            foreach ($responses as $rIndex => $response) {
+                if ($response instanceof Response && $response->successful()) {
+                    $json = $response->json();
+                    if (($json['status'] ?? '') === 'success' && isset($json['data']) && is_array($json['data'])) {
+                        $dateKey = isset($json['data']['data_timestamp'])
+                            ? Carbon::parse($json['data']['data_timestamp'])->format('Y-m-d')
+                            : ($chunk[$rIndex] ?? (string) $rIndex);
+                        $results[$dateKey] = $json['data'];
+                    }
+                }
+            }
+        }
+
+        return [
+            'success' => true,
+            'data' => $results,
+            'error' => null,
+        ];
+    }
+
+    /**
+     * Sync WXREV observation data into data_wxrev table.
+     */
+    public function syncWxrevData(int $bulan, int $tahun, int $stationId = 138): array
+    {
+        @set_time_limit(180);
+
+        $fetchResult = $this->fetchWxrevDataForMonth($bulan, $tahun, $stationId);
+
+        if (! $fetchResult['success']) {
+            return [
+                'success' => false,
+                'synced_count' => 0,
+                'failed_count' => 0,
+                'total_fetched' => 0,
+                'message' => 'Gagal mengambil data WXREV dari BMKGSoft API.',
+                'error_reason' => $fetchResult['error'],
+                'details' => [],
+            ];
+        }
+
+        $rows = $fetchResult['data'];
+        $totalSynced = 0;
+        $totalFailed = 0;
+        $allDetails = [];
+
+        // Pre-warm observer resolver
+        $startMonth = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
+        $endMonth = $startMonth->copy()->endOfMonth();
+        $this->observerResolver->prewarm($startMonth, $endMonth);
+
+        foreach ($rows as $dateStr => $row) {
+            $rawTs = $row['data_timestamp'] ?? "{$dateStr}T00:00:00Z";
+            $timestamp = Carbon::parse($rawTs, 'UTC')->format('Y-m-d H:i:s');
+
+            $observer = $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC')
+                ?? $this->observerResolver->getForecastOrObserverDutyOfficer($timestamp, 'UTC');
+            $teknisi = $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC');
+            $ppnpn = $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC');
+
+            try {
+                DataWxrev::updateOrCreate(
+                    [
+                        'station_id' => $stationId,
+                        'data_timestamp' => $timestamp,
+                    ],
+                    [
+                        'station_name' => 'Stasiun Meteorologi Oesman Sadik',
+                        'sandi' => $row['sandi'] ?? null,
+                        'mmyygp' => $row['MMYYGp'] ?? null,
+                        'iiiii' => $row['IIiii'] ?? '97460',
+                        'attxtxtntn' => $row['AtTxTxTnTn'] ?? null,
+                        'appxpxpnpn' => $row['ApPxPxPnPn'] ?? null,
+                        'auuxuxunun' => $row['AuUxUxUnUn'] ?? null,
+                        'arrrrr' => $row['ArRRRR'] ?? null,
+                        'rdrddfmfm1' => $row['RDrDDfmfm1'] ?? null,
+                        'rdrddfmfm2' => $row['RDrDDfmfm2'] ?? null,
+                        'jam_kirim' => '00,00Z VST',
+                        'pressure_indicator' => $row['pressure_indicator'] ?? null,
+                        'pressure_max' => $row['pressure_max'] ?? null,
+                        'pressure_min' => $row['pressure_min'] ?? null,
+                        'temperature_indicator' => $row['temperature_indicator'] ?? null,
+                        'temperature_max' => $row['temperature_max'] ?? null,
+                        'temperature_min' => $row['temperature_min'] ?? null,
+                        'relative_humidity_indicator' => $row['relative_humidity_indicator'] ?? null,
+                        'relative_humidity_max' => $row['relative_humidity_max'] ?? null,
+                        'relative_humidity_min' => $row['relative_humidity_min'] ?? null,
+                        'rainfall_indicator' => $row['rainfall_indicator'] ?? null,
+                        'rainfall_24' => $row['rainfall_24'] ?? null,
+                        'number_of_observation' => $row['number_of_observation'] ?? null,
+                        'dominant_wind_direction_1' => $row['dominant_wind_direction_1'] ?? null,
+                        'dominant_wind_direction_2' => $row['dominant_wind_direction_2'] ?? null,
+                        'dominant_wind_speed_1' => $row['dominant_wind_speed_1'] ?? null,
+                        'dominant_wind_speed_2' => $row['dominant_wind_speed_2'] ?? null,
+                        'number_of_dominant_wind_direction_1' => $row['number_of_dominant_wind_direction_1'] ?? null,
+                        'number_of_dominant_wind_direction_2' => $row['number_of_dominant_wind_direction_2'] ?? null,
+                        'observer_name' => $observer ? $observer->nama : null,
+                        'pegawai_id' => $observer ? $observer->id : null,
+                        'teknisi_id' => $teknisi ? $teknisi->id : null,
+                        'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
+                    ]
+                );
+
+                $totalSynced++;
+                $allDetails[] = [
+                    'date' => $dateStr,
+                    'timestamp' => $timestamp,
+                    'status' => 'berhasil',
+                ];
+            } catch (\Exception $e) {
+                $totalFailed++;
+                $allDetails[] = [
+                    'date' => $dateStr,
+                    'timestamp' => $timestamp,
+                    'status' => 'gagal',
+                    'reason' => $e->getMessage(),
+                ];
+            }
+        }
+
+        $totalFetched = count($rows);
+
+        return [
+            'success' => true,
+            'synced_count' => $totalSynced,
+            'failed_count' => $totalFailed,
+            'total_fetched' => $totalFetched,
+            'message' => "Berhasil menyinkronkan {$totalSynced} dari {$totalFetched} data WXREV.",
             'error_reason' => null,
             'details' => $allDetails,
         ];
