@@ -363,14 +363,14 @@ export default function MetarIndex({
                     <div className="absolute top-0 right-0 transform translate-x-12 -translate-y-12 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
                     <div className="space-y-2 z-10">
-                        <div className="flex items-center gap-3">
+                        {/* <div className="flex items-center gap-3">
                             <Badge className="bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-bold px-3 py-1 text-xs shadow-md">
                                 Sandi METAR (WAEL)
                             </Badge>
                             <span className="text-xs text-amber-300 font-mono tracking-widest uppercase">
                                 Stasion Meteorologi Kelas III Oesman Sadik
                             </span>
-                        </div>
+                        </div> */}
 
                         <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
                             <Radio className="h-7 w-7 text-amber-400 animate-pulse" />
@@ -503,9 +503,8 @@ export default function MetarIndex({
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className={`stroke-slate-900 transition-all duration-200 cursor-pointer pointer-events-auto ${
-                                                        hoveredDonutSegment?.label === 'Tepat Waktu' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
-                                                    }`}
+                                                    className={`stroke-slate-900 transition-all duration-200 cursor-pointer pointer-events-auto ${hoveredDonutSegment?.label === 'Tepat Waktu' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                        }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.totalSummary.timely_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset="0"
@@ -525,9 +524,8 @@ export default function MetarIndex({
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className={`stroke-amber-500 transition-all duration-200 cursor-pointer pointer-events-auto ${
-                                                        hoveredDonutSegment?.label === 'Terlambat' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
-                                                    }`}
+                                                    className={`stroke-amber-500 transition-all duration-200 cursor-pointer pointer-events-auto ${hoveredDonutSegment?.label === 'Terlambat' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                        }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.totalSummary.late_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset={`-${(dashboardStats.totalSummary.timely_pct / 100) * 251.2}`}
@@ -547,9 +545,8 @@ export default function MetarIndex({
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className={`stroke-rose-400 transition-all duration-200 cursor-pointer pointer-events-auto ${
-                                                        hoveredDonutSegment?.label === 'Missing' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
-                                                    }`}
+                                                    className={`stroke-rose-400 transition-all duration-200 cursor-pointer pointer-events-auto ${hoveredDonutSegment?.label === 'Missing' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                        }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.totalSummary.missing_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset={`-${((dashboardStats.totalSummary.timely_pct + dashboardStats.totalSummary.late_pct) / 100) * 251.2}`}
@@ -582,9 +579,8 @@ export default function MetarIndex({
                                         {/* Legend with interactive hover */}
                                         <div className="flex items-center justify-center gap-4 sm:gap-6 mt-6">
                                             <div
-                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
-                                                    hoveredDonutSegment?.label === 'Tepat Waktu' ? 'bg-amber-100 ring-1 ring-amber-300' : 'hover:bg-slate-100'
-                                                }`}
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${hoveredDonutSegment?.label === 'Tepat Waktu' ? 'bg-amber-100 ring-1 ring-amber-300' : 'hover:bg-slate-100'
+                                                    }`}
                                                 onMouseEnter={() => setHoveredDonutSegment({
                                                     label: 'Tepat Waktu',
                                                     count: dashboardStats.totalSummary.timely,
@@ -599,9 +595,8 @@ export default function MetarIndex({
                                                 </span>
                                             </div>
                                             <div
-                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
-                                                    hoveredDonutSegment?.label === 'Terlambat' ? 'bg-amber-100 ring-1 ring-amber-300' : 'hover:bg-slate-100'
-                                                }`}
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${hoveredDonutSegment?.label === 'Terlambat' ? 'bg-amber-100 ring-1 ring-amber-300' : 'hover:bg-slate-100'
+                                                    }`}
                                                 onMouseEnter={() => setHoveredDonutSegment({
                                                     label: 'Terlambat',
                                                     count: dashboardStats.totalSummary.late,
@@ -616,9 +611,8 @@ export default function MetarIndex({
                                                 </span>
                                             </div>
                                             <div
-                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
-                                                    hoveredDonutSegment?.label === 'Missing' ? 'bg-rose-100 ring-1 ring-rose-300' : 'hover:bg-slate-100'
-                                                }`}
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${hoveredDonutSegment?.label === 'Missing' ? 'bg-rose-100 ring-1 ring-rose-300' : 'hover:bg-slate-100'
+                                                    }`}
                                                 onMouseEnter={() => setHoveredDonutSegment({
                                                     label: 'Missing',
                                                     count: dashboardStats.totalSummary.missing,
@@ -641,7 +635,7 @@ export default function MetarIndex({
                                             <p className="font-medium">
                                                 Pengiriman berita METAR pada periode{' '}
                                                 <span className="font-bold text-slate-900">{NAMA_BULAN[bulan - 1]} {tahun}</span>{' '}
-                                                mengevaluasi METAR Manual (06.00-18.00 WIT) dan AWOS Auto (18.30-05.30 WIT) dengan batas toleransi tepat waktu :-2 s.d. :+2 menit.
+                                                mengevaluasi METAR Manual (06.00-18.00 WIT) dan AWOS Auto (18.30-05.30 WIT)
                                             </p>
                                         </div>
 
@@ -898,7 +892,7 @@ export default function MetarIndex({
                                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                                             <CardTitle className="text-base font-bold flex items-center gap-2">
                                                 <AlertTriangle className="h-5 w-5 text-amber-400" />
-                                                Rincian Sandi METAR Evaluasi Kepatuhan GTS
+                                                Rincian Sandi METAR Evaluasi Ketepatan Waktu GTS
                                             </CardTitle>
 
                                             {/* Sub-tabs for Missing, Terlambat, Lebih Awal */}

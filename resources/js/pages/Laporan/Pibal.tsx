@@ -353,14 +353,14 @@ export default function PibalIndex({
                 {/* Header Branding */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-gradient-to-r from-slate-900 via-sky-950 to-blue-950 text-white p-6 rounded-2xl shadow-xl">
                     <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
+                        {/* <div className="flex items-center gap-2">
                             <Badge className="bg-amber-500/20 text-amber-200 border-amber-400/30 px-3 py-1 text-xs">
                                 <Sparkles className="h-3.5 w-3.5 mr-1" /> Monitoring Pengiriman PPAA &amp; PPBB
                             </Badge>
                             <Badge className="bg-emerald-500/20 text-emerald-200 border-emerald-400/30 px-3 py-1 text-xs">
                                 Stasiun Meteorologi Oesman Sadik
                             </Badge>
-                        </div>
+                        </div> */}
                         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-2.5">
                             <Wind className="h-7 w-7 text-sky-400 animate-pulse" />
                             Laporan Kinerja &amp; Pengamatan Pibal (PPAA / PPBB)
@@ -476,7 +476,7 @@ export default function PibalIndex({
                             <CardHeader className="bg-slate-900 text-white p-5 border-b">
                                 <CardTitle className="text-xl md:text-2xl font-extrabold flex items-center gap-3">
                                     <PieChartIcon className="h-6 w-6 text-sky-400" />
-                                    Kinerja Pengiriman Berita PPAA &amp; PPBB ({NAMA_BULAN[bulan - 1]} {tahun})
+                                    Rekap Pengiriman Data PPAA &amp; PPBB ({NAMA_BULAN[bulan - 1]} {tahun})
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-6 md:p-8">
@@ -510,9 +510,8 @@ export default function PibalIndex({
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className={`stroke-sky-950 transition-all duration-200 cursor-pointer pointer-events-auto ${
-                                                        hoveredDonutSegment?.label === 'Tepat Waktu' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
-                                                    }`}
+                                                    className={`stroke-sky-950 transition-all duration-200 cursor-pointer pointer-events-auto ${hoveredDonutSegment?.label === 'Tepat Waktu' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                        }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.totalSummary.timely_pct / 100) * 251.2} 251.2`}
                                                     fill="none"
@@ -532,9 +531,8 @@ export default function PibalIndex({
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className={`stroke-blue-600 transition-all duration-200 cursor-pointer pointer-events-auto ${
-                                                        hoveredDonutSegment?.label === 'Terlambat' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
-                                                    }`}
+                                                    className={`stroke-blue-600 transition-all duration-200 cursor-pointer pointer-events-auto ${hoveredDonutSegment?.label === 'Terlambat' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                        }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.totalSummary.late_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset={`-${(dashboardStats.totalSummary.timely_pct / 100) * 251.2}`}
@@ -555,9 +553,8 @@ export default function PibalIndex({
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className={`stroke-sky-400 transition-all duration-200 cursor-pointer pointer-events-auto ${
-                                                        hoveredDonutSegment?.label === 'Missing' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
-                                                    }`}
+                                                    className={`stroke-sky-400 transition-all duration-200 cursor-pointer pointer-events-auto ${hoveredDonutSegment?.label === 'Missing' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                        }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.totalSummary.missing_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset={`-${((dashboardStats.totalSummary.timely_pct + dashboardStats.totalSummary.late_pct) / 100) * 251.2}`}
@@ -590,9 +587,8 @@ export default function PibalIndex({
                                         {/* Legend with interactive hover */}
                                         <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mt-6">
                                             <div
-                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
-                                                    hoveredDonutSegment?.label === 'Tepat Waktu' ? 'bg-sky-100 ring-1 ring-sky-300' : 'hover:bg-slate-100'
-                                                }`}
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${hoveredDonutSegment?.label === 'Tepat Waktu' ? 'bg-sky-100 ring-1 ring-sky-300' : 'hover:bg-slate-100'
+                                                    }`}
                                                 onMouseEnter={() => setHoveredDonutSegment({
                                                     label: 'Tepat Waktu',
                                                     count: dashboardStats.totalSummary.timely,
@@ -607,9 +603,8 @@ export default function PibalIndex({
                                                 </span>
                                             </div>
                                             <div
-                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
-                                                    hoveredDonutSegment?.label === 'Terlambat' ? 'bg-blue-100 ring-1 ring-blue-300' : 'hover:bg-slate-100'
-                                                }`}
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${hoveredDonutSegment?.label === 'Terlambat' ? 'bg-blue-100 ring-1 ring-blue-300' : 'hover:bg-slate-100'
+                                                    }`}
                                                 onMouseEnter={() => setHoveredDonutSegment({
                                                     label: 'Terlambat',
                                                     count: dashboardStats.totalSummary.late,
@@ -624,9 +619,8 @@ export default function PibalIndex({
                                                 </span>
                                             </div>
                                             <div
-                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
-                                                    hoveredDonutSegment?.label === 'Missing' ? 'bg-sky-100 ring-1 ring-sky-300' : 'hover:bg-slate-100'
-                                                }`}
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${hoveredDonutSegment?.label === 'Missing' ? 'bg-sky-100 ring-1 ring-sky-300' : 'hover:bg-slate-100'
+                                                    }`}
                                                 onMouseEnter={() => setHoveredDonutSegment({
                                                     label: 'Missing',
                                                     count: dashboardStats.totalSummary.missing,
@@ -645,13 +639,13 @@ export default function PibalIndex({
 
                                     {/* Text Narrative & Metric Cards */}
                                     <div className="lg:col-span-6 space-y-6">
-                                        <div className="p-4 bg-sky-50/60 rounded-xl border border-sky-100 text-slate-700 leading-relaxed text-sm">
+                                        {/* <div className="p-4 bg-sky-50/60 rounded-xl border border-sky-100 text-slate-700 leading-relaxed text-sm">
                                             <p className="font-medium">
                                                 Pengiriman berita PPAA dan PPBB pada periode{' '}
                                                 <span className="font-bold text-slate-900">{NAMA_BULAN[bulan - 1]} {tahun}</span>{' '}
                                                 menunjukkan tingkat ketepatan waktu dan kelengkapan data pengamatan angin atas.
                                             </p>
-                                        </div>
+                                        </div> */}
 
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                             {/* Timely Stat Card */}
@@ -1199,7 +1193,7 @@ export default function PibalIndex({
                                     <TableHeader className="bg-slate-100/70 border-b">
                                         <TableRow className="hover:bg-transparent">
                                             <TableHead className="w-12 text-center text-xs font-extrabold text-slate-700">No</TableHead>
-                                            <TableHead className="w-48 text-xs font-extrabold text-slate-700">Waktu Peluncuran (UTC &amp; WIT)</TableHead>
+                                            <TableHead className="w-48 text-xs font-extrabold text-slate-700">Waktu Pengiriman (UTC &amp; WIT)</TableHead>
                                             <TableHead className="w-40 text-center text-xs font-extrabold text-slate-700">Hasil Monitoring GTS</TableHead>
                                             <TableHead className="w-32 text-center text-xs font-extrabold text-slate-700">Angin Permukaan</TableHead>
                                             <TableHead className="w-44 text-xs font-extrabold text-slate-700">Penghentian Pengamatan</TableHead>

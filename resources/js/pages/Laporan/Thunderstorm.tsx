@@ -291,7 +291,7 @@ export default function ThunderstormIndex({
                     <Card className="border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white shadow-sm">
                         <CardContent className="p-5 flex items-center justify-between">
                             <div className="space-y-1">
-                                <p className="text-xs font-semibold text-slate-600">Bulan Paling Aktif ({tahun})</p>
+                                <p className="text-xs font-semibold text-slate-600">Frekuensi TS Terbanyak ({tahun})</p>
                                 <div className="flex items-baseline gap-1.5">
                                     <span className="text-2xl font-black text-amber-600">
                                         {dashboardStats.most_active_month}
@@ -317,12 +317,9 @@ export default function ThunderstormIndex({
                                     <FileText className="w-5 h-5 text-amber-600" />
                                     Matriks Frekuensi Thunderstorm Dalam Sandi WWW1W2 (Tahun {tahun})
                                 </CardTitle>
-                                <p className="text-xs text-slate-600 mt-1">
-                                    Format rekapitulasi standar BMKG (Bulan 1–12 vs Tanggal 1–31)
-                                </p>
                             </div>
                             <Badge variant="outline" className="w-fit bg-amber-50 text-amber-800 border-amber-300 font-bold text-xs">
-                                Total Tahun {tahun}: {yearlyMatrixInfo.yearly_total_days} Hari TS
+                                Total TS {tahun}: {yearlyMatrixInfo.yearly_total_days} Hari
                             </Badge>
                         </div>
                     </CardHeader>
@@ -403,13 +400,13 @@ export default function ThunderstormIndex({
                                     <span className="w-5 h-5 rounded bg-amber-400/30 border border-amber-400/60 text-amber-900 font-extrabold flex items-center justify-center text-xs">
                                         x
                                     </span>
-                                    <span>Ada 1 atau lebih kilat / thunderstorm dalam sandi WWW1W2</span>
+                                    <span>Ada 1 atau lebih thunderstorm dalam sandi WWW1W2</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <span className="w-5 h-5 rounded bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-xs">
                                         -
                                     </span>
-                                    <span>Tidak ada kilat / thunderstorm dalam sandi WWW1W2</span>
+                                    <span>Tidak ada thunderstorm dalam sandi WWW1W2</span>
                                 </div>
                             </div>
 

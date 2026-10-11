@@ -360,14 +360,14 @@ export default function TaforIndex({
                     <div className="absolute top-0 right-0 transform translate-x-12 -translate-y-12 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
                     <div className="space-y-2 z-10">
-                        <div className="flex items-center gap-3">
+                        {/* <div className="flex items-center gap-3">
                             <Badge className="bg-gradient-to-r from-sky-500 to-blue-500 text-white font-bold px-3 py-1 text-xs shadow-md">
                                 Prakiraan Cuaca Bandara (TAFOR)
                             </Badge>
                             <span className="text-xs text-sky-300 font-mono tracking-widest uppercase">
                                 Stasion Meteorologi Kelas III Oesman Sadik (WAEL / 97460)
                             </span>
-                        </div>
+                        </div> */}
 
                         <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
                             <CloudRain className="h-7 w-7 text-sky-400 animate-pulse" />
@@ -508,9 +508,8 @@ export default function TaforIndex({
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className={`stroke-indigo-900 transition-all duration-200 cursor-pointer pointer-events-auto ${
-                                                        hoveredDonutSegment?.label === 'Terkirim' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
-                                                    }`}
+                                                    className={`stroke-indigo-900 transition-all duration-200 cursor-pointer pointer-events-auto ${hoveredDonutSegment?.label === 'Terkirim' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                        }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.summary.timely_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset="0"
@@ -530,9 +529,8 @@ export default function TaforIndex({
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className={`stroke-rose-400 transition-all duration-200 cursor-pointer pointer-events-auto ${
-                                                        hoveredDonutSegment?.label === 'Missing' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
-                                                    }`}
+                                                    className={`stroke-rose-400 transition-all duration-200 cursor-pointer pointer-events-auto ${hoveredDonutSegment?.label === 'Missing' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                        }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.summary.missing_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset={`-${(dashboardStats.summary.timely_pct / 100) * 251.2}`}
@@ -565,9 +563,8 @@ export default function TaforIndex({
                                         {/* Legend with interactive hover */}
                                         <div className="flex items-center justify-center gap-4 sm:gap-6 mt-6">
                                             <div
-                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
-                                                    hoveredDonutSegment?.label === 'Terkirim' ? 'bg-indigo-100 ring-1 ring-indigo-300' : 'hover:bg-slate-100'
-                                                }`}
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${hoveredDonutSegment?.label === 'Terkirim' ? 'bg-indigo-100 ring-1 ring-indigo-300' : 'hover:bg-slate-100'
+                                                    }`}
                                                 onMouseEnter={() => setHoveredDonutSegment({
                                                     label: 'Terkirim',
                                                     count: dashboardStats.summary.timely,
@@ -582,9 +579,8 @@ export default function TaforIndex({
                                                 </span>
                                             </div>
                                             <div
-                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
-                                                    hoveredDonutSegment?.label === 'Missing' ? 'bg-rose-100 ring-1 ring-rose-300' : 'hover:bg-slate-100'
-                                                }`}
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${hoveredDonutSegment?.label === 'Missing' ? 'bg-rose-100 ring-1 ring-rose-300' : 'hover:bg-slate-100'
+                                                    }`}
                                                 onMouseEnter={() => setHoveredDonutSegment({
                                                     label: 'Missing',
                                                     count: dashboardStats.summary.missing,

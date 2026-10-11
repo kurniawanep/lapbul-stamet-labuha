@@ -43,14 +43,14 @@ class SimpanMkgController extends Controller
         $endDate = $startDate->copy()->endOfMonth();
 
         $query = DataDiseminasiMkg::with(['pegawai', 'shift'])
-            ->whereBetween('dissemination_timestamp', [$startDate, $endDate]);
+            ->whereBetween('dissemination_timestamp', [$startDate, $endDate])
+            ->whereHas('pegawai', function ($q) {
+                $q->where('role', 'LIKE', '%Observer%')
+                  ->orWhere('role', 'LIKE', '%Forecaster%');
+            });
 
         if ($request->filled('pegawai_id') && $request->input('pegawai_id') !== 'ALL') {
-            if ($request->input('pegawai_id') === 'unassigned') {
-                $query->whereNull('pegawai_id');
-            } else {
-                $query->where('pegawai_id', $request->input('pegawai_id'));
-            }
+            $query->where('pegawai_id', $request->input('pegawai_id'));
         }
 
         if ($request->filled('media_type') && $request->input('media_type') !== 'ALL') {
@@ -74,8 +74,10 @@ class SimpanMkgController extends Controller
 
         $dashboardStats = $this->dashboardService->getMonthlyStats($bulan, $tahun);
 
-        $availableStaff = Pegawai::where('role', 'LIKE', '%Observer%')
-            ->orWhere('role', 'LIKE', '%Forecaster%')
+        $availableStaff = Pegawai::where(function ($q) {
+                $q->where('role', 'LIKE', '%Observer%')
+                  ->orWhere('role', 'LIKE', '%Forecaster%');
+            })
             ->orderBy('nama')
             ->get(['id', 'nama', 'nip']);
 
@@ -130,6 +132,10 @@ class SimpanMkgController extends Controller
         $stats = $this->dashboardService->getMonthlyStats($bulan, $tahun);
         $records = DataDiseminasiMkg::with(['pegawai', 'shift'])
             ->whereBetween('dissemination_timestamp', [$startDate, $endDate])
+            ->whereHas('pegawai', function ($q) {
+                $q->where('role', 'LIKE', '%Observer%')
+                  ->orWhere('role', 'LIKE', '%Forecaster%');
+            })
             ->orderBy('dissemination_timestamp', 'asc')
             ->get();
 
@@ -261,6 +267,10 @@ class SimpanMkgController extends Controller
 
         $records = DataDiseminasiMkg::with(['pegawai', 'shift'])
             ->whereBetween('dissemination_timestamp', [$startDate, $endDate])
+            ->whereHas('pegawai', function ($q) {
+                $q->where('role', 'LIKE', '%Observer%')
+                  ->orWhere('role', 'LIKE', '%Forecaster%');
+            })
             ->orderBy('dissemination_timestamp', 'asc')
             ->get();
 

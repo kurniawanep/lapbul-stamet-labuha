@@ -109,7 +109,7 @@ export default function Dashboard() {
 
                     <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                         <div className="space-y-3">
-                            <div className="flex flex-wrap items-center gap-2">
+                            {/* <div className="flex flex-wrap items-center gap-2">
                                 <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/30 px-3 py-1 text-xs font-semibold backdrop-blur-md">
                                     <Sparkles className="h-3.5 w-3.5 mr-1.5 text-blue-400" />
                                     {stationInfo?.nama || 'Stasiun Meteorologi Oesman Sadik'}
@@ -120,7 +120,7 @@ export default function Dashboard() {
                                 <Badge className="bg-amber-500/20 text-amber-300 border-amber-400/30 px-3 py-1 text-xs font-semibold backdrop-blur-md">
                                     {stationInfo?.timezone || 'WIT (UTC+9)'}
                                 </Badge>
-                            </div>
+                            </div> */}
 
                             <h1 className="text-2xl md:text-4xl font-black tracking-tight text-white">
                                 Selamat Datang, {String(user?.nama || user?.name || 'Pegawai BMKG')}!

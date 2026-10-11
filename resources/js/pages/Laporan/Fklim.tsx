@@ -369,23 +369,23 @@ export default function FklimIndex({
                     <div className="absolute top-0 right-0 transform translate-x-12 -translate-y-12 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
                     <div className="space-y-2 z-10">
-                        <div className="flex items-center gap-3">
+                        {/* <div className="flex items-center gap-3">
                             <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold px-3 py-1 text-xs shadow-md">
                                 Data Iklim Harian (FKLIM)
                             </Badge>
                             <span className="text-xs text-amber-300 font-mono tracking-widest uppercase">
                                 Stasion Meteorologi Kelas III Oesman Sadik (WAEL / 97460)
                             </span>
-                        </div>
+                        </div> */}
 
                         <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
                             <Thermometer className="h-7 w-7 text-amber-400 animate-pulse" />
                             Laporan Bulanan Pengamatan FKLIM
                         </h1>
 
-                        <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
+                        {/* <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
                             Rekapitulasi Kepatuhan &amp; Pengiriman Data Iklim Harian.
-                        </p>
+                        </p> */}
                     </div>
 
                     {/* ACTION CONTROLS */}
@@ -523,9 +523,8 @@ export default function FklimIndex({
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className={`stroke-amber-600 transition-all duration-200 cursor-pointer pointer-events-auto ${
-                                                        hoveredDonutSegment?.label === 'Terkirim' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
-                                                    }`}
+                                                    className={`stroke-amber-600 transition-all duration-200 cursor-pointer pointer-events-auto ${hoveredDonutSegment?.label === 'Terkirim' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                        }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.summary.timely_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset="0"
@@ -545,9 +544,8 @@ export default function FklimIndex({
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className={`stroke-rose-400 transition-all duration-200 cursor-pointer pointer-events-auto ${
-                                                        hoveredDonutSegment?.label === 'Missing' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
-                                                    }`}
+                                                    className={`stroke-rose-400 transition-all duration-200 cursor-pointer pointer-events-auto ${hoveredDonutSegment?.label === 'Missing' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                        }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.summary.missing_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset={`-${(dashboardStats.summary.timely_pct / 100) * 251.2}`}
@@ -580,9 +578,8 @@ export default function FklimIndex({
                                         {/* Legend with interactive hover */}
                                         <div className="flex items-center justify-center gap-4 sm:gap-6 mt-6">
                                             <div
-                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
-                                                    hoveredDonutSegment?.label === 'Terkirim' ? 'bg-amber-100 ring-1 ring-amber-300' : 'hover:bg-slate-100'
-                                                }`}
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${hoveredDonutSegment?.label === 'Terkirim' ? 'bg-amber-100 ring-1 ring-amber-300' : 'hover:bg-slate-100'
+                                                    }`}
                                                 onMouseEnter={() => setHoveredDonutSegment({
                                                     label: 'Terkirim',
                                                     count: dashboardStats.summary.timely,
@@ -597,9 +594,8 @@ export default function FklimIndex({
                                                 </span>
                                             </div>
                                             <div
-                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
-                                                    hoveredDonutSegment?.label === 'Missing' ? 'bg-rose-100 ring-1 ring-rose-300' : 'hover:bg-slate-100'
-                                                }`}
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${hoveredDonutSegment?.label === 'Missing' ? 'bg-rose-100 ring-1 ring-rose-300' : 'hover:bg-slate-100'
+                                                    }`}
                                                 onMouseEnter={() => setHoveredDonutSegment({
                                                     label: 'Missing',
                                                     count: dashboardStats.summary.missing,

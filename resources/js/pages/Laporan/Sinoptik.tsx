@@ -352,17 +352,17 @@ export default function SinoptikIndex({
                 {/* Header Branding */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-gradient-to-r from-slate-900 via-sky-950 to-blue-950 text-white p-6 rounded-2xl shadow-xl">
                     <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
+                        {/* <div className="flex items-center gap-2">
                             <Badge className="bg-amber-500/20 text-amber-200 border-amber-400/30 px-3 py-1 text-xs">
                                 <Sparkles className="h-3.5 w-3.5 mr-1" /> Monitoring Kinerja SYNOP
                             </Badge>
                             <Badge className="bg-emerald-500/20 text-emerald-200 border-emerald-400/30 px-3 py-1 text-xs">
                                 Stasiun Meteorologi Oesman Sadik
                             </Badge>
-                        </div>
+                        </div> */}
                         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-2.5">
                             <Sun className="h-7 w-7 text-amber-400 animate-pulse" />
-                            Laporan Kinerja &amp; Pengamatan Sinoptik (SYNOP AAXX)
+                            Laporan Pengamatan Sinoptik (SYNOP AAXX)
                         </h1>
                         <p className="text-slate-300 text-sm">
                             Rekapitulasi Ketepatan Waktu GTS &amp; Evaluasi Pengiriman Berita Sinoptik (WMO ID: 97460)
@@ -428,7 +428,7 @@ export default function SinoptikIndex({
                             }`}
                     >
                         <LayoutDashboard className="h-4 w-4 text-amber-400" />
-                        Dashboard Monitoring Kinerja SYNOP
+                        Dashboard Monitoring Pengiriman SYNOP
                     </Button>
                     <Button
                         variant={activeTab === 'records' ? 'default' : 'ghost'}
@@ -485,9 +485,8 @@ export default function SinoptikIndex({
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className={`stroke-sky-900 transition-all duration-200 cursor-pointer pointer-events-auto ${
-                                                        hoveredDonutSegment?.label === 'Tepat Waktu' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
-                                                    }`}
+                                                    className={`stroke-sky-900 transition-all duration-200 cursor-pointer pointer-events-auto ${hoveredDonutSegment?.label === 'Tepat Waktu' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                        }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.totalSummary.timely_pct / 100) * 251.2} 251.2`}
                                                     fill="none"
@@ -507,9 +506,8 @@ export default function SinoptikIndex({
                                                     cx="50"
                                                     cy="50"
                                                     r="40"
-                                                    className={`stroke-sky-400 transition-all duration-200 cursor-pointer pointer-events-auto ${
-                                                        hoveredDonutSegment?.label === 'Terlambat' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
-                                                    }`}
+                                                    className={`stroke-sky-400 transition-all duration-200 cursor-pointer pointer-events-auto ${hoveredDonutSegment?.label === 'Terlambat' ? 'stroke-[19px] brightness-125' : 'hover:stroke-[18px]'
+                                                        }`}
                                                     strokeWidth="16"
                                                     strokeDasharray={`${(dashboardStats.totalSummary.late_pct / 100) * 251.2} 251.2`}
                                                     strokeDashoffset={`-${(dashboardStats.totalSummary.timely_pct / 100) * 251.2}`}
@@ -542,9 +540,8 @@ export default function SinoptikIndex({
                                         {/* Legend with interactive hover */}
                                         <div className="flex items-center justify-center gap-4 sm:gap-6 mt-6">
                                             <div
-                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
-                                                    hoveredDonutSegment?.label === 'Tepat Waktu' ? 'bg-sky-100 ring-1 ring-sky-300' : 'hover:bg-slate-100'
-                                                }`}
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${hoveredDonutSegment?.label === 'Tepat Waktu' ? 'bg-sky-100 ring-1 ring-sky-300' : 'hover:bg-slate-100'
+                                                    }`}
                                                 onMouseEnter={() => setHoveredDonutSegment({
                                                     label: 'Tepat Waktu',
                                                     count: dashboardStats.totalSummary.timely,
@@ -559,9 +556,8 @@ export default function SinoptikIndex({
                                                 </span>
                                             </div>
                                             <div
-                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
-                                                    hoveredDonutSegment?.label === 'Terlambat' ? 'bg-blue-100 ring-1 ring-blue-300' : 'hover:bg-slate-100'
-                                                }`}
+                                                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg cursor-pointer transition-all ${hoveredDonutSegment?.label === 'Terlambat' ? 'bg-blue-100 ring-1 ring-blue-300' : 'hover:bg-slate-100'
+                                                    }`}
                                                 onMouseEnter={() => setHoveredDonutSegment({
                                                     label: 'Terlambat',
                                                     count: dashboardStats.totalSummary.late,

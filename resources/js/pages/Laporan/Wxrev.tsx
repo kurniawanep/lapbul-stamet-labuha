@@ -247,18 +247,18 @@ export default function WxrevIndex() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 tracking-wide uppercase">
+                            {/* <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 tracking-wide uppercase">
                                 Observasi Sandi
-                            </span>
-                            <span className="text-xs text-slate-500 font-medium">Stamet Oesman Sadik (138)</span>
+                            </span> */}
+                            {/* <span className="text-xs text-slate-500 font-medium">Stamet Oesman Sadik (138)</span> */}
                         </div>
                         <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
                             <Activity className="h-7 w-7 text-indigo-600" />
                             Laporan Bulanan WXREV
                         </h1>
-                        <p className="text-sm text-slate-500 mt-1">
+                        {/* <p className="text-sm text-slate-500 mt-1">
                             Kumpulan Berita WXREV &bull; Periode: <span className="font-semibold text-slate-700">{NAMA_BULAN[bulan - 1]} {tahun}</span>
-                        </p>
+                        </p> */}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
@@ -598,16 +598,14 @@ export default function WxrevIndex() {
                                     <div
                                         key={m.month_num}
                                         onClick={() => handleMonthYearChange(m.month_num, tahun)}
-                                        className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                                            m.month_num === bulan
-                                                ? 'bg-indigo-50/80 border-indigo-300 shadow-sm'
-                                                : 'bg-slate-50/50 border-slate-200/70 hover:bg-slate-100/60'
-                                        }`}
+                                        className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${m.month_num === bulan
+                                            ? 'bg-indigo-50/80 border-indigo-300 shadow-sm'
+                                            : 'bg-slate-50/50 border-slate-200/70 hover:bg-slate-100/60'
+                                            }`}
                                     >
                                         <div className="flex items-center gap-2.5">
-                                            <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-extrabold ${
-                                                m.month_num === bulan ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-700'
-                                            }`}>
+                                            <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-extrabold ${m.month_num === bulan ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-700'
+                                                }`}>
                                                 {m.month_name}
                                             </span>
                                             <div>
@@ -639,9 +637,9 @@ export default function WxrevIndex() {
                                 <FileSpreadsheet className="h-5 w-5 text-indigo-600" />
                                 Kumpulan Berita Sandi WXREV ({NAMA_BULAN[bulan - 1]} {tahun})
                             </CardTitle>
-                            <p className="text-xs text-slate-500 mt-1">
+                            {/* <p className="text-xs text-slate-500 mt-1">
                                 Format tabel disesuaikan dengan template resmi <span className="font-mono font-medium">template_lapbul_wxrev.xlsx</span>
-                            </p>
+                            </p> */}
                         </div>
 
                         {/* Search Bar & Sort */}
@@ -777,11 +775,10 @@ export default function WxrevIndex() {
                                                                 </span>
                                                             )}
                                                             {rec.rainfall_24 !== null && (
-                                                                <span className={`px-1.5 py-0.5 rounded border ${
-                                                                    rec.rainfall_24 > 0 && rec.rainfall_24 != 8888 && rec.rainfall_24 != 9999
-                                                                        ? 'bg-cyan-100 text-cyan-800 border-cyan-300 font-bold'
-                                                                        : 'bg-slate-50 text-slate-500 border-slate-200'
-                                                                }`}>
+                                                                <span className={`px-1.5 py-0.5 rounded border ${rec.rainfall_24 > 0 && rec.rainfall_24 != 8888 && rec.rainfall_24 != 9999
+                                                                    ? 'bg-cyan-100 text-cyan-800 border-cyan-300 font-bold'
+                                                                    : 'bg-slate-50 text-slate-500 border-slate-200'
+                                                                    }`}>
                                                                     RR: {rec.rainfall_24 == 8888 ? 'TT' : rec.rainfall_24 == 9999 ? '-' : `${rec.rainfall_24} mm`}
                                                                 </span>
                                                             )}
@@ -833,13 +830,12 @@ export default function WxrevIndex() {
                                             disabled={!link.url || link.active}
                                             onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
                                             dangerouslySetInnerHTML={{ __html: link.label }}
-                                            className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                                                link.active
-                                                    ? 'bg-indigo-600 text-white'
-                                                    : link.url
+                                            className={`px-3 py-1.5 rounded-lg font-medium transition-all ${link.active
+                                                ? 'bg-indigo-600 text-white'
+                                                : link.url
                                                     ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                                                     : 'text-slate-300 cursor-not-allowed'
-                                            }`}
+                                                }`}
                                         />
                                     ))}
                                 </div>

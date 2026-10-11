@@ -149,16 +149,16 @@ export default function PenguapanIndex() {
 
                     <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                         <div className="space-y-2">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-semibold backdrop-blur-md">
+                            {/* <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-semibold backdrop-blur-md">
                                 <Droplets className="h-3.5 w-3.5 text-teal-400" />
                                 <span>Pengamatan Penguapan (Open Pan Evaporation)</span>
-                            </div>
+                            </div> */}
                             <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
                                 Laporan Bulanan Penguapan
                             </h1>
-                            <p className="text-slate-300 text-xs md:text-sm max-w-xl">
+                            {/* <p className="text-slate-300 text-xs md:text-sm max-w-xl">
                                 Stasiun Meteorologi Oesman Sadik Halmahera Selatan
-                            </p>
+                            </p> */}
                         </div>
 
                         {/* CONTROLS */}

@@ -324,7 +324,7 @@ export default function FlightIndex({
                     <div className="absolute bottom-0 left-0 transform -translate-x-12 translate-y-12 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
                     <div className="space-y-2 z-10">
-                        <div className="flex flex-wrap items-center gap-2">
+                        {/* <div className="flex flex-wrap items-center gap-2">
                             <Badge className="bg-gradient-to-r from-sky-500 to-blue-500 text-slate-950 font-bold px-3 py-1 text-xs shadow-md">
                                 <Sparkles className="h-3 w-3 mr-1 inline" />
                                 Log &amp; Monitoring Pergerakan Pesawat
@@ -332,16 +332,16 @@ export default function FlightIndex({
                             <span className="text-xs text-sky-300 font-mono tracking-widest uppercase">
                                 Stasiun Meteorologi Kelas III Oesman Sadik (WAEL / LAH)
                             </span>
-                        </div>
+                        </div> */}
 
                         <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
                             <Plane className="h-7 w-7 text-sky-400" />
                             Data Penerbangan (Flight Data)
                         </h1>
 
-                        <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
+                        {/* <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
                             Rekapitulasi pergerakan pesawat udara, kedatangan, keberangkatan, dan jadwal maskapai di Bandara Oesman Sadik untuk periode {namaBulan[selectedMonth - 1]} {selectedYear}.
-                        </p>
+                        </p> */}
                     </div>
 
                     {/* ACTION & FILTER CONTROLS IN HEADER */}
@@ -443,11 +443,10 @@ export default function FlightIndex({
                                 applyFilters(selectedMonth, selectedYear, selectedMaskapai, 'all', searchQuery);
                             }
                         }}
-                        className={`cursor-pointer transition-all shadow-sm ${
-                            selectedType === 'all'
-                                ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md'
-                                : 'border-border/60 hover:border-blue-500/40'
-                        }`}
+                        className={`cursor-pointer transition-all shadow-sm ${selectedType === 'all'
+                            ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md'
+                            : 'border-border/60 hover:border-blue-500/40'
+                            }`}
                     >
                         <CardContent className="p-5 flex items-center justify-between">
                             <div>
@@ -480,11 +479,10 @@ export default function FlightIndex({
                             setSelectedType(nextType);
                             applyFilters(selectedMonth, selectedYear, selectedMaskapai, nextType, searchQuery);
                         }}
-                        className={`cursor-pointer transition-all shadow-sm ${
-                            selectedType === 'departure'
-                                ? 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-500/5 shadow-md'
-                                : 'border-border/60 hover:border-amber-500/40'
-                        }`}
+                        className={`cursor-pointer transition-all shadow-sm ${selectedType === 'departure'
+                            ? 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-500/5 shadow-md'
+                            : 'border-border/60 hover:border-amber-500/40'
+                            }`}
                     >
                         <CardContent className="p-5 flex items-center justify-between">
                             <div>
@@ -517,11 +515,10 @@ export default function FlightIndex({
                             setSelectedType(nextType);
                             applyFilters(selectedMonth, selectedYear, selectedMaskapai, nextType, searchQuery);
                         }}
-                        className={`cursor-pointer transition-all shadow-sm ${
-                            selectedType === 'landing'
-                                ? 'border-emerald-500 ring-2 ring-emerald-500/30 bg-emerald-500/5 shadow-md'
-                                : 'border-border/60 hover:border-emerald-500/40'
-                        }`}
+                        className={`cursor-pointer transition-all shadow-sm ${selectedType === 'landing'
+                            ? 'border-emerald-500 ring-2 ring-emerald-500/30 bg-emerald-500/5 shadow-md'
+                            : 'border-border/60 hover:border-emerald-500/40'
+                            }`}
                     >
                         <CardContent className="p-5 flex items-center justify-between">
                             <div>
@@ -598,11 +595,10 @@ export default function FlightIndex({
                                             setSelectedMaskapai(nextMaskapai);
                                             applyFilters(selectedMonth, selectedYear, nextMaskapai, selectedType, searchQuery);
                                         }}
-                                        className={`cursor-pointer transition-all duration-200 rounded-2xl p-5 border ${
-                                            isSelected
-                                                ? 'bg-gradient-to-br from-indigo-900 to-slate-900 text-white border-indigo-500 shadow-md ring-2 ring-indigo-500'
-                                                : 'bg-card hover:border-indigo-300 dark:hover:border-indigo-700 border-border/60 shadow-sm text-foreground hover:shadow-md'
-                                        }`}
+                                        className={`cursor-pointer transition-all duration-200 rounded-2xl p-5 border ${isSelected
+                                            ? 'bg-gradient-to-br from-indigo-900 to-slate-900 text-white border-indigo-500 shadow-md ring-2 ring-indigo-500'
+                                            : 'bg-card hover:border-indigo-300 dark:hover:border-indigo-700 border-border/60 shadow-sm text-foreground hover:shadow-md'
+                                            }`}
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="space-y-1">
@@ -621,9 +617,8 @@ export default function FlightIndex({
                                             </div>
 
                                             <div className="text-right">
-                                                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                                                    isSelected ? 'bg-white/10 text-slate-200' : 'bg-muted text-muted-foreground'
-                                                }`}>
+                                                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${isSelected ? 'bg-white/10 text-slate-200' : 'bg-muted text-muted-foreground'
+                                                    }`}>
                                                     {g.unique_aircraft_count} Pesawat (Reg)
                                                 </span>
                                             </div>
@@ -647,17 +642,15 @@ export default function FlightIndex({
                                                 {g.unique_aircrafts.slice(0, 5).map((reg) => (
                                                     <span
                                                         key={reg}
-                                                        className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                                                            isSelected ? 'bg-white/20 text-white' : 'bg-muted text-foreground'
-                                                        }`}
+                                                        className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isSelected ? 'bg-white/20 text-white' : 'bg-muted text-foreground'
+                                                            }`}
                                                     >
                                                         {reg}
                                                     </span>
                                                 ))}
                                                 {g.unique_aircrafts.length > 5 && (
-                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                                                        isSelected ? 'bg-white/10 text-slate-300' : 'bg-muted/60 text-muted-foreground'
-                                                    }`}>
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${isSelected ? 'bg-white/10 text-slate-300' : 'bg-muted/60 text-muted-foreground'
+                                                        }`}>
                                                         +{g.unique_aircrafts.length - 5} lainnya
                                                     </span>
                                                 )}
@@ -689,17 +682,15 @@ export default function FlightIndex({
                                 <div
                                     key={d.day}
                                     title={`Tgl ${d.day}: ${d.count} penerbangan`}
-                                    className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-center transition-all ${
-                                        d.count > 0
-                                            ? 'bg-sky-50/80 dark:bg-sky-950/40 border-sky-300 dark:border-sky-800 text-sky-900 dark:text-sky-200 font-semibold'
-                                            : 'bg-muted/20 border-border/40 text-muted-foreground'
-                                    }`}
+                                    className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-center transition-all ${d.count > 0
+                                        ? 'bg-sky-50/80 dark:bg-sky-950/40 border-sky-300 dark:border-sky-800 text-sky-900 dark:text-sky-200 font-semibold'
+                                        : 'bg-muted/20 border-border/40 text-muted-foreground'
+                                        }`}
                                 >
                                     <span className="text-[10px] text-muted-foreground">Tgl</span>
                                     <span className="text-xs font-bold text-foreground">{d.day}</span>
-                                    <span className={`text-[10px] mt-0.5 px-1 rounded-md ${
-                                        d.count > 0 ? 'bg-sky-600 text-white font-bold' : 'text-muted-foreground/60'
-                                    }`}>
+                                    <span className={`text-[10px] mt-0.5 px-1 rounded-md ${d.count > 0 ? 'bg-sky-600 text-white font-bold' : 'text-muted-foreground/60'
+                                        }`}>
                                         {d.count}
                                     </span>
                                 </div>
@@ -888,19 +879,17 @@ export default function FlightIndex({
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-1">
-                                                        <span className={`font-mono font-bold px-1.5 py-0.5 rounded-md text-[11px] ${
-                                                            isDepLah
-                                                                ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
-                                                                : 'bg-muted text-muted-foreground'
-                                                        }`}>
+                                                        <span className={`font-mono font-bold px-1.5 py-0.5 rounded-md text-[11px] ${isDepLah
+                                                            ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
+                                                            : 'bg-muted text-muted-foreground'
+                                                            }`}>
                                                             {row.dep || '?'}
                                                         </span>
                                                         <span className="text-muted-foreground/60">&rarr;</span>
-                                                        <span className={`font-mono font-bold px-1.5 py-0.5 rounded-md text-[11px] ${
-                                                            isArrLah
-                                                                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
-                                                                : 'bg-muted text-muted-foreground'
-                                                        }`}>
+                                                        <span className={`font-mono font-bold px-1.5 py-0.5 rounded-md text-[11px] ${isArrLah
+                                                            ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
+                                                            : 'bg-muted text-muted-foreground'
+                                                            }`}>
                                                             {row.arr || '?'}
                                                         </span>
                                                     </div>
@@ -1025,17 +1014,15 @@ export default function FlightIndex({
                                             importForm.setData('file', e.dataTransfer.files[0]);
                                         }
                                     }}
-                                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
-                                        isDragging
-                                            ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40 ring-2 ring-indigo-300'
-                                            : importForm.data.file
+                                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${isDragging
+                                        ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40 ring-2 ring-indigo-300'
+                                        : importForm.data.file
                                             ? 'border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/20'
                                             : 'border-border hover:border-indigo-500 bg-muted/20 hover:bg-indigo-50/30'
-                                    }`}
+                                        }`}
                                 >
-                                    <FileSpreadsheet className={`h-10 w-10 mx-auto mb-2 ${
-                                        importForm.data.file ? 'text-emerald-600' : 'text-indigo-500'
-                                    }`} />
+                                    <FileSpreadsheet className={`h-10 w-10 mx-auto mb-2 ${importForm.data.file ? 'text-emerald-600' : 'text-indigo-500'
+                                        }`} />
 
                                     {importForm.data.file ? (
                                         <div className="space-y-1">

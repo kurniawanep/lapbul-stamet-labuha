@@ -484,11 +484,10 @@ export default function SimpanMkgIndex({
                 <div className="flex border-b border-slate-200 gap-2">
                     <button
                         onClick={() => setActiveTab('rekap')}
-                        className={`flex items-center gap-2 pb-3 px-3 text-sm font-semibold border-b-2 transition-all ${
-                            activeTab === 'rekap'
+                        className={`flex items-center gap-2 pb-3 px-3 text-sm font-semibold border-b-2 transition-all ${activeTab === 'rekap'
                                 ? 'border-blue-600 text-blue-600'
                                 : 'border-transparent text-slate-500 hover:text-slate-800'
-                        }`}
+                            }`}
                     >
                         <Users className="h-4 w-4" />
                         <span>Rekap Pegawai Berdinas</span>
@@ -499,11 +498,10 @@ export default function SimpanMkgIndex({
 
                     <button
                         onClick={() => setActiveTab('tren')}
-                        className={`flex items-center gap-2 pb-3 px-3 text-sm font-semibold border-b-2 transition-all ${
-                            activeTab === 'tren'
+                        className={`flex items-center gap-2 pb-3 px-3 text-sm font-semibold border-b-2 transition-all ${activeTab === 'tren'
                                 ? 'border-blue-600 text-blue-600'
                                 : 'border-transparent text-slate-500 hover:text-slate-800'
-                        }`}
+                            }`}
                     >
                         <TrendingUp className="h-4 w-4" />
                         <span>Distribusi & Tren Harian</span>
@@ -511,11 +509,10 @@ export default function SimpanMkgIndex({
 
                     <button
                         onClick={() => setActiveTab('logs')}
-                        className={`flex items-center gap-2 pb-3 px-3 text-sm font-semibold border-b-2 transition-all ${
-                            activeTab === 'logs'
+                        className={`flex items-center gap-2 pb-3 px-3 text-sm font-semibold border-b-2 transition-all ${activeTab === 'logs'
                                 ? 'border-blue-600 text-blue-600'
                                 : 'border-transparent text-slate-500 hover:text-slate-800'
-                        }`}
+                            }`}
                     >
                         <Layers className="h-4 w-4" />
                         <span>Log Detail Diseminasi</span>
@@ -535,9 +532,9 @@ export default function SimpanMkgIndex({
                                         <CardTitle className="text-base font-bold text-slate-900">
                                             Rekapitulasi Frekuensi Diseminasi per Pegawai Operasional
                                         </CardTitle>
-                                        <CardDescription className="text-xs text-slate-500">
+                                        {/* <CardDescription className="text-xs text-slate-500">
                                             Dihitung otomatis berdasarkan kecocokan waktu diseminasi dengan jadwal dinas pegawai piket (Observer/Forecaster).
-                                        </CardDescription>
+                                        </CardDescription> */}
                                     </div>
                                     <div className="flex items-center gap-2 text-xs text-slate-500">
                                         <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-400"></span> Pagi</span>
@@ -575,11 +572,10 @@ export default function SimpanMkgIndex({
                                                         <TableRow key={staff.pegawai_id} className="hover:bg-slate-50/80 transition-colors">
                                                             <TableCell className="text-center font-medium">
                                                                 {isTop3 ? (
-                                                                    <span className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold ${
-                                                                        index === 0 ? 'bg-amber-100 text-amber-800 border border-amber-300' :
-                                                                        index === 1 ? 'bg-slate-200 text-slate-800 border border-slate-300' :
-                                                                        'bg-orange-100 text-orange-800 border border-orange-300'
-                                                                    }`}>
+                                                                    <span className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold ${index === 0 ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                                                                            index === 1 ? 'bg-slate-200 text-slate-800 border border-slate-300' :
+                                                                                'bg-orange-100 text-orange-800 border border-orange-300'
+                                                                        }`}>
                                                                         {index + 1}
                                                                     </span>
                                                                 ) : (
@@ -807,11 +803,10 @@ export default function SimpanMkgIndex({
                                         return (
                                             <div
                                                 key={item.day}
-                                                className={`p-2.5 rounded-xl border text-center transition-all ${
-                                                    hasActivity
+                                                className={`p-2.5 rounded-xl border text-center transition-all ${hasActivity
                                                         ? 'bg-blue-50/70 border-blue-200 text-blue-900 shadow-xs'
                                                         : 'bg-white border-slate-200/70 text-slate-400'
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="text-[11px] font-semibold text-slate-500">
                                                     Tgl {item.day} ({item.day_name})
@@ -854,7 +849,6 @@ export default function SimpanMkgIndex({
                                             {s.nama}
                                         </SelectItem>
                                     ))}
-                                    <SelectItem value="unassigned" className="text-xs">Luar Shift / Unassigned</SelectItem>
                                 </SelectContent>
                             </Select>
 
@@ -1044,11 +1038,10 @@ export default function SimpanMkgIndex({
                         </DialogHeader>
 
                         <div className="space-y-3 py-2 text-sm">
-                            <div className={`p-3 rounded-xl border text-xs leading-relaxed ${
-                                syncResult?.success
+                            <div className={`p-3 rounded-xl border text-xs leading-relaxed ${syncResult?.success
                                     ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
                                     : 'bg-rose-50 text-rose-900 border-rose-200'
-                            }`}>
+                                }`}>
                                 {syncResult?.message || flashError || flashSuccess}
                             </div>
 

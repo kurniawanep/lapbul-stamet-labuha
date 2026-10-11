@@ -10,17 +10,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { 
-    CheckCircle2, 
-    Clock, 
-    ExternalLink, 
+import {
+    CheckCircle2,
+    Clock,
+    ExternalLink,
     Eye,
-    FileCheck, 
+    FileCheck,
     FileCode,
-    FileText, 
-    MessageSquare, 
-    Search, 
-    Trash2, 
+    FileText,
+    MessageSquare,
+    Search,
+    Trash2,
     Plane,
     Users,
     Calendar
@@ -213,9 +213,9 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                             <FileCheck className="h-7 w-7 text-indigo-600" />
                             Log Flight Document (Dokumen Penerbangan)
                         </h1>
-                        <p className="text-sm text-slate-500 mt-1">
+                        {/* <p className="text-sm text-slate-500 mt-1">
                             Pencatatan riwayat dokumen penerbangan (Flight Document) yang telah diterbitkan dan dikirimkan ke maskapai.
-                        </p>
+                        </p> */}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -325,7 +325,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                 <div>
                                     <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Total Flight Document</p>
                                     <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.total_fd}</h3>
-                                    <p className="text-xs text-slate-500 mt-1">Dokumen penerbangan terbit</p>
+                                    {/* <p className="text-xs text-slate-500 mt-1">Dokumen penerbangan terbit</p> */}
                                 </div>
                                 <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600">
                                     <FileText className="h-6 w-6" />
@@ -340,7 +340,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                 <div>
                                     <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Nomor Penerbangan</p>
                                     <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.unique_flights}</h3>
-                                    <p className="text-xs text-emerald-600 font-medium mt-1">Varian rute terlayani</p>
+                                    {/* <p className="text-xs text-emerald-600 font-medium mt-1">Varian rute terlayani</p> */}
                                 </div>
                                 <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600">
                                     <Plane className="h-6 w-6" />
@@ -349,7 +349,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                         </CardContent>
                     </Card>
 
-                    <Card className="border-sky-100 bg-gradient-to-br from-sky-50/50 to-white">
+                    {/* <Card className="border-sky-100 bg-gradient-to-br from-sky-50/50 to-white">
                         <CardContent className="p-5">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -362,7 +362,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                 </div>
                             </div>
                         </CardContent>
-                    </Card>
+                    </Card> */}
                 </div>
 
                 {/* Filter Controls */}
@@ -434,11 +434,10 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                             <div
                                 key={item.day}
                                 title={`Tanggal ${item.day}: ${item.total_fd} Flight Document`}
-                                className={`p-2 rounded-lg text-center border transition-all ${
-                                    item.total_fd === 0
-                                        ? 'bg-slate-50 border-slate-200 text-slate-400'
-                                        : 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold'
-                                }`}
+                                className={`p-2 rounded-lg text-center border transition-all ${item.total_fd === 0
+                                    ? 'bg-slate-50 border-slate-200 text-slate-400'
+                                    : 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold'
+                                    }`}
                             >
                                 <div className="text-xs font-semibold">{item.day}</div>
                                 <div className="text-[10px] mt-0.5 opacity-80">
@@ -477,88 +476,88 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                         const dt = formatFlightDocTime(item.wa_dispatched_at || item.departure_at);
 
                                         return (
-                                        <TableRow key={item.id} className="hover:bg-slate-50/50">
-                                            <TableCell className="font-mono text-xs font-semibold text-indigo-600">
-                                                {item.no_fd || item.inasiam_fd_id || 'FD-DOC'}
-                                            </TableCell>
+                                            <TableRow key={item.id} className="hover:bg-slate-50/50">
+                                                <TableCell className="font-mono text-xs font-semibold text-indigo-600">
+                                                    {item.no_fd || item.inasiam_fd_id || 'FD-DOC'}
+                                                </TableCell>
 
-                                            <TableCell>
-                                                <div className="font-semibold text-slate-800">{item.flight_number || 'IW-FLIGHT'}</div>
-                                                <div className="text-xs text-slate-500">{item.airline_name || 'Wings Air'}</div>
-                                            </TableCell>
+                                                <TableCell>
+                                                    <div className="font-semibold text-slate-800">{item.flight_number || 'IW-FLIGHT'}</div>
+                                                    <div className="text-xs text-slate-500">{item.airline_name || 'Wings Air'}</div>
+                                                </TableCell>
 
-                                            <TableCell>
-                                                <Badge variant="outline" className="font-mono text-xs bg-slate-100">
-                                                    {item.route || 'WAEL -> WAMM'}
-                                                </Badge>
-                                            </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="font-mono text-xs bg-slate-100">
+                                                        {item.route || 'WAEL -> WAMM'}
+                                                    </Badge>
+                                                </TableCell>
 
-                                            <TableCell className="whitespace-nowrap">
-                                                <div className="flex flex-col text-xs">
-                                                    <span className="font-bold text-slate-900">{dt.wit}</span>
-                                                    <span className="text-[11px] font-mono text-slate-500">{dt.utc}</span>
-                                                </div>
-                                            </TableCell>
-
-                                            <TableCell>
-                                                <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
-                                                    {item.status || 'Selesai'}
-                                                </Badge>
-                                            </TableCell>
-
-                                            <TableCell className="text-xs">
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="text-[10px] uppercase font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">Observer</span>
-                                                        <span className="font-semibold text-slate-900">{item.pegawai?.nama || item.observer_name || '-'}</span>
+                                                <TableCell className="whitespace-nowrap">
+                                                    <div className="flex flex-col text-xs">
+                                                        <span className="font-bold text-slate-900">{dt.wit}</span>
+                                                        <span className="text-[11px] font-mono text-slate-500">{dt.utc}</span>
                                                     </div>
-                                                    <div className="flex items-center gap-1.5 text-[11px] text-slate-600">
-                                                        <span className="text-[10px] uppercase font-bold text-amber-700 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">Teknisi</span>
-                                                        <span>{item.teknisi?.nama || '-'}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                                                        <span className="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">PPNPN</span>
-                                                        <span>{item.ppnpn?.nama || '-'}</span>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
+                                                </TableCell>
 
-                                            <TableCell className="text-right">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => setSelectedFd(item)}
-                                                        className="h-8 w-8 text-slate-500 hover:text-indigo-600"
-                                                        title="Lihat Detail"
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </Button>
+                                                <TableCell>
+                                                    <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
+                                                        {item.status || 'Selesai'}
+                                                    </Badge>
+                                                </TableCell>
 
-                                                    {item.fd_url && (
-                                                        <a
-                                                            href={item.fd_url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="p-1.5 text-slate-500 hover:text-indigo-600"
-                                                            title="Buka Dokumen PDF"
+                                                <TableCell className="text-xs">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-[10px] uppercase font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">Observer</span>
+                                                            <span className="font-semibold text-slate-900">{item.pegawai?.nama || item.observer_name || '-'}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-[11px] text-slate-600">
+                                                            <span className="text-[10px] uppercase font-bold text-amber-700 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">Teknisi</span>
+                                                            <span>{item.teknisi?.nama || '-'}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                                                            <span className="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">PPNPN</span>
+                                                            <span>{item.ppnpn?.nama || '-'}</span>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+
+                                                <TableCell className="text-right">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => setSelectedFd(item)}
+                                                            className="h-8 w-8 text-slate-500 hover:text-indigo-600"
+                                                            title="Lihat Detail"
                                                         >
-                                                            <ExternalLink className="h-4 w-4" />
-                                                        </a>
-                                                    )}
+                                                            <Eye className="h-4 w-4" />
+                                                        </Button>
 
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleDelete(item.id)}
-                                                        className="h-8 w-8 text-slate-400 hover:text-red-600"
-                                                        title="Hapus Log"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
+                                                        {item.fd_url && (
+                                                            <a
+                                                                href={item.fd_url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="p-1.5 text-slate-500 hover:text-indigo-600"
+                                                                title="Buka Dokumen PDF"
+                                                            >
+                                                                <ExternalLink className="h-4 w-4" />
+                                                            </a>
+                                                        )}
+
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => handleDelete(item.id)}
+                                                            className="h-8 w-8 text-slate-400 hover:text-red-600"
+                                                            title="Hapus Log"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
                                         );
                                     })
                                 )}

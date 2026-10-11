@@ -205,9 +205,9 @@ export default function HakAksesIndex({
                             <ShieldCheck className="h-7 w-7 text-primary" />
                             Manajemen Hak Akses & Role
                         </h1>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        {/* <p className="text-sm text-muted-foreground mt-1">
                             Kelola status Super Admin dan kustomisasi izin modul per individu pegawai secara granular.
-                        </p>
+                        </p> */}
                     </div>
                 </div>
 
@@ -504,18 +504,16 @@ export default function HakAksesIndex({
                                             <button
                                                 type="button"
                                                 onClick={() => form.setData('is_custom', false)}
-                                                className={`flex items-start gap-3 p-3 rounded-md border text-left transition-all ${
-                                                    !form.data.is_custom
+                                                className={`flex items-start gap-3 p-3 rounded-md border text-left transition-all ${!form.data.is_custom
                                                         ? 'border-primary bg-primary/5 ring-1 ring-primary'
                                                         : 'border-border bg-card hover:bg-muted/40'
-                                                }`}
+                                                    }`}
                                             >
                                                 <CheckCircle2
-                                                    className={`h-4 w-4 mt-0.5 ${
-                                                        !form.data.is_custom
+                                                    className={`h-4 w-4 mt-0.5 ${!form.data.is_custom
                                                             ? 'text-primary'
                                                             : 'text-muted-foreground'
-                                                    }`}
+                                                        }`}
                                                 />
                                                 <div>
                                                     <div className="font-medium text-sm">Gunakan Default Role</div>
@@ -528,18 +526,16 @@ export default function HakAksesIndex({
                                             <button
                                                 type="button"
                                                 onClick={() => form.setData('is_custom', true)}
-                                                className={`flex items-start gap-3 p-3 rounded-md border text-left transition-all ${
-                                                    form.data.is_custom
+                                                className={`flex items-start gap-3 p-3 rounded-md border text-left transition-all ${form.data.is_custom
                                                         ? 'border-primary bg-primary/5 ring-1 ring-primary'
                                                         : 'border-border bg-card hover:bg-muted/40'
-                                                }`}
+                                                    }`}
                                             >
                                                 <Sliders
-                                                    className={`h-4 w-4 mt-0.5 ${
-                                                        form.data.is_custom
+                                                    className={`h-4 w-4 mt-0.5 ${form.data.is_custom
                                                             ? 'text-primary'
                                                             : 'text-muted-foreground'
-                                                    }`}
+                                                        }`}
                                                 />
                                                 <div>
                                                     <div className="font-medium text-sm">Kustomisasi Izin (Custom)</div>

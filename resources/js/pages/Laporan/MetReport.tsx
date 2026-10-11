@@ -268,21 +268,21 @@ export default function MetReportIndex({
                 {/* Header Branding */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white p-6 rounded-2xl shadow-xl">
                     <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
+                        {/* <div className="flex items-center gap-2">
                             <Badge className="bg-emerald-500/20 text-emerald-200 border-emerald-400/30 px-3 py-1 text-xs">
                                 <MessageSquare className="h-3.5 w-3.5 mr-1" /> WhatsApp Bot Listener &amp; Parser
                             </Badge>
                             <Badge className="bg-cyan-500/20 text-cyan-200 border-cyan-400/30 px-3 py-1 text-xs">
                                 Oesman Sadik Airport (WAEL)
                             </Badge>
-                        </div>
+                        </div> */}
                         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-2.5">
                             <MessageSquare className="h-7 w-7 text-emerald-400 animate-pulse" />
                             MET REPORT (QAM) Recap
                         </h1>
-                        <p className="text-emerald-100/80 text-sm">
+                        {/* <p className="text-emerald-100/80 text-sm">
                             Rekap Otomatis Pesan Informasi Cuaca Bandara
-                        </p>
+                        </p> */}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
@@ -352,7 +352,7 @@ export default function MetReportIndex({
                         <CardContent>
                             <div className="text-2xl font-black text-slate-900">{totalRecords} Records</div>
                             <p className="text-xs text-slate-500 mt-1">
-                                Data terdata bulan {NAMA_BULAN[bulan - 1]} {tahun}
+                                Data bulan {NAMA_BULAN[bulan - 1]} {tahun}
                             </p>
                         </CardContent>
                     </Card>

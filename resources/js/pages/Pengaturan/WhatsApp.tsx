@@ -115,23 +115,23 @@ export default function WhatsAppManagement({ status }: Props) {
                     <div className="absolute top-0 right-0 transform translate-x-12 -translate-y-12 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
                     <div className="space-y-2 z-10">
-                        <div className="flex items-center gap-3">
+                        {/* <div className="flex items-center gap-3">
                             <Badge className="bg-gradient-to-r from-sky-500 to-blue-500 text-white font-bold px-3 py-1 text-xs shadow-md">
                                 Service Management
                             </Badge>
                             <span className="text-xs text-sky-300 font-mono tracking-widest uppercase">
                                 Stasion Meteorologi Kelas III Oesman Sadik (WAEL / 97460)
                             </span>
-                        </div>
+                        </div> */}
 
                         <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
                             <Radio className="h-7 w-7 text-sky-400 animate-pulse" />
                             WhatsApp Gateway Management
                         </h1>
 
-                        <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
+                        {/* <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
                             Pemantauan Status Koneksi 24/7, Pemindaian QR Code, Logout Sesi, dan Pengujian Pengiriman Pesan Outbound.
-                        </p>
+                        </p> */}
                     </div>
 
                     <div className="flex items-center gap-3 z-10 w-full md:w-auto">

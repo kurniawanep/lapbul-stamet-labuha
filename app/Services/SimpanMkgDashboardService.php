@@ -19,6 +19,10 @@ class SimpanMkgDashboardService
 
         $records = DataDiseminasiMkg::with(['pegawai', 'shift'])
             ->whereBetween('dissemination_timestamp', [$startDate, $endDate])
+            ->whereHas('pegawai', function ($q) {
+                $q->where('role', 'LIKE', '%Observer%')
+                  ->orWhere('role', 'LIKE', '%Forecaster%');
+            })
             ->get();
 
         $totalRecords = $records->count();
