@@ -45,19 +45,19 @@ export default function AuthSplitLayout({
                     <Link href={home()} className="flex items-center gap-3 group">
                         <BmkgLogo className="h-10" subtitle="Stasiun Meteorologi Oesman Sadik" lightMode={true} />
                     </Link>
-
+                    {/* 
                     <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 border border-slate-200 text-xs font-mono text-slate-700 shadow-xs backdrop-blur-xs">
                         <Clock className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
                         <span>{currentTime ? `${currentTime} WIT` : 'WIT (UTC+9)'}</span>
-                    </div>
+                    </div> */}
                 </div>
 
                 {/* Center Content / Hero Text */}
                 <div className="relative z-10 my-auto max-w-lg space-y-6 py-8">
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-600/10 border border-blue-200 text-blue-800 text-xs font-semibold backdrop-blur-xs shadow-2xs">
+                    {/* <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-600/10 border border-blue-200 text-blue-800 text-xs font-semibold backdrop-blur-xs shadow-2xs">
                         <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                         <span>Sistem Otomasi Laporan Bulanan & Monitoring Performa Pegawai</span>
-                    </div>
+                    </div> */}
 
                     <h2 className="text-3xl xl:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
                         Stasiun Meteorologi Kelas III{' '}
@@ -100,16 +100,16 @@ export default function AuthSplitLayout({
                         <MapPin className="w-3.5 h-3.5 text-rose-500" />
                         Labuha, Halmahera Selatan
                     </span>
-                    <span className="italic text-slate-500 font-serif">
+                    {/* <span className="italic text-slate-500 font-serif">
                         "Cepat, Tepat, Akurat, Luas, dan Mudah Dipahami"
-                    </span>
+                    </span> */}
                 </div>
             </div>
 
             {/* Right Column - Light Mode Form Container */}
             <div className="lg:col-span-5 flex flex-col justify-center items-center p-6 sm:p-10 relative w-full bg-slate-50/50">
                 {/* Mobile Header (Shown on small screens) */}
-                <div className="w-full max-w-sm lg:hidden flex items-center justify-between mb-8">
+                {/* <div className="w-full max-w-sm lg:hidden flex items-center justify-between mb-8">
                     <Link href={home()}>
                         <BmkgLogo className="h-9" subtitle="BMKG Oesman Sadik" lightMode={true} />
                     </Link>
@@ -117,7 +117,7 @@ export default function AuthSplitLayout({
                         <Clock className="w-3 h-3 text-blue-600 animate-pulse" />
                         <span>WIT</span>
                     </div>
-                </div>
+                </div> */}
 
                 <div className="w-full max-w-sm space-y-6">
                     {/* Header */}
