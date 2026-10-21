@@ -63,8 +63,8 @@ class JadwalController extends Controller
      */
     public function index(Request $request): Response
     {
-        $bulan = (int) $request->input('bulan', 8);
-        $tahun = (int) $request->input('tahun', 2026);
+        $bulan = (int) $request->input('bulan', Carbon::now('Asia/Jayapura')->month);
+        $tahun = (int) $request->input('tahun', Carbon::now('Asia/Jayapura')->year);
 
         $jadwalBulanan = $this->getJadwalBulanan($bulan, $tahun);
 
@@ -100,8 +100,8 @@ class JadwalController extends Controller
      */
     public function teknisiIndex(Request $request): Response
     {
-        $bulan = (int) $request->input('bulan', 8);
-        $tahun = (int) $request->input('tahun', 2026);
+        $bulan = (int) $request->input('bulan', Carbon::now('Asia/Jayapura')->month);
+        $tahun = (int) $request->input('tahun', Carbon::now('Asia/Jayapura')->year);
 
         $jadwalBulanan = $this->getJadwalBulanan($bulan, $tahun);
 
@@ -134,8 +134,8 @@ class JadwalController extends Controller
      */
     public function ppnpnIndex(Request $request): Response
     {
-        $bulan = (int) $request->input('bulan', 8);
-        $tahun = (int) $request->input('tahun', 2026);
+        $bulan = (int) $request->input('bulan', Carbon::now('Asia/Jayapura')->month);
+        $tahun = (int) $request->input('tahun', Carbon::now('Asia/Jayapura')->year);
 
         $jadwalBulanan = $this->getJadwalBulanan($bulan, $tahun);
 
@@ -203,10 +203,17 @@ class JadwalController extends Controller
     /**
      * Helper to fetch matrix data for a monthly schedule.
      */
-    private function getMatrixData(int $jadwalBulananId): array
+    private function getMatrixData(JadwalBulanan|int $jadwalBulanan): array
     {
+        $jb = $jadwalBulanan instanceof JadwalBulanan ? $jadwalBulanan : JadwalBulanan::find($jadwalBulanan);
+        if (!$jb) {
+            return [];
+        }
+
         $details = JadwalDetail::with('shift')
-            ->where('jadwal_bulanan_id', $jadwalBulananId)
+            ->where('jadwal_bulanan_id', $jb->id)
+            ->whereYear('tanggal', $jb->tahun)
+            ->whereMonth('tanggal', $jb->bulan)
             ->get();
 
         $matrix = [];
@@ -720,8 +727,8 @@ class JadwalController extends Controller
      */
     public function exportPdf(Request $request)
     {
-        $bulan = (int) $request->input('bulan', 8);
-        $tahun = (int) $request->input('tahun', 2026);
+        $bulan = (int) $request->input('bulan', Carbon::now('Asia/Jayapura')->month);
+        $tahun = (int) $request->input('tahun', Carbon::now('Asia/Jayapura')->year);
         $category = $request->input('category', 'operasional');
 
         $jadwalBulanan = JadwalBulanan::where('bulan', $bulan)
@@ -748,6 +755,8 @@ class JadwalController extends Controller
 
         $details = JadwalDetail::with('shift')
             ->where('jadwal_bulanan_id', $jadwalBulanan->id)
+            ->whereYear('tanggal', $jadwalBulanan->tahun)
+            ->whereMonth('tanggal', $jadwalBulanan->bulan)
             ->get();
 
         $matrix = [];
