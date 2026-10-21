@@ -189,6 +189,12 @@ export default function ProdukBulanan({
                             Laporan Produk Bulanan ({bulanLabel} {selectedTahun})
                         </h1>
 
+                        <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className="text-[11px] font-mono text-emerald-300 border-emerald-500/30 bg-emerald-950/40">
+                                Standar Waktu: UTC
+                            </Badge>
+                        </div>
+
                         {/* <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
                             Rekapitulasi lengkap pelayanan informasi meteorologi penerbangan (Flight Document, TAFOR, METAR, MET REPORT) serta frekuensi penerbangan maskapai.
                         </p> */}

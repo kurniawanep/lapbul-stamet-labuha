@@ -97,55 +97,41 @@ const bulanIndoShort = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 
 const formatFlightDocTime = (timestampStr: string | null) => {
     if (!timestampStr) {
         return {
-            wit: '-',
             utc: '-',
-            timeWit: '-',
             timeUtc: '-',
-            dateWit: '-',
-            fullWit: '-',
             fullUtc: '-',
         };
     }
 
-    const d = new Date(timestampStr);
-    if (isNaN(d.getTime())) {
+    const cleanStr = timestampStr.split('.')[0].replace('Z', '').replace('T', ' ');
+    const [datePart, timePart] = cleanStr.split(' ');
+
+    if (!datePart) {
         return {
-            wit: timestampStr,
-            utc: '-',
-            timeWit: '-',
+            utc: timestampStr,
             timeUtc: '-',
-            dateWit: '-',
-            fullWit: timestampStr,
-            fullUtc: '-',
+            fullUtc: timestampStr,
         };
     }
 
-    // WIT is UTC + 9 hours
-    const witMs = d.getTime() + (9 * 60 * 60 * 1000);
-    const witDate = new Date(witMs);
+    const [yearStr, monthStr, dayStr] = datePart.split('-');
+    const [hourStr = '00', minStr = '00'] = (timePart || '00:00').split(':');
+
+    const year = parseInt(yearStr, 10);
+    const monthIndex = parseInt(monthStr, 10) - 1;
+    const day = parseInt(dayStr, 10);
+    const utcHours = parseInt(hourStr, 10);
+    const utcMinutes = parseInt(minStr, 10);
 
     const pad = (n: number) => String(n).padStart(2, '0');
-
-    const yearWit = witDate.getUTCFullYear();
-    const monthWitIdx = witDate.getUTCMonth();
-    const dayWit = pad(witDate.getUTCDate());
-    const hoursWit = pad(witDate.getUTCHours());
-    const minsWit = pad(witDate.getUTCMinutes());
-
-    const yearUtc = d.getUTCFullYear();
-    const monthUtcIdx = d.getUTCMonth();
-    const dayUtc = pad(d.getUTCDate());
-    const hoursUtc = pad(d.getUTCHours());
-    const minsUtc = pad(d.getUTCMinutes());
+    const dayUtc = pad(day);
+    const hoursUtc = pad(utcHours);
+    const minsUtc = pad(utcMinutes);
 
     return {
-        wit: `${dayWit} ${bulanIndoShort[monthWitIdx]} ${yearWit}, ${hoursWit}:${minsWit} WIT`,
-        utc: `${dayUtc} ${bulanIndoShort[monthUtcIdx]} ${yearUtc}, ${hoursUtc}:${minsUtc} UTC`,
-        timeWit: `${hoursWit}:${minsWit} WIT`,
+        utc: `${dayUtc} ${bulanIndoShort[monthIndex]} ${year}, ${hoursUtc}:${minsUtc} UTC`,
         timeUtc: `${hoursUtc}:${minsUtc} UTC`,
-        dateWit: `${dayWit} ${bulanIndoShort[monthWitIdx]} ${yearWit}`,
-        fullWit: `${dayWit} ${namaBulan[monthWitIdx]} ${yearWit} pukul ${hoursWit}:${minsWit} WIT`,
-        fullUtc: `${dayUtc} ${namaBulan[monthUtcIdx]} ${yearUtc} pukul ${hoursUtc}:${minsUtc} UTC`,
+        fullUtc: `${dayUtc} ${namaBulan[monthIndex]} ${year} pukul ${hoursUtc}:${minsUtc} UTC`,
     };
 };
 
@@ -457,7 +443,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                                     <TableHead className="w-[180px]">No. FD</TableHead>
                                     <TableHead>Penerbangan & Maskapai</TableHead>
                                     <TableHead>Rute</TableHead>
-                                    <TableHead className="w-[190px]">Waktu Kirim (WIT)</TableHead>
+                                    <TableHead className="w-[190px]">Waktu Kirim (UTC)</TableHead>
                                     <TableHead>Status Dokumen</TableHead>
                                     <TableHead>Petugas Piket (Jadwal Dinas)</TableHead>
                                     <TableHead className="text-right">Aksi</TableHead>
@@ -494,8 +480,7 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
 
                                                 <TableCell className="whitespace-nowrap">
                                                     <div className="flex flex-col text-xs">
-                                                        <span className="font-bold text-slate-900">{dt.wit}</span>
-                                                        <span className="text-[11px] font-mono text-slate-500">{dt.utc}</span>
+                                                        <span className="font-bold text-slate-900 font-mono">{dt.utc}</span>
                                                     </div>
                                                 </TableCell>
 
@@ -620,14 +605,11 @@ export default function FlightDocument({ records, filters, stats, daily_matrix, 
                             </div>
 
                             <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                                <div className="text-slate-500 font-semibold mb-1">Waktu Kirim:</div>
+                                <div className="text-slate-500 font-semibold mb-1">Waktu Kirim (UTC):</div>
                                 <div className="space-y-1">
-                                    <div className="font-bold text-indigo-700 flex items-center gap-1.5">
+                                    <div className="font-bold text-indigo-700 flex items-center gap-1.5 font-mono">
                                         <Clock className="h-3.5 w-3.5 text-indigo-500" />
-                                        <span>{formatFlightDocTime(selectedFd.wa_dispatched_at || selectedFd.departure_at).fullWit}</span>
-                                    </div>
-                                    <div className="text-xs text-slate-500 font-mono">
-                                        {formatFlightDocTime(selectedFd.wa_dispatched_at || selectedFd.departure_at).fullUtc}
+                                        <span>{formatFlightDocTime(selectedFd.wa_dispatched_at || selectedFd.departure_at).fullUtc}</span>
                                     </div>
                                 </div>
                             </div>

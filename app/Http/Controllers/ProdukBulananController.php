@@ -42,7 +42,7 @@ class ProdukBulananController extends Controller
             4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'
         ];
 
-        $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
+        $startDate = Carbon::createFromDate($tahun, $bulan, 1, 'UTC')->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
         $daysInMonth = $startDate->daysInMonth;
 
@@ -56,7 +56,7 @@ class ProdukBulananController extends Controller
         $dailyFd = array_fill(1, 31, 0);
         foreach ($fdRecords as $r) {
             if ($r->departure_at) {
-                $d = Carbon::parse($r->departure_at)->day;
+                $d = Carbon::parse($r->departure_at, 'UTC')->day;
                 if ($d >= 1 && $d <= 31) $dailyFd[$d]++;
             }
         }
@@ -66,7 +66,7 @@ class ProdukBulananController extends Controller
             if ($r->tanggal) {
                 $dep = strtoupper(trim((string)$r->dep));
                 if ($dep === 'LAH' || $dep === 'WAEL') {
-                    $d = Carbon::parse($r->tanggal)->day;
+                    $d = Carbon::parse($r->tanggal, 'UTC')->day;
                     if ($d >= 1 && $d <= 31) $dailyFlightCount[$d]++;
                 }
             }
@@ -75,7 +75,7 @@ class ProdukBulananController extends Controller
         $dailyTafor = array_fill(1, 31, 0);
         foreach ($taforRecords as $r) {
             if ($r->data_timestamp) {
-                $d = Carbon::parse($r->data_timestamp)->day;
+                $d = Carbon::parse($r->data_timestamp, 'UTC')->day;
                 if ($d >= 1 && $d <= 31) $dailyTafor[$d]++;
             }
         }
@@ -84,7 +84,7 @@ class ProdukBulananController extends Controller
         $dailySpeci = array_fill(1, 31, 0);
         foreach ($metarRecords as $r) {
             if ($r->data_timestamp) {
-                $dt = Carbon::parse($r->data_timestamp);
+                $dt = Carbon::parse($r->data_timestamp, 'UTC');
                 $d = $dt->day;
                 if ($d >= 1 && $d <= 31) {
                     $type = strtolower((string)$r->type_message);
@@ -103,14 +103,14 @@ class ProdukBulananController extends Controller
         $dailyMetReport = array_fill(1, 31, 0);
         foreach ($metReportRecords as $r) {
             if ($r->data_timestamp) {
-                $d = Carbon::parse($r->data_timestamp)->day;
+                $d = Carbon::parse($r->data_timestamp, 'UTC')->day;
                 if ($d >= 1 && $d <= 31) $dailyMetReport[$d]++;
             }
         }
 
         $harianData = [];
         for ($d = 1; $d <= $daysInMonth; $d++) {
-            $dtDay = Carbon::createFromDate($tahun, $bulan, $d);
+            $dtDay = Carbon::createFromDate($tahun, $bulan, $d, 'UTC');
             $harianData[] = [
                 'day' => $d,
                 'day_name' => $namaHariIndo[$dtDay->dayOfWeek],
@@ -132,8 +132,8 @@ class ProdukBulananController extends Controller
         }
 
         // 2. Fetch Yearly Data (Jan - Dec)
-        $yearStart = Carbon::createFromDate($tahun, 1, 1)->startOfYear();
-        $yearEnd = Carbon::createFromDate($tahun, 12, 31)->endOfYear();
+        $yearStart = Carbon::createFromDate($tahun, 1, 1, 'UTC')->startOfYear();
+        $yearEnd = Carbon::createFromDate($tahun, 12, 31, 'UTC')->endOfYear();
 
         $yearFd = DataFlightDocument::whereBetween('departure_at', [$yearStart, $yearEnd])->get();
         $yearFlightRecords = DataFlight::whereBetween('tanggal', [$yearStart->format('Y-m-d'), $yearEnd->format('Y-m-d')])->get();
@@ -144,7 +144,7 @@ class ProdukBulananController extends Controller
         $monthlyFd = array_fill(1, 12, 0);
         foreach ($yearFd as $r) {
             if ($r->departure_at) {
-                $m = Carbon::parse($r->departure_at)->month;
+                $m = Carbon::parse($r->departure_at, 'UTC')->month;
                 $monthlyFd[$m]++;
             }
         }
@@ -154,7 +154,7 @@ class ProdukBulananController extends Controller
             if ($r->tanggal) {
                 $dep = strtoupper(trim((string)$r->dep));
                 if ($dep === 'LAH' || $dep === 'WAEL') {
-                    $m = Carbon::parse($r->tanggal)->month;
+                    $m = Carbon::parse($r->tanggal, 'UTC')->month;
                     $monthlyFlightCount[$m]++;
                 }
             }
@@ -163,7 +163,7 @@ class ProdukBulananController extends Controller
         $monthlyTafor = array_fill(1, 12, 0);
         foreach ($yearTafor as $r) {
             if ($r->data_timestamp) {
-                $m = Carbon::parse($r->data_timestamp)->month;
+                $m = Carbon::parse($r->data_timestamp, 'UTC')->month;
                 $monthlyTafor[$m]++;
             }
         }
@@ -172,7 +172,7 @@ class ProdukBulananController extends Controller
         $monthlySpeci = array_fill(1, 12, 0);
         foreach ($yearMetar as $r) {
             if ($r->data_timestamp) {
-                $dt = Carbon::parse($r->data_timestamp);
+                $dt = Carbon::parse($r->data_timestamp, 'UTC');
                 $m = $dt->month;
                 $type = strtolower((string)$r->type_message);
                 if ($type === 'speci') {
@@ -189,7 +189,7 @@ class ProdukBulananController extends Controller
         $monthlyMetReport = array_fill(1, 12, 0);
         foreach ($yearMetReport as $r) {
             if ($r->data_timestamp) {
-                $m = Carbon::parse($r->data_timestamp)->month;
+                $m = Carbon::parse($r->data_timestamp, 'UTC')->month;
                 $monthlyMetReport[$m]++;
             }
         }

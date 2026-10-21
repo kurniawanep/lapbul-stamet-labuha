@@ -44,7 +44,7 @@ class ProdukBulananExportService
 
         $monthNameUpper = $this->namaBulanIndo[$bulan] ?? 'JANUARI';
         $monthNameCapitalized = ucfirst(strtolower($monthNameUpper));
-        $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
+        $startDate = Carbon::createFromDate($tahun, $bulan, 1, 'UTC')->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
         $daysInMonth = $startDate->daysInMonth;
 
@@ -86,11 +86,11 @@ class ProdukBulananExportService
             $metarRecords = DataMetar::whereBetween('data_timestamp', [$startDate, $endDate])->get();
             $metReportRecords = DataMetReport::whereBetween('data_timestamp', [$startDate, $endDate])->get();
 
-            // Group by day
+            // Group by day (UTC standard)
             $dailyFd = array_fill(1, 31, 0);
             foreach ($fdRecords as $r) {
                 if ($r->departure_at) {
-                    $d = Carbon::parse($r->departure_at)->day;
+                    $d = Carbon::parse($r->departure_at, 'UTC')->day;
                     if ($d >= 1 && $d <= 31) $dailyFd[$d]++;
                 }
             }
@@ -102,7 +102,7 @@ class ProdukBulananExportService
                 if ($r->tanggal) {
                     $dep = strtoupper(trim((string)$r->dep));
                     $arr = strtoupper(trim((string)$r->arr));
-                    $d = (int) Carbon::parse($r->tanggal)->day;
+                    $d = (int) Carbon::parse($r->tanggal, 'UTC')->day;
                     if ($d >= 1 && $d <= 31) {
                         if ($dep === 'LAH' || $dep === 'WAEL') {
                             $dailyFlightTO[$d]++;
@@ -119,7 +119,7 @@ class ProdukBulananExportService
             $dailyTafor = array_fill(1, 31, 0);
             foreach ($taforRecords as $r) {
                 if ($r->data_timestamp) {
-                    $d = Carbon::parse($r->data_timestamp)->day;
+                    $d = Carbon::parse($r->data_timestamp, 'UTC')->day;
                     if ($d >= 1 && $d <= 31) $dailyTafor[$d]++;
                 }
             }
@@ -128,7 +128,7 @@ class ProdukBulananExportService
             $dailySpeci = array_fill(1, 31, 0);
             foreach ($metarRecords as $r) {
                 if ($r->data_timestamp) {
-                    $dt = Carbon::parse($r->data_timestamp);
+                    $dt = Carbon::parse($r->data_timestamp, 'UTC');
                     $d = $dt->day;
                     if ($d >= 1 && $d <= 31) {
                         $type = strtolower((string)$r->type_message);
@@ -147,7 +147,7 @@ class ProdukBulananExportService
             $dailyMetReport = array_fill(1, 31, 0);
             foreach ($metReportRecords as $r) {
                 if ($r->data_timestamp) {
-                    $d = Carbon::parse($r->data_timestamp)->day;
+                    $d = Carbon::parse($r->data_timestamp, 'UTC')->day;
                     if ($d >= 1 && $d <= 31) $dailyMetReport[$d]++;
                 }
             }
@@ -213,8 +213,8 @@ class ProdukBulananExportService
                 $sheetB->setCellValue('N9', 41);
             }
 
-            $yearStart = Carbon::createFromDate($tahun, 1, 1)->startOfYear();
-            $yearEnd = Carbon::createFromDate($tahun, 12, 31)->endOfYear();
+            $yearStart = Carbon::createFromDate($tahun, 1, 1, 'UTC')->startOfYear();
+            $yearEnd = Carbon::createFromDate($tahun, 12, 31, 'UTC')->endOfYear();
 
             $yearFd = DataFlightDocument::whereBetween('departure_at', [$yearStart, $yearEnd])->get();
             $yearFlight = DataFlight::whereBetween('tanggal', [$yearStart->format('Y-m-d'), $yearEnd->format('Y-m-d')])->get();
@@ -225,7 +225,7 @@ class ProdukBulananExportService
             $monthlyFd = array_fill(1, 12, 0);
             foreach ($yearFd as $r) {
                 if ($r->departure_at) {
-                    $m = Carbon::parse($r->departure_at)->month;
+                    $m = Carbon::parse($r->departure_at, 'UTC')->month;
                     $monthlyFd[$m]++;
                 }
             }
@@ -235,7 +235,7 @@ class ProdukBulananExportService
                 if ($r->tanggal) {
                     $dep = strtoupper(trim((string)$r->dep));
                     if ($dep === 'LAH' || $dep === 'WAEL') {
-                        $m = Carbon::parse($r->tanggal)->month;
+                        $m = Carbon::parse($r->tanggal, 'UTC')->month;
                         $monthlyFlightCount[$m]++;
                     }
                 }
@@ -244,7 +244,7 @@ class ProdukBulananExportService
             $monthlyTafor = array_fill(1, 12, 0);
             foreach ($yearTafor as $r) {
                 if ($r->data_timestamp) {
-                    $m = Carbon::parse($r->data_timestamp)->month;
+                    $m = Carbon::parse($r->data_timestamp, 'UTC')->month;
                     $monthlyTafor[$m]++;
                 }
             }
@@ -253,7 +253,7 @@ class ProdukBulananExportService
             $monthlySpeci = array_fill(1, 12, 0);
             foreach ($yearMetar as $r) {
                 if ($r->data_timestamp) {
-                    $dt = Carbon::parse($r->data_timestamp);
+                    $dt = Carbon::parse($r->data_timestamp, 'UTC');
                     $m = $dt->month;
                     $type = strtolower((string)$r->type_message);
                     if ($type === 'speci') {
@@ -270,7 +270,7 @@ class ProdukBulananExportService
             $monthlyMetReport = array_fill(1, 12, 0);
             foreach ($yearMetReport as $r) {
                 if ($r->data_timestamp) {
-                    $m = Carbon::parse($r->data_timestamp)->month;
+                    $m = Carbon::parse($r->data_timestamp, 'UTC')->month;
                     $monthlyMetReport[$m]++;
                 }
             }

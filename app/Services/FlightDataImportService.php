@@ -139,29 +139,12 @@ class FlightDataImportService
                     $ataUtc = isset($colMap['ata_utc']) && isset($row[$colMap['ata_utc']]) ? $this->parseTime($row[$colMap['ata_utc']]) : null;
                     $atdUtc = isset($colMap['atd_utc']) && isset($row[$colMap['atd_utc']]) ? $this->parseTime($row[$colMap['atd_utc']]) : null;
 
-                    // Convert UTC date & time to local WIT date (Asia/Jayapura, UTC+9)
-                    $effectiveTime = null;
-                    if ($dep === 'LAH' || $dep === 'WAEL') {
-                        $effectiveTime = $stdUtc ?: ($atdUtc ?: ($staUtc ?: $ataUtc));
-                    } elseif ($arr === 'LAH' || $arr === 'WAEL') {
-                        $effectiveTime = $staUtc ?: ($ataUtc ?: ($stdUtc ?: $atdUtc));
-                    } else {
-                        $effectiveTime = $stdUtc ?: ($staUtc ?: ($atdUtc ?: $ataUtc));
-                    }
-
-                    $localDate = $parsedDate->copy();
-                    if ($effectiveTime && preg_match('/^(\d{1,2}):(\d{2})$/', $effectiveTime, $tMatch)) {
-                        $utcDt = Carbon::createFromFormat(
-                            'Y-m-d H:i',
-                            $parsedDate->format('Y-m-d') . ' ' . sprintf('%02d:%02d', (int)$tMatch[1], (int)$tMatch[2]),
-                            'UTC'
-                        );
-                        $localDate = $utcDt->setTimezone('Asia/Jayapura');
-                    }
+                    // Preserve standard UTC date for flight record
+                    $utcDate = $parsedDate->copy();
 
                     if ($detectedMonth === null) {
-                        $detectedMonth = $localDate->month;
-                        $detectedYear = $localDate->year;
+                        $detectedMonth = $utcDate->month;
+                        $detectedYear = $utcDate->year;
                     }
                     
                     $rowMaskapai = isset($colMap['maskapai']) && !empty($row[$colMap['maskapai']]) 
@@ -173,10 +156,10 @@ class FlightDataImportService
 
                     $maskapai = $overrideMaskapai ?: ($rowMaskapai ?: DataFlight::detectMaskapai($flightNumber));
 
-                    // Save or update flight record using local WIT date
+                    // Save or update flight record using UTC date
                     DataFlight::updateOrCreate(
                         [
-                            'tanggal' => $localDate->format('Y-m-d'),
+                            'tanggal' => $utcDate->format('Y-m-d'),
                             'flight_number' => $flightNumber,
                             'dep' => $dep,
                             'arr' => $arr,
@@ -300,7 +283,7 @@ class FlightDataImportService
      */
     public function export(int $bulan, int $tahun, ?string $maskapai = null, string $type = 'all'): StreamedResponse
     {
-        $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
+        $startDate = Carbon::createFromDate($tahun, $bulan, 1, 'UTC')->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
 
         $query = DataFlight::whereBetween('tanggal', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')]);
@@ -325,8 +308,8 @@ class FlightDataImportService
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle(substr($startDate->locale('id')->isoFormat('MMMM Y'), 0, 31));
 
-        // Headers
-        $headers = ['Tanggal', 'Flight No', 'Reg', 'Dep', 'Arr', 'STA/UTC', 'STD/UTC', 'ATA/UTC', 'ATD/UTC', 'Maskapai', 'Keterangan'];
+        // Headers (UTC Standard)
+        $headers = ['Tanggal (UTC)', 'Flight No', 'Reg', 'Dep', 'Arr', 'STA (UTC)', 'STD (UTC)', 'ATA (UTC)', 'ATD (UTC)', 'Maskapai', 'Keterangan'];
         
         $sheet->fromArray([$headers], null, 'A1');
 

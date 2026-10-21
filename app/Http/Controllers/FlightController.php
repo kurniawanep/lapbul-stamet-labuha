@@ -35,7 +35,7 @@ class FlightController extends Controller
         $typeFilter = $request->input('type', 'all'); // 'all', 'departure', 'landing'
         $search = $request->input('search');
 
-        $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
+        $startDate = Carbon::createFromDate($tahun, $bulan, 1, 'UTC')->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
         $daysInMonth = $startDate->daysInMonth;
 

@@ -827,7 +827,7 @@ export default function FlightIndex({
                                             className="rounded border-border text-primary focus:ring-primary"
                                         />
                                     </TableHead>
-                                    <TableHead className="font-bold">Tanggal</TableHead>
+                                    <TableHead className="font-bold">Tanggal (UTC)</TableHead>
                                     <TableHead className="font-bold">Maskapai</TableHead>
                                     <TableHead className="font-bold">Flight No</TableHead>
                                     <TableHead className="font-bold">Reg (Pesawat)</TableHead>
@@ -1094,7 +1094,7 @@ export default function FlightIndex({
                         <form onSubmit={handleFormSubmit} className="space-y-3 pt-2">
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
-                                    <Label className="text-xs font-semibold text-foreground">Tanggal</Label>
+                                    <Label className="text-xs font-semibold text-foreground">Tanggal (UTC)</Label>
                                     <Input
                                         type="date"
                                         value={flightForm.data.tanggal}

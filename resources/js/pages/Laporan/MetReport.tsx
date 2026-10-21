@@ -469,7 +469,7 @@ export default function MetReportIndex({
                                 <TableHeader className="bg-slate-100/70 border-b">
                                     <TableRow className="hover:bg-transparent">
                                         <TableHead className="w-12 text-center text-xs font-extrabold text-slate-700">No</TableHead>
-                                        <TableHead className="w-48 text-xs font-extrabold text-slate-700">Waktu (UTC &amp; WIT)</TableHead>
+                                        <TableHead className="w-44 text-xs font-extrabold text-slate-700">Waktu (UTC)</TableHead>
                                         <TableHead className="w-28 text-center text-xs font-extrabold text-slate-700">Angin (WIND)</TableHead>
                                         <TableHead className="w-24 text-center text-xs font-extrabold text-slate-700">Visibilitas</TableHead>
                                         <TableHead className="w-24 text-center text-xs font-extrabold text-slate-700">Weather</TableHead>
@@ -516,8 +516,7 @@ export default function MetReportIndex({
 
                                                     <TableCell className="whitespace-nowrap">
                                                         <div className="flex flex-col text-xs">
-                                                            <span className="font-bold text-slate-900">{dt.topUtc}</span>
-                                                            <span className="text-[11px] font-medium text-slate-500">{dt.bottomWit}</span>
+                                                            <span className="font-bold text-slate-900 font-mono">{dt.topUtc}</span>
                                                         </div>
                                                     </TableCell>
 
@@ -647,9 +646,8 @@ export default function MetReportIndex({
                         <div className="space-y-4 pt-2 text-xs">
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                                 <div>
-                                    <p className="text-slate-500 font-medium">Waktu Data</p>
-                                    <p className="font-bold text-slate-900 mt-0.5">{formatDateTimeDisplay(selectedReport.data_timestamp).topUtc}</p>
-                                    <p className="text-[11px] font-semibold text-emerald-700">{formatDateTimeDisplay(selectedReport.data_timestamp).bottomWit}</p>
+                                    <p className="text-slate-500 font-medium">Waktu Data (UTC)</p>
+                                    <p className="font-bold text-slate-900 mt-0.5 font-mono">{formatDateTimeDisplay(selectedReport.data_timestamp).topUtc}</p>
                                 </div>
                                 <div>
                                     <p className="text-slate-500 font-medium">Suhu TT / TD</p>

@@ -42,7 +42,7 @@ class MetReportController extends Controller
             $sortOrder = 'desc';
         }
 
-        $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
+        $startDate = Carbon::createFromDate($tahun, $bulan, 1, 'UTC')->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
 
         $query = DataMetReport::with(['pegawai', 'teknisi', 'ppnpn'])
@@ -234,12 +234,12 @@ class MetReportController extends Controller
                     ])->where('is_wa_dispatched', false)->first();
                 }
 
-                $pegawai = $timestamp ? $this->observerResolver->getObserverByTimestamp($timestamp, 'Asia/Jayapura') : null;
+                $pegawai = $timestamp ? $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC') : null;
                 if (!$pegawai && $timestamp) {
-                    $pegawai = $this->observerResolver->resolvePegawai($timestamp, $sender, 'Asia/Jayapura');
+                    $pegawai = $this->observerResolver->resolvePegawai($timestamp, $sender, 'UTC');
                 }
-                $teknisi = $timestamp ? $this->observerResolver->getTeknisiByTimestamp($timestamp, 'Asia/Jayapura') : null;
-                $ppnpn = $timestamp ? $this->observerResolver->getPpnpnByTimestamp($timestamp, 'Asia/Jayapura') : null;
+                $teknisi = $timestamp ? $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC') : null;
+                $ppnpn = $timestamp ? $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC') : null;
 
                 $flNumber = $item['flight_number'] ?? 'WA Dispatch';
                 $route = $item['route'] ?? 'WAEL -> WAMM';

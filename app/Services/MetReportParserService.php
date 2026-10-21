@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Carbon\Carbon;
+
 class MetReportParserService
 {
     /**
@@ -145,22 +147,37 @@ class MetReportParserService
             $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $day);
         }
 
-        // Time extraction
+        // Time extraction (standardized to UTC)
         $timeStr = null;
-        if (preg_match('/(?:TIME|JAM|WAKTU|TM)\s*[:=]?\s*(\d{1,2})\s*[.:]+\s*(\d{2})/i', $cleanRaw, $m)) {
+        $tzParsed = null;
+        if (preg_match('/(?:TIME|JAM|WAKTU|TM)\s*[:=]?\s*(\d{1,2})\s*[.:]+\s*(\d{2})(?:\s*(UTC|WIT|Z|WITA|WIB))?/i', $cleanRaw, $m)) {
             $h = (int)$m[1];
             $min = (int)$m[2];
+            $tzParsed = !empty($m[3]) ? strtoupper($m[3]) : null;
             if ($h >= 0 && $h <= 23 && $min >= 0 && $min <= 59) {
                 $timeStr = sprintf('%02d:%02d:00', $h, $min);
             }
-        } elseif (preg_match('/\b([01]?\d|2[0-3])\s*[.:]+\s*([0-5]\d)\s*(?:UTC|WIT|Z)\b/i', $cleanRaw, $m)) {
+        } elseif (preg_match('/\b([01]?\d|2[0-3])\s*[.:]+\s*([0-5]\d)\s*(UTC|WIT|Z|WITA|WIB)\b/i', $cleanRaw, $m)) {
+            $tzParsed = strtoupper($m[3]);
             $timeStr = sprintf('%02d:%02d:00', (int)$m[1], (int)$m[2]);
         } elseif (preg_match('/\b([01]?\d|2[0-3])([0-5]\d)\s*Z\b/i', $cleanRaw, $m)) {
+            $tzParsed = 'Z';
             $timeStr = sprintf('%02d:%02d:00', (int)$m[1], (int)$m[2]);
         }
 
         if ($dateStr && $timeStr) {
-            $res['data_timestamp'] = "{$dateStr} {$timeStr}";
+            if ($tzParsed === 'WIT') {
+                $utcDt = Carbon::createFromFormat('Y-m-d H:i:s', "{$dateStr} {$timeStr}", 'Asia/Jayapura')->setTimezone('UTC');
+                $res['data_timestamp'] = $utcDt->format('Y-m-d H:i:s');
+            } elseif ($tzParsed === 'WITA') {
+                $utcDt = Carbon::createFromFormat('Y-m-d H:i:s', "{$dateStr} {$timeStr}", 'Asia/Makassar')->setTimezone('UTC');
+                $res['data_timestamp'] = $utcDt->format('Y-m-d H:i:s');
+            } elseif ($tzParsed === 'WIB') {
+                $utcDt = Carbon::createFromFormat('Y-m-d H:i:s', "{$dateStr} {$timeStr}", 'Asia/Jakarta')->setTimezone('UTC');
+                $res['data_timestamp'] = $utcDt->format('Y-m-d H:i:s');
+            } else {
+                $res['data_timestamp'] = "{$dateStr} {$timeStr}";
+            }
         }
 
         // WIND (Normalize e.g. "260 / 06 KT" to "260/06 KT")

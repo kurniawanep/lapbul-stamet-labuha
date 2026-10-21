@@ -36,7 +36,7 @@ class FlightDocumentController extends Controller
         $tahun = (int) $request->input('tahun', Carbon::now()->year);
         $search = $request->input('search');
 
-        $startDate = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
+        $startDate = Carbon::createFromDate($tahun, $bulan, 1, 'UTC')->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
         $daysInMonth = $startDate->daysInMonth;
 
@@ -71,7 +71,7 @@ class FlightDocumentController extends Controller
         $dailyMatrix = [];
         for ($d = 1; $d <= $daysInMonth; $d++) {
             $dayRecords = $allMonthRecords->filter(function ($item) use ($d) {
-                return Carbon::parse($item->departure_at)->day === $d;
+                return Carbon::parse($item->departure_at, 'UTC')->day === $d;
             });
 
             $countFd = $dayRecords->count();
@@ -151,7 +151,7 @@ class FlightDocumentController extends Controller
         $dateFrom = null;
         $dateTo = null;
         if ($bulan && $tahun) {
-            $startDate = Carbon::createFromDate((int) $tahun, (int) $bulan, 1)->startOfMonth();
+            $startDate = Carbon::createFromDate((int) $tahun, (int) $bulan, 1, 'UTC')->startOfMonth();
             $endDate = $startDate->copy()->endOfMonth();
             $dateFrom = $startDate->toDateTimeString();
             $dateTo = $endDate->toDateTimeString();
@@ -197,12 +197,12 @@ class FlightDocumentController extends Controller
                 ])->where('is_wa_dispatched', false)->first();
             }
 
-            $pegawai = $timestamp ? $this->observerResolver->getObserverByTimestamp($timestamp, 'Asia/Jayapura') : null;
+            $pegawai = $timestamp ? $this->observerResolver->getObserverByTimestamp($timestamp, 'UTC') : null;
             if (!$pegawai && $timestamp) {
-                $pegawai = $this->observerResolver->resolvePegawai($timestamp, $sender, 'Asia/Jayapura');
+                $pegawai = $this->observerResolver->resolvePegawai($timestamp, $sender, 'UTC');
             }
-            $teknisi = $timestamp ? $this->observerResolver->getTeknisiByTimestamp($timestamp, 'Asia/Jayapura') : null;
-            $ppnpn = $timestamp ? $this->observerResolver->getPpnpnByTimestamp($timestamp, 'Asia/Jayapura') : null;
+            $teknisi = $timestamp ? $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC') : null;
+            $ppnpn = $timestamp ? $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC') : null;
 
             if ($doc) {
                 $doc->update([
