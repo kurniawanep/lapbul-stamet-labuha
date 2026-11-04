@@ -287,11 +287,16 @@ class ObserverResolverService
 
         // 1. Check details starting on the current date
         $currentDetails = $this->getDetailsForDate($currentDateStr)->filter(function ($detail) {
+            $role = $detail->pegawai->role ?? '';
+            $namaShift = strtoupper($detail->shift->nama_shift ?? '');
             return $detail->shift
                 && $detail->shift->kode_shift !== 'A'
+                && !str_contains($namaShift, 'TEKNISI')
+                && !str_contains($namaShift, 'PPNPN')
                 && !$detail->shift->is_tidak_masuk_kerja
                 && $detail->pegawai
-                && str_contains($detail->pegawai->role ?? '', 'Observer');
+                && (str_contains($role, 'Observer') || str_contains($role, 'Forecaster'))
+                && !str_contains($role, 'Teknisi');
         });
 
         foreach ($currentDetails as $detail) {
@@ -314,11 +319,16 @@ class ObserverResolverService
 
         // 2. Check overnight details starting on the previous date (e.g., 00:00:00 to 01:45:00)
         $previousDetails = $this->getDetailsForDate($previousDateStr)->filter(function ($detail) {
+            $role = $detail->pegawai->role ?? '';
+            $namaShift = strtoupper($detail->shift->nama_shift ?? '');
             return $detail->shift
                 && $detail->shift->kode_shift !== 'A'
+                && !str_contains($namaShift, 'TEKNISI')
+                && !str_contains($namaShift, 'PPNPN')
                 && !$detail->shift->is_tidak_masuk_kerja
                 && $detail->pegawai
-                && str_contains($detail->pegawai->role ?? '', 'Observer');
+                && (str_contains($role, 'Observer') || str_contains($role, 'Forecaster'))
+                && !str_contains($role, 'Teknisi');
         });
 
         foreach ($previousDetails as $detail) {
@@ -376,11 +386,18 @@ class ObserverResolverService
 
         // 1. Check if PF (Pagi Forecast / Forecast) is scheduled on this date
         $pfDetail = $this->getDetailsForDate($currentDateStr)->first(function ($detail) {
-            if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja) {
+            if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja || !$detail->pegawai) {
+                return false;
+            }
+            $role = $detail->pegawai->role ?? '';
+            if ((!str_contains($role, 'Observer') && !str_contains($role, 'Forecaster')) || str_contains($role, 'Teknisi')) {
                 return false;
             }
             $kode = $detail->shift->kode_shift ?? '';
             $nama = strtoupper($detail->shift->nama_shift ?? '');
+            if (str_contains($nama, 'TEKNISI') || str_contains($nama, 'PPNPN')) {
+                return false;
+            }
             return ($kode === 'PF' || str_starts_with($kode, 'PF') || str_contains($nama, 'FORECAST') || str_contains($nama, 'FOD'));
         });
 
@@ -405,11 +422,18 @@ class ObserverResolverService
 
         // 2. Check overnight PF shift starting on previous date
         $prevPfDetail = $this->getDetailsForDate($previousDateStr)->first(function ($detail) {
-            if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja) {
+            if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja || !$detail->pegawai) {
+                return false;
+            }
+            $role = $detail->pegawai->role ?? '';
+            if ((!str_contains($role, 'Observer') && !str_contains($role, 'Forecaster')) || str_contains($role, 'Teknisi')) {
                 return false;
             }
             $kode = $detail->shift->kode_shift ?? '';
             $nama = strtoupper($detail->shift->nama_shift ?? '');
+            if (str_contains($nama, 'TEKNISI') || str_contains($nama, 'PPNPN')) {
+                return false;
+            }
             return ($kode === 'PF' || str_starts_with($kode, 'PF') || str_contains($nama, 'FORECAST') || str_contains($nama, 'FOD'));
         });
 
@@ -422,14 +446,24 @@ class ObserverResolverService
             }
         }
 
-        // 3. Fallback: Check if P (PAGI / PAGI OBS) is scheduled on this date
+        // 3. Check active duty Observer/Forecaster for this exact timestamp (Siang / Malam / Pagi Obs)
+        $activeObserver = $this->getObserverByTimestamp($dateTimeString, $fromTz);
+        if ($activeObserver) {
+            return $activeObserver;
+        }
+
+        // 4. Fallback: Check if P (PAGI / PAGI OBS) is scheduled on this date (Observer/Forecaster ONLY)
         $pDetail = $this->getDetailsForDate($currentDateStr)->first(function ($detail) {
-            if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja) {
+            if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja || !$detail->pegawai) {
+                return false;
+            }
+            $role = $detail->pegawai->role ?? '';
+            if ((!str_contains($role, 'Observer') && !str_contains($role, 'Forecaster')) || str_contains($role, 'Teknisi')) {
                 return false;
             }
             $kode = $detail->shift->kode_shift ?? '';
             $nama = strtoupper($detail->shift->nama_shift ?? '');
-            if ($kode === 'A') {
+            if ($kode === 'A' || str_contains($nama, 'TEKNISI') || str_contains($nama, 'PPNPN')) {
                 return false;
             }
             return in_array($kode, ['P', 'P1', 'PO']) || str_contains($nama, 'PAGI OBS') || str_contains($nama, 'PAGI');
@@ -439,8 +473,7 @@ class ObserverResolverService
             return $pDetail->pegawai;
         }
 
-        // 4. Fallback to standard duty observer resolver for this timestamp
-        return $this->getObserverByTimestamp($dateTimeString, $fromTz);
+        return null;
     }
 
     /**

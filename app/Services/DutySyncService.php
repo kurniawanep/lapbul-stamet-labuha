@@ -153,16 +153,14 @@ class DutySyncService
 
             foreach ($pibalRecords as $pibal) {
                 $officer = $this->resolver->getPibalDutyOfficer($pibal->data_timestamp, 'UTC');
-                $teknisi = $this->resolver->getTeknisiByTimestamp($pibal->data_timestamp, 'UTC');
-                $ppnpn = $this->resolver->getPpnpnByTimestamp($pibal->data_timestamp, 'UTC');
 
                 DB::table('data_pibal')
                     ->where('id', $pibal->id)
                     ->update([
                         'pegawai_id' => $officer ? $officer->id : null,
                         'observer_name' => $officer ? $officer->nama : $pibal->observer_name,
-                        'teknisi_id' => $teknisi ? $teknisi->id : null,
-                        'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
+                        'teknisi_id' => null,
+                        'ppnpn_id' => null,
                     ]);
                 $totalUpdated++;
             }
@@ -176,16 +174,14 @@ class DutySyncService
 
             foreach ($taforRecords as $tafor) {
                 $officer = $this->resolver->getTaforDutyOfficer($tafor->data_timestamp, 'UTC');
-                $teknisi = $this->resolver->getTeknisiByTimestamp($tafor->data_timestamp, 'UTC');
-                $ppnpn = $this->resolver->getPpnpnByTimestamp($tafor->data_timestamp, 'UTC');
 
                 DB::table('data_tafor')
                     ->where('id', $tafor->id)
                     ->update([
                         'pegawai_id' => $officer ? $officer->id : null,
                         'observer_name' => $officer ? $officer->nama : $tafor->observer_name,
-                        'teknisi_id' => $teknisi ? $teknisi->id : null,
-                        'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
+                        'teknisi_id' => null,
+                        'ppnpn_id' => null,
                     ]);
                 $totalUpdated++;
             }

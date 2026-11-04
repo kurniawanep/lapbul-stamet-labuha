@@ -774,7 +774,7 @@ export default function WxrevIndex() {
                                                                     RH: {rec.relative_humidity_max}% / {rec.relative_humidity_min ?? '-'}%
                                                                 </span>
                                                             )}
-                                                            {rec.rainfall_24 !== null && (
+                                                            {rec.rainfall_24 !== null && rec.rainfall_24 !== undefined && (
                                                                 <span className={`px-1.5 py-0.5 rounded border ${rec.rainfall_24 > 0 && rec.rainfall_24 != 8888 && rec.rainfall_24 != 9999
                                                                     ? 'bg-cyan-100 text-cyan-800 border-cyan-300 font-bold'
                                                                     : 'bg-slate-50 text-slate-500 border-slate-200'

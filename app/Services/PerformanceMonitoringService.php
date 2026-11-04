@@ -168,13 +168,18 @@ class PerformanceMonitoringService
 
         // Hourly heatmaps & statistics
         $hourlyDelays = array_fill(0, 24, 0);
-        $hourlyTotal = array_fill(0, 24, 0);
+        $hourlyDelaysByParam = [
+            'sinop' => array_fill(0, 24, 0),
+            'metar' => array_fill(0, 24, 0),
+            'pibal_ppaa' => array_fill(0, 24, 0),
+            'pibal_ppbb' => array_fill(0, 24, 0),
+            'tafor' => array_fill(0, 24, 0),
+        ];
 
         // 1. EVALUATE SINOPTIK (24 slots / day: 00..23 UTC)
         for ($d = 1; $d <= $daysInMonth; $d++) {
             for ($h = 0; $h < 24; $h++) {
                 $slotTime = Carbon::create($tahun, $bulan, $d, $h, 0, 0, 'UTC');
-                $hourlyTotal[$h]++;
 
                 // Timely Window: :50 prev hour to :15 slot hour (inclusive of minute 15 up to :15:59)
                 $windowStart = $slotTime->copy()->subMinutes(10);
@@ -215,6 +220,7 @@ class PerformanceMonitoringService
                             $staffMetrics[$pId]['total_delay_minutes'] += $delayMin;
                             $staffMetrics[$pId]['breakdown']['sinop']['total_delay'] += $delayMin;
                             $hourlyDelays[$h]++;
+                            $hourlyDelaysByParam['sinop'][$h]++;
 
                             $staffMetrics[$pId]['details'][] = [
                                 'type' => 'SINOP',
@@ -230,6 +236,7 @@ class PerformanceMonitoringService
                         $staffMetrics[$pId]['missing_count']++;
                         $staffMetrics[$pId]['breakdown']['sinop']['missing']++;
                         $hourlyDelays[$h]++;
+                        $hourlyDelaysByParam['sinop'][$h]++;
 
                         $staffMetrics[$pId]['details'][] = [
                             'type' => 'SINOP',
@@ -304,6 +311,8 @@ class PerformanceMonitoringService
 
                                 $staffMetrics[$pId]['total_delay_minutes'] += $delayMin;
                                 $staffMetrics[$pId]['breakdown']['metar']['total_delay'] += $delayMin;
+                                $hourlyDelays[$h]++;
+                                $hourlyDelaysByParam['metar'][$h]++;
 
                                 $staffMetrics[$pId]['details'][] = [
                                     'type' => 'METAR (Manual)',
@@ -317,6 +326,8 @@ class PerformanceMonitoringService
                         } else {
                             $staffMetrics[$pId]['missing_count']++;
                             $staffMetrics[$pId]['breakdown']['metar']['missing']++;
+                            $hourlyDelays[$h]++;
+                            $hourlyDelaysByParam['metar'][$h]++;
 
                             $staffMetrics[$pId]['details'][] = [
                                 'type' => 'METAR (Manual)',
@@ -362,9 +373,12 @@ class PerformanceMonitoringService
                 if ($foundPibal) {
                     $observer = $foundPibal->pegawai_id 
                         ? $allPegawai->find($foundPibal->pegawai_id) 
-                        : $this->observerResolver->resolvePegawai($slotTime->toDateTimeString(), $foundPibal->observer_name, 'UTC');
+                        : null;
+                    if (!$observer) {
+                        $observer = $this->observerResolver->resolvePibalPegawai($slotTime->toDateTimeString(), $foundPibal->observer_name, 'UTC');
+                    }
                 } else {
-                    $observer = $this->observerResolver->getObserverByTimestamp($slotTime->toDateTimeString(), 'UTC');
+                    $observer = $this->observerResolver->getPibalDutyOfficer($slotTime->toDateTimeString(), 'UTC');
                 }
 
                 $pId = $observer ? $observer->id : null;
@@ -393,6 +407,8 @@ class PerformanceMonitoringService
 
                             $staffMetrics[$pId]['total_delay_minutes'] += $delayMin;
                             $staffMetrics[$pId]['breakdown']['pibal_ppaa']['total_delay'] += $delayMin;
+                            $hourlyDelays[$h]++;
+                            $hourlyDelaysByParam['pibal_ppaa'][$h]++;
 
                             $staffMetrics[$pId]['details'][] = [
                                 'type' => 'PIBAL PPAA',
@@ -407,6 +423,8 @@ class PerformanceMonitoringService
                         // Missing PPAA
                         $staffMetrics[$pId]['missing_count']++;
                         $staffMetrics[$pId]['breakdown']['pibal_ppaa']['missing']++;
+                        $hourlyDelays[$h]++;
+                        $hourlyDelaysByParam['pibal_ppaa'][$h]++;
 
                         $staffMetrics[$pId]['details'][] = [
                             'type' => 'PIBAL PPAA',
@@ -435,6 +453,8 @@ class PerformanceMonitoringService
 
                             $staffMetrics[$pId]['total_delay_minutes'] += $delayMin;
                             $staffMetrics[$pId]['breakdown']['pibal_ppbb']['total_delay'] += $delayMin;
+                            $hourlyDelays[$h]++;
+                            $hourlyDelaysByParam['pibal_ppbb'][$h]++;
 
                             $staffMetrics[$pId]['details'][] = [
                                 'type' => 'PIBAL PPBB',
@@ -449,6 +469,8 @@ class PerformanceMonitoringService
                         // Missing PPBB
                         $staffMetrics[$pId]['missing_count']++;
                         $staffMetrics[$pId]['breakdown']['pibal_ppbb']['missing']++;
+                        $hourlyDelays[$h]++;
+                        $hourlyDelaysByParam['pibal_ppbb'][$h]++;
 
                         $staffMetrics[$pId]['details'][] = [
                             'type' => 'PIBAL PPBB',
@@ -482,9 +504,12 @@ class PerformanceMonitoringService
                 if ($foundTafor) {
                     $observer = $foundTafor->pegawai_id 
                         ? $allPegawai->find($foundTafor->pegawai_id) 
-                        : $this->observerResolver->resolvePegawai($slotTime->toDateTimeString(), $foundTafor->observer_name, 'UTC');
+                        : null;
+                    if (!$observer) {
+                        $observer = $this->observerResolver->resolveTaforPegawai($slotTime->toDateTimeString(), $foundTafor->observer_name, 'UTC');
+                    }
                 } else {
-                    $observer = $this->observerResolver->getObserverByTimestamp($slotTime->toDateTimeString(), 'UTC');
+                    $observer = $this->observerResolver->getTaforDutyOfficer($slotTime->toDateTimeString(), 'UTC');
                 }
 
                 $pId = $observer ? $observer->id : null;
@@ -500,6 +525,8 @@ class PerformanceMonitoringService
                         // TAFOR Missing Data
                         $staffMetrics[$pId]['missing_count']++;
                         $staffMetrics[$pId]['breakdown']['tafor']['missing']++;
+                        $hourlyDelays[$h]++;
+                        $hourlyDelaysByParam['tafor'][$h]++;
 
                         $staffMetrics[$pId]['details'][] = [
                             'type' => 'TAFOR',
@@ -570,6 +597,33 @@ class PerformanceMonitoringService
             ];
         }
 
+        // Aggregate Station Breakdown per Parameter across all staff
+        $stationBreakdown = [
+            'sinop' => ['total' => 0, 'timely' => 0, 'late' => 0, 'missing' => 0, 'total_delay' => 0],
+            'metar' => ['total' => 0, 'timely' => 0, 'late' => 0, 'missing' => 0, 'total_delay' => 0],
+            'pibal_ppaa' => ['total' => 0, 'timely' => 0, 'late' => 0, 'missing' => 0, 'total_delay' => 0],
+            'pibal_ppbb' => ['total' => 0, 'timely' => 0, 'late' => 0, 'missing' => 0, 'total_delay' => 0],
+            'tafor' => ['total' => 0, 'timely' => 0, 'late' => 0, 'missing' => 0, 'total_delay' => 0],
+        ];
+
+        foreach ($staffMetrics as $pId => $m) {
+            foreach (['sinop', 'metar', 'pibal_ppaa', 'pibal_ppbb', 'tafor'] as $type) {
+                $stationBreakdown[$type]['total'] += $m['breakdown'][$type]['total'];
+                $stationBreakdown[$type]['timely'] += $m['breakdown'][$type]['timely'];
+                $stationBreakdown[$type]['late'] += $m['breakdown'][$type]['late'];
+                $stationBreakdown[$type]['missing'] += $m['breakdown'][$type]['missing'];
+                $stationBreakdown[$type]['total_delay'] += $m['breakdown'][$type]['total_delay'];
+            }
+        }
+
+        foreach ($stationBreakdown as $type => &$sb) {
+            $sb['timely_pct'] = $sb['total'] > 0 ? round(($sb['timely'] / $sb['total']) * 100, 1) : 0;
+            $sb['late_pct'] = $sb['total'] > 0 ? round(($sb['late'] / $sb['total']) * 100, 1) : 0;
+            $sb['missing_pct'] = $sb['total'] > 0 ? round(($sb['missing'] / $sb['total']) * 100, 1) : 0;
+            $sb['avg_delay'] = $sb['late'] > 0 ? round($sb['total_delay'] / $sb['late'], 1) : 0;
+        }
+        unset($sb);
+
         // Sort leaderboard by timely_rate_pct descending
         usort($formattedStaff, fn($a, $b) => $b['timely_rate_pct'] <=> $a['timely_rate_pct']);
 
@@ -589,6 +643,7 @@ class PerformanceMonitoringService
                 'total_missing' => $totalStationMissing,
                 'overall_compliance_pct' => $stationTimelyPct,
                 'top_observer' => $formattedStaff[0]['pegawai']['nama'] ?? '-',
+                'breakdown' => $stationBreakdown,
             ],
             'dissemination_summary' => [
                 'total' => $dissemRecords->count(),
@@ -596,6 +651,7 @@ class PerformanceMonitoringService
             ],
             'awos_summary' => $awosStats,
             'hourly_delays' => $hourlyDelays,
+            'hourly_delays_by_param' => $hourlyDelaysByParam,
             'staff_rankings' => $formattedStaff,
         ];
     }
@@ -630,7 +686,7 @@ class PerformanceMonitoringService
 
             if ($isPastMonth) {
                 $monthPerf = Cache::remember(
-                    "perf_monthly_summary_{$y}_{$m}",
+                    "perf_monthly_summary_v3_{$y}_{$m}",
                     now()->addDays(30),
                     fn () => $this->getMonthlyPerformance($m, $y)
                 );
@@ -666,6 +722,7 @@ class PerformanceMonitoringService
                     'timely_pct' => $stTimelyPct,
                     'availability_pct' => $stAvailPct,
                     'avg_delay_minutes' => $st['avg_delay_minutes'] ?? 0,
+                    'breakdown' => $st['breakdown'] ?? null,
                 ];
             }
 
@@ -676,6 +733,7 @@ class PerformanceMonitoringService
                 'month' => $m,
                 'station_timely_pct' => $timelyPct,
                 'station_availability_pct' => $availPct,
+                'station_breakdown' => $stationSum['breakdown'] ?? null,
                 'total_slots' => $totalSlots,
                 'timely_count' => $timely,
                 'late_count' => $late,
@@ -711,6 +769,7 @@ class PerformanceMonitoringService
                         'timely_pct' => $stData['timely_pct'],
                         'availability_pct' => $stData['availability_pct'],
                         'avg_delay_minutes' => $stData['avg_delay_minutes'],
+                        'breakdown' => $stData['breakdown'] ?? null,
                     ];
                 } else {
                     $history[] = [
@@ -725,6 +784,7 @@ class PerformanceMonitoringService
                         'timely_pct' => null,
                         'availability_pct' => null,
                         'avg_delay_minutes' => 0,
+                        'breakdown' => null,
                     ];
                 }
             }

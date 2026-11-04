@@ -36,6 +36,30 @@ class BmkgsoftService
     }
 
     /**
+     * Auto resynchronize observation records with the duty roster for the period.
+     */
+    public function autoResyncDuty(string|int $startOrMonth, string|int|null $endOrYear = null): void
+    {
+        try {
+            $dutySync = app(DutySyncService::class);
+            if (is_numeric($startOrMonth) && is_numeric($endOrYear)) {
+                $dutySync->syncObservationsForPeriod((int) $startOrMonth, (int) $endOrYear);
+                return;
+            }
+
+            $start = Carbon::parse((string) $startOrMonth);
+            $end = $endOrYear ? Carbon::parse((string) $endOrYear) : $start;
+
+            $dutySync->syncObservationsForPeriod((int) $start->month, (int) $start->year);
+            if ($end->month !== $start->month || $end->year !== $start->year) {
+                $dutySync->syncObservationsForPeriod((int) $end->month, (int) $end->year);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Auto duty resync failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Get bearer authentication token from BMKGSoft API (cached for 6 hours).
      */
     public function getToken(bool $forceRefresh = false): ?string
@@ -201,8 +225,6 @@ class BmkgsoftService
             }
 
             $pegawai = $this->observerResolver->resolvePibalPegawai($timestamp, $observerName, 'UTC');
-            $teknisi = $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC');
-            $ppnpn = $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC');
 
             try {
                 DataPibal::updateOrCreate(
@@ -223,8 +245,8 @@ class BmkgsoftService
                         'pembacaan_azimuth_elevasi' => $item['pembacaan_azimuth_elevasi'] ?? null,
                         'observer_name' => $pegawai ? $pegawai->nama : ($observerName ?? null),
                         'pegawai_id' => $pegawai ? $pegawai->id : null,
-                        'teknisi_id' => $teknisi ? $teknisi->id : null,
-                        'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
+                        'teknisi_id' => null,
+                        'ppnpn_id' => null,
                     ]
                 );
 
@@ -337,6 +359,10 @@ class BmkgsoftService
             }
         } catch (\Exception $e) {
             Log::warning('GTS Pilot monitoring enrichment error: '.$e->getMessage());
+        }
+
+        if ($syncedCount > 0) {
+            $this->autoResyncDuty($startDate, $endDate);
         }
 
         return [
@@ -484,8 +510,6 @@ class BmkgsoftService
                 }
 
                 $pegawai = $this->observerResolver->resolveTaforPegawai($timestamp, $observerName, 'UTC');
-                $teknisi = $this->observerResolver->getTeknisiByTimestamp($timestamp, 'UTC');
-                $ppnpn = $this->observerResolver->getPpnpnByTimestamp($timestamp, 'UTC');
 
                 try {
                     DataTafor::updateOrCreate(
@@ -508,8 +532,8 @@ class BmkgsoftService
                             'sender_username' => $item['sender_username'] ?? null,
                             'observer_name' => $pegawai ? $pegawai->nama : null,
                             'pegawai_id' => $pegawai ? $pegawai->id : null,
-                            'teknisi_id' => $teknisi ? $teknisi->id : null,
-                            'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
+                            'teknisi_id' => null,
+                            'ppnpn_id' => null,
                         ]
                     );
 
@@ -544,6 +568,10 @@ class BmkgsoftService
                 'error_reason' => $overallError,
                 'details' => [],
             ];
+        }
+
+        if ($totalSynced > 0) {
+            $this->autoResyncDuty($startDate, $endDate);
         }
 
         return [
@@ -827,6 +855,10 @@ class BmkgsoftService
                 'error_reason' => $overallError,
                 'details' => [],
             ];
+        }
+
+        if ($totalSynced > 0) {
+            $this->autoResyncDuty($startDate, $endDate);
         }
 
         return [
@@ -1197,6 +1229,10 @@ class BmkgsoftService
             ];
         }
 
+        if ($totalSynced > 0) {
+            $this->autoResyncDuty($startDate, $endDate);
+        }
+
         return [
             'success' => true,
             'synced_count' => $totalSynced,
@@ -1521,6 +1557,10 @@ class BmkgsoftService
             ];
         }
 
+        if ($totalSynced > 0) {
+            $this->autoResyncDuty($startDate, $endDate);
+        }
+
         return [
             'success' => true,
             'synced_count' => $totalSynced,
@@ -1679,6 +1719,10 @@ class BmkgsoftService
         }
 
         $totalFetched = count($rows);
+
+        if ($totalSynced > 0) {
+            $this->autoResyncDuty($startDate, $endDate);
+        }
 
         return [
             'success' => true,
@@ -1957,6 +2001,10 @@ class BmkgsoftService
 
         $totalFetched = count($rows);
 
+        if ($totalSynced > 0) {
+            $this->autoResyncDuty($startDate, $endDate);
+        }
+
         return [
             'success' => true,
             'synced_count' => $totalSynced,
@@ -2181,6 +2229,10 @@ class BmkgsoftService
         }
 
         $totalFetched = count($rows);
+
+        if ($totalSynced > 0) {
+            $this->autoResyncDuty($bulan, $tahun);
+        }
 
         return [
             'success' => true,

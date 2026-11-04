@@ -24,6 +24,9 @@ class MonitoringController extends Controller
     {
         $bulan = (int) $request->input('bulan', Carbon::now()->month);
         $tahun = (int) $request->input('tahun', Carbon::now()->year);
+        $parameter = (string) $request->input('parameter', 'all');
+        $staffId = $request->input('staff_id') ? (int) $request->input('staff_id') : null;
+        $tab = (string) $request->input('tab', 'overview');
 
         $performanceData = $this->monitoringService->getMonthlyPerformance($bulan, $tahun);
         $trend12Months = $this->monitoringService->get12MonthsTrend($bulan, $tahun);
@@ -32,11 +35,15 @@ class MonitoringController extends Controller
             'filters' => [
                 'bulan' => $bulan,
                 'tahun' => $tahun,
+                'parameter' => $parameter,
+                'staff_id' => $staffId,
+                'tab' => $tab,
             ],
             'summary' => $performanceData['station_summary'],
             'dissemination_summary' => $performanceData['dissemination_summary'] ?? ['total' => 0, 'daily_avg' => 0],
             'awos_summary' => $performanceData['awos_summary'] ?? [],
             'hourly_delays' => $performanceData['hourly_delays'],
+            'hourly_delays_by_param' => $performanceData['hourly_delays_by_param'] ?? [],
             'staff_rankings' => $performanceData['staff_rankings'],
             'trend_12_months' => $trend12Months,
         ]);

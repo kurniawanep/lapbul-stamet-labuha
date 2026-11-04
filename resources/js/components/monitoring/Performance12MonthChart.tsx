@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingUp, TrendingDown, Users, CheckCircle2, Clock, AlertTriangle, Target, LineChart as ChartIcon } from 'lucide-react';
+import { TrendingUp, TrendingDown, Users, CheckCircle2, Clock, AlertTriangle, Target, LineChart as ChartIcon, Filter } from 'lucide-react';
 
 export interface MonthSummary {
     key: string;
@@ -11,6 +11,7 @@ export interface MonthSummary {
     month: number;
     station_timely_pct: number;
     station_availability_pct: number;
+    station_breakdown?: Record<string, { total: number; timely: number; late: number; missing: number; timely_pct: number; avg_delay?: number }>;
     total_slots: number;
     timely_count: number;
     late_count: number;
@@ -29,6 +30,7 @@ export interface StaffHistoryItem {
     timely_pct: number | null;
     availability_pct: number | null;
     avg_delay_minutes: number;
+    breakdown?: Record<string, { total: number; timely: number; late: number; missing: number; timely_pct: number; avg_delay?: number }>;
 }
 
 export interface StaffTrend {
@@ -49,28 +51,83 @@ export interface Trend12MonthsData {
 interface Props {
     data?: Trend12MonthsData;
     initialStaffId?: number | null;
+    activeParameter?: string;
+    onParameterChange?: (param: string) => void;
+    title?: string;
+    hideStaffSelect?: boolean;
 }
 
-export default function Performance12MonthChart({ data, initialStaffId }: Props) {
+const parameterLabels: Record<string, string> = {
+    all: 'Semua Parameter',
+    sinop: 'Sinoptik',
+    metar: 'METAR Manual',
+    pibal_ppaa: 'PIBAL PPAA',
+    pibal_ppbb: 'PIBAL PPBB',
+    tafor: 'TAFOR',
+};
+
+export default function Performance12MonthChart({
+    data,
+    initialStaffId,
+    activeParameter = 'all',
+    onParameterChange,
+    title,
+    hideStaffSelect = false,
+}: Props) {
     const months = data?.months ?? [];
     const staffTrends = data?.staff_trends ?? [];
 
     const [selectedStaffId, setSelectedStaffId] = useState<string>(
         initialStaffId ? String(initialStaffId) : 'station_avg'
     );
+    const [selectedParam, setSelectedParam] = useState<string>(activeParameter);
     const [activeMetric, setActiveMetric] = useState<'both' | 'timely' | 'availability'>('both');
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (initialStaffId !== undefined) {
+            setSelectedStaffId(initialStaffId ? String(initialStaffId) : 'station_avg');
+        }
+    }, [initialStaffId]);
+
+    useEffect(() => {
+        setSelectedParam(activeParameter);
+    }, [activeParameter]);
+
+    const handleParamChange = (newParam: string) => {
+        setSelectedParam(newParam);
+        if (onParameterChange) {
+            onParameterChange(newParam);
+        }
+    };
 
     const activeStaff = useMemo(() => {
         if (selectedStaffId === 'station_avg') return null;
         return staffTrends.find((s) => String(s.pegawai.id) === selectedStaffId) ?? null;
     }, [selectedStaffId, staffTrends]);
 
-    // Data points to graph
+    // Data points to graph based on selected staff and selected parameter
     const chartPoints = useMemo(() => {
         return months.map((m, idx) => {
             if (activeStaff) {
                 const staffHist = activeStaff.history[idx];
+                if (selectedParam !== 'all' && staffHist?.breakdown?.[selectedParam]) {
+                    const pData = staffHist.breakdown[selectedParam];
+                    const availPct = pData.total > 0 ? Number(((pData.timely + pData.late) / pData.total * 100).toFixed(1)) : null;
+                    return {
+                        label: m.label,
+                        key: m.key,
+                        timely_pct: pData.total > 0 ? pData.timely_pct : null,
+                        availability_pct: availPct,
+                        assigned: pData.total,
+                        timely_count: pData.timely,
+                        late_count: pData.late,
+                        missing_count: pData.missing,
+                        avg_delay: pData.avg_delay ?? 0,
+                        isStaff: true,
+                    };
+                }
+
                 return {
                     label: m.label,
                     key: m.key,
@@ -84,6 +141,24 @@ export default function Performance12MonthChart({ data, initialStaffId }: Props)
                     isStaff: true,
                 };
             }
+
+            if (selectedParam !== 'all' && m.station_breakdown?.[selectedParam]) {
+                const pData = m.station_breakdown[selectedParam];
+                const availPct = pData.total > 0 ? Number(((pData.timely + pData.late) / pData.total * 100).toFixed(1)) : 0;
+                return {
+                    label: m.label,
+                    key: m.key,
+                    timely_pct: pData.timely_pct,
+                    availability_pct: availPct,
+                    assigned: pData.total,
+                    timely_count: pData.timely,
+                    late_count: pData.late,
+                    missing_count: pData.missing,
+                    avg_delay: pData.avg_delay ?? 0,
+                    isStaff: false,
+                };
+            }
+
             return {
                 label: m.label,
                 key: m.key,
@@ -97,7 +172,7 @@ export default function Performance12MonthChart({ data, initialStaffId }: Props)
                 isStaff: false,
             };
         });
-    }, [months, activeStaff]);
+    }, [months, activeStaff, selectedParam]);
 
     // Calculate Summary Stats
     const summaryStats = useMemo(() => {
@@ -208,13 +283,35 @@ export default function Performance12MonthChart({ data, initialStaffId }: Props)
                         <div className="flex items-center gap-2">
                             <ChartIcon className="h-5 w-5 text-indigo-600" />
                             <CardTitle className="text-base font-bold text-slate-900">
-                                Tren Performa Pengiriman Data (12 Bulan Terakhir)
+                                {title || 'Tren Performa Pengiriman Data (12 Bulan Terakhir)'}
                             </CardTitle>
                         </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                            Monitoring tren ketepatan waktu & ketercapaian per bulan {selectedParam !== 'all' ? `• Parameter: ${parameterLabels[selectedParam]}` : ''}
+                        </p>
                     </div>
 
                     {/* Filter Controls */}
                     <div className="flex flex-wrap items-center gap-2.5">
+                        {/* Parameter Selector */}
+                        <div className="w-44">
+                            <Select value={selectedParam} onValueChange={handleParamChange}>
+                                <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 font-medium">
+                                    <div className="flex items-center gap-1.5 truncate">
+                                        <Filter className="h-3.5 w-3.5 text-slate-400" />
+                                        <SelectValue placeholder="Pilih Parameter" />
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent className="max-h-64">
+                                    {Object.entries(parameterLabels).map(([key, label]) => (
+                                        <SelectItem key={key} value={key} className="text-xs">
+                                            {label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
                         {/* Metric Selector Buttons */}
                         <div className="flex items-center bg-white p-1 rounded-lg border border-slate-200 shadow-xs text-xs">
                             <button
@@ -244,23 +341,25 @@ export default function Performance12MonthChart({ data, initialStaffId }: Props)
                         </div>
 
                         {/* Staff Dropdown Selector */}
-                        <div className="w-56">
-                            <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
-                                <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 font-medium">
-                                    <SelectValue placeholder="Pilih Pegawai" />
-                                </SelectTrigger>
-                                <SelectContent className="max-h-64">
-                                    <SelectItem value="station_avg" className="text-xs font-semibold text-indigo-700">
-                                        📊 Rata-rata Keseluruhan
-                                    </SelectItem>
-                                    {staffTrends.map((s) => (
-                                        <SelectItem key={s.pegawai.id} value={String(s.pegawai.id)} className="text-xs">
-                                            {s.pegawai.nama}
+                        {!hideStaffSelect && (
+                            <div className="w-56">
+                                <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                                    <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 font-medium">
+                                        <SelectValue placeholder="Pilih Pegawai" />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-64">
+                                        <SelectItem value="station_avg" className="text-xs font-semibold text-indigo-700">
+                                            📊 Rata-rata Keseluruhan
                                         </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                                        {staffTrends.map((s) => (
+                                            <SelectItem key={s.pegawai.id} value={String(s.pegawai.id)} className="text-xs">
+                                                {s.pegawai.nama}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -312,12 +411,12 @@ export default function Performance12MonthChart({ data, initialStaffId }: Props)
                     </div>
 
                     <div className="bg-white p-2.5 rounded-lg border border-slate-100 shadow-xs flex flex-col justify-center">
-                        <div className="text-xs text-slate-500">Subjek Pantauan:</div>
+                        <div className="text-xs text-slate-500">Subjek & Parameter:</div>
                         <div className="text-xs font-bold text-slate-800 truncate mt-0.5">
                             {activeStaff ? activeStaff.pegawai.nama : 'Semua Observer & Forecaster'}
                         </div>
-                        <div className="text-[10px] text-slate-400 truncate">
-                            {activeStaff ? (activeStaff.pegawai.nip ? `NIP: ${activeStaff.pegawai.nip}` : activeStaff.pegawai.jabatan || 'Observer') : 'Stamet Labuha'}
+                        <div className="text-[10px] text-indigo-600 font-semibold truncate">
+                            {parameterLabels[selectedParam] || 'Semua Parameter'}
                         </div>
                     </div>
                 </div>
