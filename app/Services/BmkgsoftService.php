@@ -1932,11 +1932,14 @@ class BmkgsoftService
 
             $m0700 = $row['m_0700ws'] ?? [];
 
-            $parsePenguapanVal = function ($val) {
+            $parsePenguapanVal = function ($val, bool $preserveRainfallCodes = false) {
                 if ($val === null || $val === '') {
                     return null;
                 }
                 $f = (float) $val;
+                if ($preserveRainfallCodes && ($f == 8888 || $f == 9999)) {
+                    return $f;
+                }
                 if ($f == 9999) {
                     return null;
                 }
@@ -1951,7 +1954,7 @@ class BmkgsoftService
             $tAirMax = isset($m0700['t_air_max_0700']) ? $parsePenguapanVal($m0700['t_air_max_0700']) : null;
             $tAirMin = isset($m0700['t_air_min_0700']) ? $parsePenguapanVal($m0700['t_air_min_0700']) : null;
             $tAirAvg = isset($m0700['t_air_avg_0700']) ? $parsePenguapanVal($m0700['t_air_avg_0700']) : null;
-            $rr0700 = isset($m0700['rr_0700']) ? $parsePenguapanVal($m0700['rr_0700']) : null;
+            $rr0700 = isset($m0700['rr_0700']) ? $parsePenguapanVal($m0700['rr_0700'], true) : null;
             $opEva = isset($m0700['op_eva_0700']) ? $parsePenguapanVal($m0700['op_eva_0700']) : null;
             $wsAvg0c5 = isset($m0700['ws_avg_0c5_0700']) ? $parsePenguapanVal($m0700['ws_avg_0c5_0700']) : null;
 

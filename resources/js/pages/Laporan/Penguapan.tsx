@@ -547,6 +547,8 @@ export default function PenguapanIndex() {
                                             const observerDisplay = item.pegawai?.nama || item.observer_name || 'Unassigned';
                                             const dtDisplay = formatDateTimeDisplay(item.data_timestamp);
                                             const renderVal = (v: number | null | undefined) => (v === null || v === undefined ? '-' : v === 8888 ? 0 : v);
+                                            const renderRainfallVal = (v: number | null | undefined) =>
+                                                v === null || v === undefined ? '-' : v === 8888 || v === 9999 ? 'TTU' : v;
 
                                             return (
                                                 <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors">
@@ -566,7 +568,7 @@ export default function PenguapanIndex() {
                                                         {renderVal(item.op_eva)}
                                                     </TableCell>
                                                     <TableCell className="text-center font-mono font-bold text-sky-700 border-r border-slate-100">
-                                                        {renderVal(item.rr_0700)}
+                                                        {renderRainfallVal(item.rr_0700)}
                                                     </TableCell>
                                                     <TableCell className="text-center font-mono font-bold text-indigo-700 border-r border-slate-100">
                                                         {renderVal(item.ws_avg_0c5)}
@@ -630,7 +632,11 @@ export default function PenguapanIndex() {
                                 </div>
                                 <div className="p-2.5 rounded-xl bg-sky-50 border border-sky-200 flex justify-between items-center">
                                     <span className="text-sky-900 font-bold">Curah Hujan 07:</span>
-                                    <strong className="text-sky-900 text-sm">{selectedRecord.rr_0700 ?? '-'} mm</strong>
+                                    <strong className="text-sky-900 text-sm">
+                                        {selectedRecord.rr_0700 === 8888 || selectedRecord.rr_0700 === 9999
+                                            ? 'TTU'
+                                            : `${selectedRecord.rr_0700 ?? '-'} mm`}
+                                    </strong>
                                 </div>
                                 <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 flex justify-between items-center">
                                     <span className="text-indigo-900 font-bold">WS 0.5m:</span>

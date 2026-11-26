@@ -56,6 +56,13 @@ class PenguapanExportService
             return $val;
         };
 
+        $formatRainfallVal = function ($val) {
+            if ($val === null) return null;
+            $f = (float) $val;
+            if ($f == 8888 || $f == 9999) return 'TTU';
+            return $val;
+        };
+
         // 3. Populate Half 1: Days 1 to 15 (Rows 12 to 26)
         for ($day = 1; $day <= 15; $day++) {
             $row = 11 + $day;
@@ -66,7 +73,7 @@ class PenguapanExportService
 
             if ($rec) {
                 $sheet->setCellValue("B{$row}", $formatCellVal($rec->op_diff_baca));
-                $sheet->setCellValue("C{$row}", $formatCellVal($rec->rr_0700));
+                $sheet->setCellValue("C{$row}", $formatRainfallVal($rec->rr_0700));
                 $sheet->setCellValue("D{$row}", $formatCellVal($rec->op_eva));
                 $sheet->setCellValue("E{$row}", '07.00');
 
@@ -95,7 +102,7 @@ class PenguapanExportService
 
                 if ($rec) {
                     $sheet->setCellValue("G{$row}", $formatCellVal($rec->op_diff_baca));
-                    $sheet->setCellValue("H{$row}", $formatCellVal($rec->rr_0700));
+                    $sheet->setCellValue("H{$row}", $formatRainfallVal($rec->rr_0700));
                     $sheet->setCellValue("I{$row}", $formatCellVal($rec->op_eva));
                     $sheet->setCellValue("J{$row}", '07.00');
 
