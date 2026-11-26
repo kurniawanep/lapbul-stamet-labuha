@@ -269,82 +269,129 @@ class ObserverResolverService
     }
 
     /**
+     * Parse a timestamp string into WIT (Asia/Jayapura) timezone.
+     */
+    protected function parseToWit(string $dateTimeString, ?string $fromTz = null): Carbon
+    {
+        if ($fromTz) {
+            return Carbon::parse($dateTimeString, $fromTz)->setTimezone('Asia/Jayapura');
+        }
+
+        if (preg_match('/(Z|[+\-]\d{2}:?\d{2})$/i', trim($dateTimeString))) {
+            return Carbon::parse($dateTimeString)->setTimezone('Asia/Jayapura');
+        }
+
+        return Carbon::parse($dateTimeString, 'Asia/Jayapura');
+    }
+
+    /**
+     * Resolve the active JadwalDetail matching a timestamp, prioritizing the latest shift start
+     * when multiple shifts overlap (intersect).
+     */
+    protected function resolveLatestActiveDetail(
+        Carbon $witDt,
+        callable $filter,
+        ?callable $tieBreaker = null
+    ): ?JadwalDetail {
+        $timeStr = $witDt->format('H:i:s');
+        $currentDateStr = $witDt->toDateString();
+        $previousDateStr = $witDt->copy()->subDay()->toDateString();
+
+        $candidates = [];
+
+        foreach ($this->getDetailsForDate($currentDateStr)->filter($filter) as $detail) {
+            $shift = $detail->shift;
+            if (!$shift || !$shift->jam_masuk || !$shift->jam_keluar) {
+                continue;
+            }
+
+            $isMatch = $shift->jam_masuk <= $shift->jam_keluar
+                ? ($timeStr >= $shift->jam_masuk && $timeStr <= $shift->jam_keluar)
+                : ($timeStr >= $shift->jam_masuk);
+
+            if ($isMatch) {
+                $candidates[] = [
+                    'detail' => $detail,
+                    'start_at' => "{$currentDateStr} {$shift->jam_masuk}",
+                    'tie' => $tieBreaker ? (int) $tieBreaker($detail) : 0,
+                ];
+            }
+        }
+
+        foreach ($this->getDetailsForDate($previousDateStr)->filter($filter) as $detail) {
+            $shift = $detail->shift;
+            if (!$shift || !$shift->jam_masuk || !$shift->jam_keluar) {
+                continue;
+            }
+
+            if ($shift->jam_masuk > $shift->jam_keluar && $timeStr <= $shift->jam_keluar) {
+                $candidates[] = [
+                    'detail' => $detail,
+                    'start_at' => "{$previousDateStr} {$shift->jam_masuk}",
+                    'tie' => $tieBreaker ? (int) $tieBreaker($detail) : 0,
+                ];
+            }
+        }
+
+        if (empty($candidates)) {
+            return null;
+        }
+
+        usort($candidates, function (array $a, array $b) {
+            // Prioritize the later starting shift when schedules intersect.
+            $cmp = strcmp($b['start_at'], $a['start_at']);
+            if ($cmp !== 0) {
+                return $cmp;
+            }
+
+            return $b['tie'] <=> $a['tie'];
+        });
+
+        return $candidates[0]['detail'];
+    }
+
+    /**
+     * Resolve the active operational observer/forecaster JadwalDetail for a given date-time string.
+     */
+    public function getObserverDetailByTimestamp(string $dateTimeString, ?string $fromTz = null): ?JadwalDetail
+    {
+        $dt = $this->parseToWit($dateTimeString, $fromTz);
+
+        $filter = function ($detail) {
+            $role = $detail->pegawai->role ?? '';
+            $namaShift = strtoupper($detail->shift->nama_shift ?? '');
+            $category = strtolower($detail->shift->category ?? 'operasional');
+
+            return $detail->shift
+                && $category === 'operasional'
+                && $detail->shift->kode_shift !== 'A'
+                && !str_contains($namaShift, 'TEKNISI')
+                && !str_contains($namaShift, 'PPNPN')
+                && !$detail->shift->is_tidak_masuk_kerja
+                && $detail->pegawai
+                && (str_contains($role, 'Observer') || str_contains($role, 'Forecaster'))
+                && !str_contains($role, 'Teknisi');
+        };
+
+        $tieBreaker = function (JadwalDetail $detail): int {
+            $kode = strtoupper($detail->shift->kode_shift ?? '');
+            $nama = strtoupper($detail->shift->nama_shift ?? '');
+            $isForecast = str_starts_with($kode, 'PF')
+                || str_contains($nama, 'FORECAST')
+                || str_contains($nama, 'FOD');
+
+            return $isForecast ? 0 : 1;
+        };
+
+        return $this->resolveLatestActiveDetail($dt, $filter, $tieBreaker);
+    }
+
+    /**
      * Resolve the duty observer (Pegawai) for a given date-time string in WIT timezone.
      */
     public function getObserverByTimestamp(string $dateTimeString, ?string $fromTz = null): ?Pegawai
     {
-        if ($fromTz) {
-            $dt = Carbon::parse($dateTimeString, $fromTz)->setTimezone('Asia/Jayapura');
-        } elseif (preg_match('/[Z\+\-]/i', $dateTimeString)) {
-            $dt = Carbon::parse($dateTimeString)->setTimezone('Asia/Jayapura');
-        } else {
-            $dt = Carbon::parse($dateTimeString, 'Asia/Jayapura');
-        }
-
-        $timeStr = $dt->format('H:i:s');
-        $currentDateStr = $dt->toDateString();
-        $previousDateStr = $dt->copy()->subDay()->toDateString();
-
-        // 1. Check details starting on the current date
-        $currentDetails = $this->getDetailsForDate($currentDateStr)->filter(function ($detail) {
-            $role = $detail->pegawai->role ?? '';
-            $namaShift = strtoupper($detail->shift->nama_shift ?? '');
-            return $detail->shift
-                && $detail->shift->kode_shift !== 'A'
-                && !str_contains($namaShift, 'TEKNISI')
-                && !str_contains($namaShift, 'PPNPN')
-                && !$detail->shift->is_tidak_masuk_kerja
-                && $detail->pegawai
-                && (str_contains($role, 'Observer') || str_contains($role, 'Forecaster'))
-                && !str_contains($role, 'Teknisi');
-        });
-
-        foreach ($currentDetails as $detail) {
-            $shift = $detail->shift;
-            if (!$shift || !$shift->jam_masuk || !$shift->jam_keluar) {
-                continue;
-            }
-
-            if ($shift->jam_masuk <= $shift->jam_keluar) {
-                if ($timeStr >= $shift->jam_masuk && $timeStr <= $shift->jam_keluar) {
-                    return $detail->pegawai;
-                }
-            } else {
-                // Overnight shift starting today (e.g., 19:30 to 23:59:59)
-                if ($timeStr >= $shift->jam_masuk) {
-                    return $detail->pegawai;
-                }
-            }
-        }
-
-        // 2. Check overnight details starting on the previous date (e.g., 00:00:00 to 01:45:00)
-        $previousDetails = $this->getDetailsForDate($previousDateStr)->filter(function ($detail) {
-            $role = $detail->pegawai->role ?? '';
-            $namaShift = strtoupper($detail->shift->nama_shift ?? '');
-            return $detail->shift
-                && $detail->shift->kode_shift !== 'A'
-                && !str_contains($namaShift, 'TEKNISI')
-                && !str_contains($namaShift, 'PPNPN')
-                && !$detail->shift->is_tidak_masuk_kerja
-                && $detail->pegawai
-                && (str_contains($role, 'Observer') || str_contains($role, 'Forecaster'))
-                && !str_contains($role, 'Teknisi');
-        });
-
-        foreach ($previousDetails as $detail) {
-            $shift = $detail->shift;
-            if (!$shift || !$shift->jam_masuk || !$shift->jam_keluar) {
-                continue;
-            }
-
-            if ($shift->jam_masuk > $shift->jam_keluar) {
-                if ($timeStr <= $shift->jam_keluar) {
-                    return $detail->pegawai;
-                }
-            }
-        }
-
-        return null;
+        return $this->getObserverDetailByTimestamp($dateTimeString, $fromTz)?->pegawai;
     }
 
     /**
@@ -372,13 +419,7 @@ class ObserverResolverService
      */
     public function getForecastOrObserverDutyOfficer(string $dateTimeString, ?string $fromTz = null): ?Pegawai
     {
-        if ($fromTz) {
-            $dt = Carbon::parse($dateTimeString, $fromTz)->setTimezone('Asia/Jayapura');
-        } elseif (preg_match('/[Z\+\-]/i', $dateTimeString)) {
-            $dt = Carbon::parse($dateTimeString)->setTimezone('Asia/Jayapura');
-        } else {
-            $dt = Carbon::parse($dateTimeString, 'Asia/Jayapura');
-        }
+        $dt = $this->parseToWit($dateTimeString, $fromTz);
 
         $timeStr = $dt->format('H:i:s');
         $currentDateStr = $dt->toDateString();
@@ -481,17 +522,9 @@ class ObserverResolverService
      */
     public function getTeknisiByTimestamp(string $dateTimeString, ?string $fromTz = null): ?Pegawai
     {
-        if ($fromTz) {
-            $dt = Carbon::parse($dateTimeString, $fromTz)->setTimezone('Asia/Jayapura');
-        } elseif (preg_match('/[Z\+\-]/i', $dateTimeString)) {
-            $dt = Carbon::parse($dateTimeString)->setTimezone('Asia/Jayapura');
-        } else {
-            $dt = Carbon::parse($dateTimeString, 'Asia/Jayapura');
-        }
+        $dt = $this->parseToWit($dateTimeString, $fromTz);
 
-        $currentDateStr = $dt->toDateString();
-
-        $detail = $this->getDetailsForDate($currentDateStr)->first(function ($detail) {
+        $teknisiFilter = function ($detail) {
             if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja || !$detail->pegawai) {
                 return false;
             }
@@ -499,9 +532,19 @@ class ObserverResolverService
             return str_contains($role, 'Teknisi')
                 || str_contains($role, 'Peralatan')
                 || str_contains($role, 'Komunikasi');
-        });
+        };
 
-        return $detail ? $detail->pegawai : null;
+        $tieBreaker = function (JadwalDetail $detail): int {
+            return strtoupper($detail->shift->kode_shift ?? '') === 'A' ? 0 : 1;
+        };
+
+        $matched = $this->resolveLatestActiveDetail($dt, $teknisiFilter, $tieBreaker);
+        if ($matched && $matched->pegawai) {
+            return $matched->pegawai;
+        }
+
+        $fallback = $this->getDetailsForDate($dt->toDateString())->first($teknisiFilter);
+        return $fallback ? $fallback->pegawai : null;
     }
 
     /**
@@ -510,64 +553,21 @@ class ObserverResolverService
      */
     public function getPpnpnByTimestamp(string $dateTimeString, ?string $fromTz = null): ?Pegawai
     {
-        if ($fromTz) {
-            $dt = Carbon::parse($dateTimeString, $fromTz)->setTimezone('Asia/Jayapura');
-        } elseif (preg_match('/[Z\+\-]/i', $dateTimeString)) {
-            $dt = Carbon::parse($dateTimeString)->setTimezone('Asia/Jayapura');
-        } else {
-            $dt = Carbon::parse($dateTimeString, 'Asia/Jayapura');
-        }
+        $dt = $this->parseToWit($dateTimeString, $fromTz);
 
-        $timeStr = $dt->format('H:i:s');
-        $currentDateStr = $dt->toDateString();
-        $previousDateStr = $dt->copy()->subDay()->toDateString();
-
-        // 1. Check details starting on current date (excluding shift A & L)
-        $details = $this->getDetailsForDate($currentDateStr)->filter(function ($detail) {
+        $ppnpnFilter = function ($detail) {
             if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja || in_array($detail->shift->kode_shift, ['L', 'A']) || !$detail->pegawai) {
                 return false;
             }
             return ($detail->pegawai->jenis_pegawai === 'PPNPN') || str_contains($detail->pegawai->role ?? '', 'PPNPN');
-        });
+        };
 
-        foreach ($details as $detail) {
-            $shift = $detail->shift;
-            if (!$shift || !$shift->jam_masuk || !$shift->jam_keluar) {
-                continue;
-            }
-
-            if ($shift->jam_masuk <= $shift->jam_keluar) {
-                if ($timeStr >= $shift->jam_masuk && $timeStr <= $shift->jam_keluar) {
-                    return $detail->pegawai;
-                }
-            } else {
-                if ($timeStr >= $shift->jam_masuk) {
-                    return $detail->pegawai;
-                }
-            }
+        $matched = $this->resolveLatestActiveDetail($dt, $ppnpnFilter);
+        if ($matched && $matched->pegawai) {
+            return $matched->pegawai;
         }
 
-        // 2. Check overnight details starting on previous date (e.g., 20:00 to 08:00 next day)
-        $previousDetails = $this->getDetailsForDate($previousDateStr)->filter(function ($detail) {
-            if (!$detail->shift || $detail->shift->is_tidak_masuk_kerja || in_array($detail->shift->kode_shift, ['L', 'A']) || !$detail->pegawai) {
-                return false;
-            }
-            return ($detail->pegawai->jenis_pegawai === 'PPNPN') || str_contains($detail->pegawai->role ?? '', 'PPNPN');
-        });
-
-        foreach ($previousDetails as $detail) {
-            $shift = $detail->shift;
-            if (!$shift || !$shift->jam_masuk || !$shift->jam_keluar) {
-                continue;
-            }
-
-            if ($shift->jam_masuk > $shift->jam_keluar) {
-                if ($timeStr <= $shift->jam_keluar) {
-                    return $detail->pegawai;
-                }
-            }
-        }
-
-        return $details->first() ? $details->first()->pegawai : null;
+        $fallback = $this->getDetailsForDate($dt->toDateString())->first($ppnpnFilter);
+        return $fallback ? $fallback->pegawai : null;
     }
 }

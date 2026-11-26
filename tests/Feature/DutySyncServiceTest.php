@@ -187,3 +187,133 @@ test('duty sync service assigns pibal and tafor to PF when scheduled and falls b
     expect($taforDay2->observer_name)->toBe($pegawaiP->nama);
 });
 
+test('duty sync service associates 11:00 UTC synop with M1 instead of S even when overlapping teknisi or ppnpn shifts exist', function () {
+    $mirza = Pegawai::create([
+        'nama' => 'MIRZA CHRISANDY PESULIMA, S.Tr',
+        'jenis_pegawai' => 'PNS',
+        'role' => 'Observer & Forecaster',
+    ]);
+    $rezky = Pegawai::create([
+        'nama' => 'REZKY RAMADHAN, S.Tr. Met.',
+        'jenis_pegawai' => 'PNS',
+        'role' => 'Observer & Forecaster',
+    ]);
+    $teknisi = Pegawai::create([
+        'nama' => 'TEKNISI SIANG',
+        'jenis_pegawai' => 'PNS',
+        'role' => 'Teknisi',
+    ]);
+    $ppnpn = Pegawai::create([
+        'nama' => 'PPNPN SIANG',
+        'jenis_pegawai' => 'PPNPN',
+        'role' => 'PPNPN',
+    ]);
+
+    $jadwal = JadwalBulanan::firstOrCreate(
+        ['bulan' => 11, 'tahun' => 2026],
+        ['stasiun' => 'Stasiun Meteorologi Oesman Sadik']
+    );
+
+    $shiftS = JadwalBulananShift::create([
+        'jadwal_bulanan_id' => $jadwal->id,
+        'category' => 'operasional',
+        'kode_shift' => 'S',
+        'nama_shift' => 'SIANG OBS',
+        'jam_masuk' => '13:30:00',
+        'jam_keluar' => '19:45:00',
+        'is_tidak_masuk_kerja' => false,
+    ]);
+    $shiftM1 = JadwalBulananShift::create([
+        'jadwal_bulanan_id' => $jadwal->id,
+        'category' => 'operasional',
+        'kode_shift' => 'M1',
+        'nama_shift' => 'MALAM 1',
+        'jam_masuk' => '19:30:00',
+        'jam_keluar' => '01:30:00',
+        'is_tidak_masuk_kerja' => false,
+    ]);
+    $shiftST = JadwalBulananShift::create([
+        'jadwal_bulanan_id' => $jadwal->id,
+        'category' => 'teknisi',
+        'kode_shift' => 'ST',
+        'nama_shift' => 'SIANG TEKNISI',
+        'jam_masuk' => '14:30:00',
+        'jam_keluar' => '22:00:00',
+        'is_tidak_masuk_kerja' => false,
+    ]);
+    $shiftSPpnpn = JadwalBulananShift::create([
+        'jadwal_bulanan_id' => $jadwal->id,
+        'category' => 'ppnpn',
+        'kode_shift' => 'S',
+        'nama_shift' => 'SIANG PPNPN',
+        'jam_masuk' => '13:30:00',
+        'jam_keluar' => '20:30:00',
+        'is_tidak_masuk_kerja' => false,
+    ]);
+
+    JadwalDetail::create([
+        'jadwal_bulanan_id' => $jadwal->id,
+        'pegawai_id' => $rezky->id,
+        'tanggal' => '2026-11-01',
+        'shift_id' => $shiftS->id,
+    ]);
+    JadwalDetail::create([
+        'jadwal_bulanan_id' => $jadwal->id,
+        'pegawai_id' => $mirza->id,
+        'tanggal' => '2026-11-01',
+        'shift_id' => $shiftM1->id,
+    ]);
+    JadwalDetail::create([
+        'jadwal_bulanan_id' => $jadwal->id,
+        'pegawai_id' => $teknisi->id,
+        'tanggal' => '2026-11-01',
+        'shift_id' => $shiftST->id,
+    ]);
+    JadwalDetail::create([
+        'jadwal_bulanan_id' => $jadwal->id,
+        'pegawai_id' => $ppnpn->id,
+        'tanggal' => '2026-11-01',
+        'shift_id' => $shiftSPpnpn->id,
+    ]);
+
+    $sinop09 = DataSinoptik::create([
+        'station_id' => 138,
+        'station_name' => 'Stasiun Meteorologi Oesman Sadik',
+        'data_timestamp' => '2026-11-01 09:00:00', // 18:00 WIT -> S (Rezky)
+        'observer_name' => 'Wrong Observer',
+    ]);
+    $sinop11 = DataSinoptik::create([
+        'station_id' => 138,
+        'station_name' => 'Stasiun Meteorologi Oesman Sadik',
+        'data_timestamp' => '2026-11-01 11:00:00', // 20:00 WIT -> M1 (Mirza)
+        'observer_name' => $rezky->nama,
+        'pegawai_id' => $rezky->id,
+    ]);
+    $sinop12 = DataSinoptik::create([
+        'station_id' => 138,
+        'station_name' => 'Stasiun Meteorologi Oesman Sadik',
+        'data_timestamp' => '2026-11-01 12:00:00', // 21:00 WIT -> M1 (Mirza)
+        'observer_name' => $rezky->nama,
+        'pegawai_id' => $rezky->id,
+    ]);
+
+    $service = app(DutySyncService::class);
+    $result = $service->syncObservationsForPeriod(11, 2026);
+
+    expect($result['success'])->toBeTrue();
+
+    $sinop09->refresh();
+    expect($sinop09->pegawai_id)->toBe($rezky->id);
+    expect($sinop09->observer_name)->toBe($rezky->nama);
+
+    $sinop11->refresh();
+    expect($sinop11->pegawai_id)->toBe($mirza->id);
+    expect($sinop11->observer_name)->toBe($mirza->nama);
+    expect($sinop11->teknisi_id)->toBe($teknisi->id);
+    expect($sinop11->ppnpn_id)->toBe($ppnpn->id);
+
+    $sinop12->refresh();
+    expect($sinop12->pegawai_id)->toBe($mirza->id);
+    expect($sinop12->observer_name)->toBe($mirza->nama);
+});
+

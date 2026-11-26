@@ -203,11 +203,16 @@ class SimpanMkgSyncService
      */
     public function resolveOperationalDutyOfficer(Carbon $witDt, ?string $fallbackName = null): array
     {
-        $timeStr = $witDt->format('H:i:s');
-        $currentDateStr = $witDt->toDateString();
-        $previousDateStr = $witDt->copy()->subDay()->toDateString();
+        $wit = $witDt->copy()->setTimezone('Asia/Jayapura');
+        $matchedActive = $this->resolver->getObserverDetailByTimestamp($wit->format('Y-m-d H:i:s'), 'Asia/Jayapura');
+        if ($matchedActive && $matchedActive->pegawai) {
+            return [
+                'pegawai' => $matchedActive->pegawai,
+                'shift' => $matchedActive->shift,
+            ];
+        }
 
-        // 1. Check details starting on current date
+        $currentDateStr = $wit->toDateString();
         $currentDetails = $this->resolver->getDetailsForDate($currentDateStr)->filter(function ($detail) {
             if (!$detail->shift || !$detail->pegawai) {
                 return false;
@@ -222,62 +227,8 @@ class SimpanMkgSyncService
                 && $isObsOrForecast;
         });
 
-        foreach ($currentDetails as $detail) {
-            $shift = $detail->shift;
-            if (!$shift || !$shift->jam_masuk || !$shift->jam_keluar) {
-                continue;
-            }
-
-            if ($shift->jam_masuk <= $shift->jam_keluar) {
-                if ($timeStr >= $shift->jam_masuk && $timeStr <= $shift->jam_keluar) {
-                    return [
-                        'pegawai' => $detail->pegawai,
-                        'shift' => $shift,
-                    ];
-                }
-            } else {
-                // Overnight shift starting today (e.g. 19:30 to 23:59:59)
-                if ($timeStr >= $shift->jam_masuk) {
-                    return [
-                        'pegawai' => $detail->pegawai,
-                        'shift' => $shift,
-                    ];
-                }
-            }
-        }
-
-        // 2. Check overnight shifts starting on previous date (e.g. 00:00:00 to 07:45:00)
-        $previousDetails = $this->resolver->getDetailsForDate($previousDateStr)->filter(function ($detail) {
-            if (!$detail->shift || !$detail->pegawai) {
-                return false;
-            }
-            $shift = $detail->shift;
-            $role = strtolower($detail->pegawai->role ?? '');
-            $isObsOrForecast = str_contains($role, 'observer') || str_contains($role, 'forecaster');
-            return $shift->category === 'operasional'
-                && $shift->kode_shift !== 'A'
-                && !$shift->is_tidak_masuk_kerja
-                && $isObsOrForecast;
-        });
-
-        foreach ($previousDetails as $detail) {
-            $shift = $detail->shift;
-            if (!$shift || !$shift->jam_masuk || !$shift->jam_keluar) {
-                continue;
-            }
-
-            if ($shift->jam_masuk > $shift->jam_keluar) {
-                if ($timeStr <= $shift->jam_keluar) {
-                    return [
-                        'pegawai' => $detail->pegawai,
-                        'shift' => $shift,
-                    ];
-                }
-            }
-        }
-
         // 3. Fallback: If outside regular observer shifts, check active morning / afternoon officer
-        $hour = $witDt->hour;
+        $hour = $wit->hour;
         $matchedDetail = null;
         if ($hour >= 7 && $hour < 15) {
             // Morning duty (P / PF)

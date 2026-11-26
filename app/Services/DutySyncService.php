@@ -36,114 +36,90 @@ class DutySyncService
 
         $totalUpdated = 0;
 
-        $jadwalBulanan = \App\Models\JadwalBulanan::where('bulan', $bulan)->where('tahun', $tahun)->first();
-        
-        $shifts = collect();
-        if ($jadwalBulanan) {
-            $shifts = \App\Models\JadwalBulananShift::where('jadwal_bulanan_id', $jadwalBulanan->id)
-                ->where('is_tidak_masuk_kerja', false)
-                ->whereNotNull('jam_masuk')
-                ->whereNotNull('jam_keluar')
-                ->get();
-        }
-        if ($shifts->isEmpty()) {
-            $shifts = \App\Models\MasterShift::where('is_tidak_masuk_kerja', false)
-                ->whereNotNull('jam_masuk')
-                ->whereNotNull('jam_keluar')
-                ->get();
-        }
+        $this->resolver->resetCache();
+        $monthStart = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth();
+        $monthEnd = Carbon::createFromDate($tahun, $bulan, $daysInMonth)->endOfMonth();
+        $this->resolver->prewarm($monthStart->copy()->subDays(2), $monthEnd->copy()->addDays(2));
 
-        $uniqueShiftWindows = $shifts->unique(function ($s) {
-            return $s->jam_masuk . '-' . $s->jam_keluar;
-        });
+        $utcMonthStart = sprintf('%04d-%02d-01 00:00:00', $tahun, $bulan);
+        $utcMonthEnd = sprintf('%04d-%02d-%02d 23:59:59', $tahun, $bulan, $daysInMonth);
+        $witDay1StartInUtc = Carbon::create($tahun, $bulan, 1, 0, 0, 0, 'Asia/Jayapura')
+            ->setTimezone('UTC')
+            ->toDateTimeString();
 
-        for ($day = 1; $day <= $daysInMonth; $day++) {
-            $dateStr = sprintf('%04d-%02d-%02d', $tahun, $bulan, $day);
+        $schema = DB::getSchemaBuilder();
+        $resolvedByTs = [];
 
-            $windows = [];
-            if ($uniqueShiftWindows->isNotEmpty()) {
-                foreach ($uniqueShiftWindows as $s) {
-                    $masuk = $s->jam_masuk;
-                    $keluar = $s->jam_keluar;
-                    if (!$masuk || !$keluar) {
-                        continue;
-                    }
+        foreach ($tableTimestampMap as $table => $timestampCol) {
+            if (!$schema->hasTable($table) || !$schema->hasColumn($table, $timestampCol)) {
+                continue;
+            }
 
-                    $startCarbon = Carbon::parse("{$dateStr} {$masuk}", 'Asia/Jayapura');
+            $hasObserverNameCol = $schema->hasColumn($table, 'observer_name');
+            $records = DB::table($table)
+                ->whereBetween($timestampCol, [$witDay1StartInUtc, $utcMonthEnd])
+                ->get(['id', $timestampCol]);
 
-                    if ($masuk <= $keluar) {
-                        $endCarbon = Carbon::parse("{$dateStr} {$keluar}", 'Asia/Jayapura');
-                        $sampleWit = $startCarbon->copy()->addMinutes(max(5, (int) ($startCarbon->diffInMinutes($endCarbon) / 2)))->toDateTimeString();
-                    } else {
-                        $endCarbon = Carbon::parse("{$dateStr} {$keluar}", 'Asia/Jayapura')->addDay();
-                        $sampleWit = $startCarbon->copy()->addMinutes(30)->toDateTimeString();
-                    }
+            $batches = [];
+            foreach ($records as $record) {
+                $rawTs = $record->{$timestampCol};
+                if (empty($rawTs)) {
+                    continue;
+                }
 
-                    $windows[] = [
-                        'sample_wit' => $sampleWit,
-                        'utc_start' => $startCarbon->copy()->setTimezone('UTC')->toDateTimeString(),
-                        'utc_end' => $endCarbon->copy()->subSecond()->setTimezone('UTC')->toDateTimeString(),
+                $ts = is_string($rawTs) ? $rawTs : (string) $rawTs;
+                if (!isset($resolvedByTs[$ts])) {
+                    $resolvedByTs[$ts] = [
+                        'observer' => $this->resolver->getObserverByTimestamp($ts, 'UTC'),
+                        'teknisi' => $this->resolver->getTeknisiByTimestamp($ts, 'UTC'),
+                        'ppnpn' => $this->resolver->getPpnpnByTimestamp($ts, 'UTC'),
                     ];
                 }
-            }
 
-            // Fallback default windows if no shifts configured
-            if (empty($windows)) {
-                $windows = [
-                    [
-                        'sample_wit' => "{$dateStr} 08:00:00",
-                        'utc_start' => Carbon::parse("{$dateStr} 07:00:00", 'Asia/Jayapura')->setTimezone('UTC')->toDateTimeString(),
-                        'utc_end' => Carbon::parse("{$dateStr} 13:29:59", 'Asia/Jayapura')->setTimezone('UTC')->toDateTimeString(),
-                    ],
-                    [
-                        'sample_wit' => "{$dateStr} 14:00:00",
-                        'utc_start' => Carbon::parse("{$dateStr} 13:30:00", 'Asia/Jayapura')->setTimezone('UTC')->toDateTimeString(),
-                        'utc_end' => Carbon::parse("{$dateStr} 19:29:59", 'Asia/Jayapura')->setTimezone('UTC')->toDateTimeString(),
-                    ],
-                    [
-                        'sample_wit' => "{$dateStr} 20:00:00",
-                        'utc_start' => Carbon::parse("{$dateStr} 19:30:00", 'Asia/Jayapura')->setTimezone('UTC')->toDateTimeString(),
-                        'utc_end' => Carbon::parse("{$dateStr} 23:59:59", 'Asia/Jayapura')->addHours(7)->setTimezone('UTC')->toDateTimeString(),
-                    ],
-                ];
-            }
+                $resolved = $resolvedByTs[$ts];
+                $observer = $resolved['observer'];
+                $teknisi = $resolved['teknisi'];
+                $ppnpn = $resolved['ppnpn'];
 
-            foreach ($windows as $win) {
-                $sampleWit = $win['sample_wit'];
-                $utcStart = $win['utc_start'];
-                $utcEnd = $win['utc_end'];
+                // Do not clobber previous UTC month tail records if no schedule exists for that hour.
+                if ($ts < $utcMonthStart && !$observer && !$teknisi && !$ppnpn) {
+                    continue;
+                }
 
-                $observer = $this->resolver->getObserverByTimestamp($sampleWit, 'Asia/Jayapura');
-                $teknisi = $this->resolver->getTeknisiByTimestamp($sampleWit, 'Asia/Jayapura');
-                $ppnpn = $this->resolver->getPpnpnByTimestamp($sampleWit, 'Asia/Jayapura');
+                $key = ($observer ? $observer->id : 'n')
+                    . '|' . ($teknisi ? $teknisi->id : 'n')
+                    . '|' . ($ppnpn ? $ppnpn->id : 'n');
 
-                $updatePayload = [
-                    'pegawai_id' => $observer ? $observer->id : null,
-                    'teknisi_id' => $teknisi ? $teknisi->id : null,
-                    'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
-                ];
-
-                foreach ($tableTimestampMap as $table => $timestampCol) {
-                    if (!DB::getSchemaBuilder()->hasTable($table) || !DB::getSchemaBuilder()->hasColumn($table, $timestampCol)) {
-                        continue;
-                    }
-
-                    $payload = $updatePayload;
-                    if (DB::getSchemaBuilder()->hasColumn($table, 'observer_name')) {
+                if (!isset($batches[$key])) {
+                    $payload = [
+                        'pegawai_id' => $observer ? $observer->id : null,
+                        'teknisi_id' => $teknisi ? $teknisi->id : null,
+                        'ppnpn_id' => $ppnpn ? $ppnpn->id : null,
+                    ];
+                    if ($hasObserverNameCol) {
                         $payload['observer_name'] = $observer ? $observer->nama : null;
                     }
+                    $batches[$key] = [
+                        'payload' => $payload,
+                        'ids' => [],
+                    ];
+                }
 
+                $batches[$key]['ids'][] = $record->id;
+            }
+
+            foreach ($batches as $batch) {
+                foreach (array_chunk($batch['ids'], 500) as $idChunk) {
                     $count = DB::table($table)
-                        ->whereBetween($timestampCol, [$utcStart, $utcEnd])
-                        ->update($payload);
-
+                        ->whereIn('id', $idChunk)
+                        ->update($batch['payload']);
                     $totalUpdated += $count;
                 }
             }
         }
 
-        $monthStart = Carbon::createFromDate($tahun, $bulan, 1)->startOfMonth()->toDateTimeString();
-        $monthEnd = Carbon::createFromDate($tahun, $bulan, $daysInMonth)->endOfMonth()->toDateTimeString();
+        $monthStart = $utcMonthStart;
+        $monthEnd = $utcMonthEnd;
 
         // Targeted synchronization for PIBAL (PF duty range -> fallback to P -> observer)
         if (DB::getSchemaBuilder()->hasTable('data_pibal') && DB::getSchemaBuilder()->hasColumn('data_pibal', 'data_timestamp')) {
